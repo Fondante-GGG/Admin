@@ -1,0 +1,92 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'crm_dashboard/calendar.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>{{ title }}</h1>
+
+  <div class="crm-cal-toolbar">
+    <button type="button" data-cal-prev class="crm-btn crm-btn--icon">&larr;</button>
+    <h2 data-cal-title class="crm-cal-toolbar__title"></h2>
+    <button type="button" data-cal-next class="crm-btn crm-btn--icon">&rarr;</button>
+
+    <div class="crm-cal-views">
+      <button type="button" data-cal-view="dayGridMonth" class="crm-btn is-active">Месяц</button>
+      <button type="button" data-cal-view="timeGridWeek" class="crm-btn">Неделя</button>
+      <button type="button" data-cal-view="timeGridDay" class="crm-btn">День</button>
+    </div>
+
+    <button type="button" data-cal-toggle-filters class="crm-btn crm-btn--outline">Фильтры</button>
+    <button type="button" data-cal-open-create class="crm-btn crm-btn--primary">+ Событие</button>
+  </div>
+
+  <div data-cal-filters class="crm-cal-filters is-hidden">
+    <div class="crm-cal-filters__row">
+      <label>Курс
+        <select data-cal-filter-text="course" id="calCourses">
+          <option value="">Все</option>
+          {% for c in courses %}<option value="{{ c.title }}">{{ c.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Предмет
+        <select data-cal-filter-text="subject">
+          <option value="">Все</option>
+          {% for s in subjects %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ментор
+        <select data-cal-filter-text="mentor">
+          <option value="">Все</option>
+          {% for m in mentors %}<option value="{{ m.id }}">{{ m.user.get_full_name|default:m.user.username }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="crm-cal-filters__actions">
+      <button type="button" data-cal-apply class="crm-btn crm-btn--primary">Применить</button>
+      <button type="button" data-cal-clear class="crm-btn crm-btn--outline">Сбросить</button>
+    </div>
+  </div>
+
+  <div id="crmCalendar" data-events-url="{% url 'admin:calendar_events' %}" data-create-url="{% url 'admin:calendar_event_create' %}"></div>
+
+  <div data-cal-modal class="crm-modal is-hidden">
+    <div class="crm-modal__backdrop"></div>
+    <div class="crm-modal__content">
+      <div class="crm-modal__header">
+        <h3>Новое событие</h3>
+        <button type="button" data-cal-close class="crm-modal__close">&times;</button>
+      </div>
+      <form data-cal-form>
+        {% csrf_token %}
+        <div class="crm-form-grid">
+          <label>Название <input type="text" name="title" required></label>
+          <label>Курс
+            <select name="course">
+              <option value="">—</option>
+              {% for c in courses %}<option value="{{ c.id }}">{{ c.title }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>Дата <input type="date" name="date" required></label>
+          <label>Время начала <input type="time" name="start_time" required></label>
+          <label>Время конца <input type="time" name="end_time"></label>
+          <label>Место <input type="text" name="location"></label>
+          <label>Ссылка (онлайн) <input type="url" name="online_link"></label>
+          <label>Описание <textarea name="description" rows="3"></textarea></label>
+        </div>
+        <div class="crm-modal__footer">
+          <button type="submit" class="crm-btn crm-btn--primary">Сохранить</button>
+          <button type="button" data-cal-close class="crm-btn crm-btn--outline">Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="{% static 'crm_dashboard/calendar.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,110 @@
+.crm-debt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+  margin-bottom: 0.75rem;
+}
+
+.crm-field__label {
+  font-weight: 800;
+  color: #374151;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.crm-input, .crm-select {
+  width: 100%;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  min-width: 120px;
+}
+
+.crm-field--wide {
+  min-width: 240px;
+}
+
+.crm-pill-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+
+.crm-pill-btn--primary { background: #6366f1; color: #fff; }
+.crm-pill-btn--muted { background: #6b7280; color: #fff; }
+.crm-pill-btn:hover { filter: brightness(0.97); text-decoration: none; color: #fff; }
+
+.crm-table-wrap {
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
+  overflow-x: auto;
+  width: 100%;
+  max-width: none;
+}
+
+.crm-table-wrap .card,
+.crm-table-wrap .card-body,
+.crm-table-wrap .table-responsive {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.crm-debt-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh);
+}
+
+.crm-table-wrap--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.crm-debt-footer {
+  position: sticky;
+  bottom: 0;
+  background: #f9fafb;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.crm-table-wrap .results,
+.crm-table-wrap table {
+  width: 100%;
+}
+
+.crm-debt-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem 0.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+/* Make changelist stretch full width (Jazzmin uses a fixed-width .container). */
+.content-wrapper .container,
+.content-wrapper .content > .container,
+.content-wrapper .content > .container-fluid,
+.content-wrapper .content .container,
+.content-wrapper .content .container-fluid,
+#content {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Some Jazzmin/AdminLTE skins constrain main content width via inner wrappers. */
+.content-wrapper .content {
+  max-width: none !important;
+}

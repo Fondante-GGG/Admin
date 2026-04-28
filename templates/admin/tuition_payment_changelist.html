@@ -1,0 +1,58 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/payments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Платежи</h1>
+
+  <div data-pay-toolbar class="crm-toolbar">
+    <div class="crm-toolbar__filters">
+      <label>Курс
+        <select data-pay="course">
+          <option value="">Все</option>
+          {% for c in courses %}<option value="{{ c.id }}" {% if filters.course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ментор
+        <select data-pay="mentor">
+          <option value="">Все</option>
+          {% for m in mentors %}<option value="{{ m.id }}" {% if filters.mentor == m.id|stringformat:"s" %}selected{% endif %}>{{ m.user.get_full_name|default:m.user.username }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Способ
+        <select data-pay="method">
+          <option value="">Все</option>
+          {% for key, label in methods %}<option value="{{ key }}" {% if filters.method == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Первый?
+        <select data-pay="first">
+          <option value="">Все</option>
+          <option value="1" {% if filters.first == "1" %}selected{% endif %}>Да</option>
+          <option value="0" {% if filters.first == "0" %}selected{% endif %}>Нет</option>
+        </select>
+      </label>
+      <label>Дата с <input type="date" data-pay="date_from" value="{{ filters.date_from }}"></label>
+      <label>Дата по <input type="date" data-pay="date_to" value="{{ filters.date_to }}"></label>
+      <label>ID <input type="text" data-pay="pay_id" placeholder="ID" value="{{ filters.pay_id }}" style="width:80px"></label>
+    </div>
+    <div class="crm-toolbar__actions">
+      <button type="button" data-pay-apply class="crm-btn crm-btn--primary">Применить</button>
+      <button type="button" data-pay-clear class="crm-btn crm-btn--outline">Сбросить</button>
+      <a href="?{{ export_qs }}&export=pdf" class="crm-btn crm-btn--outline">PDF</a>
+    </div>
+  </div>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat crm-stat--green"><span class="crm-stat__value">{{ total_amount|floatformat:"0" }}</span><span class="crm-stat__label">Общая сумма (с.)</span></div>
+  </div>
+
+  {{ block.super }}
+</div>
+<script src="{% static 'crm_dashboard/payments.js' %}"></script>
+{% endblock %}

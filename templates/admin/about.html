@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'crm_dashboard/about.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-about">
+  <h1>{{ title }}</h1>
+  {% if about %}
+    <div class="crm-about__content">{{ about.content|safe }}</div>
+    {% if can_edit %}
+    <div class="crm-about__actions">
+      <a href="{% url 'admin:config_crmabout_change' about.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
+    </div>
+    {% endif %}
+  {% else %}
+    <p>Нет информации</p>
+  {% endif %}
+</div>
+{% endblock %}

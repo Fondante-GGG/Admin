@@ -1,0 +1,43 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/debtors.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Должники</h1>
+
+  <div data-debt-toolbar class="crm-toolbar">
+    <div class="crm-toolbar__filters">
+      <label>Курс
+        <select data-debt="course">
+          <option value="">Все</option>
+          {% for c in courses %}<option value="{{ c.id }}" {% if filters.course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ментор
+        <select data-debt="mentor">
+          <option value="">Все</option>
+          {% for m in mentors %}<option value="{{ m.id }}" {% if filters.mentor == m.id|stringformat:"s" %}selected{% endif %}>{{ m.user.get_full_name|default:m.user.username }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Поиск <input type="text" data-debt="q" placeholder="ФИО, телефон..." value="{{ filters.q }}"></label>
+    </div>
+    <div class="crm-toolbar__actions">
+      <button type="button" data-debt-apply class="crm-btn crm-btn--primary">Применить</button>
+      <button type="button" data-debt-clear class="crm-btn crm-btn--outline">Сбросить</button>
+      <a href="?{{ export_qs }}&export=pdf" class="crm-btn crm-btn--outline">PDF</a>
+    </div>
+  </div>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat crm-stat--red"><span class="crm-stat__value">{{ total_debt|floatformat:"0" }}</span><span class="crm-stat__label">Общий долг (с.)</span></div>
+  </div>
+
+  {{ block.super }}
+</div>
+<script src="{% static 'crm_dashboard/debtors.js' %}"></script>
+{% endblock %}

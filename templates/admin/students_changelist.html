@@ -1,0 +1,72 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/students.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Студенты</h1>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat"><span class="crm-stat__value">{{ student_counts.active }}</span><span class="crm-stat__label">Активные</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ student_counts.inactive }}</span><span class="crm-stat__label">Неактивные</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ student_counts.left }}</span><span class="crm-stat__label">Ушли</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ student_counts.frozen }}</span><span class="crm-stat__label">Заморожены</span></div>
+    <div class="crm-stat crm-stat--green"><span class="crm-stat__value">{{ students_paid_total|floatformat:"0" }}</span><span class="crm-stat__label">Оплачено (с.)</span></div>
+  </div>
+
+  <div class="crm-toolbar">
+    <button type="button" data-st-toggle-pay-filters class="crm-btn crm-btn--outline">Фильтры оплат ▾</button>
+    <a href="{% url 'admin:students_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">CSV</a>
+    <a href="{% url 'admin:students_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">PDF</a>
+  </div>
+
+  <div data-st-pay-filters class="crm-filter-panel is-hidden">
+    <div class="crm-filter-panel__grid">
+      <label>Курс
+        <select name="pay_course" form="changelist-search">
+          <option value="">Все</option>
+          {% for c in courses %}<option value="{{ c.id }}" {% if pay_filters.pay_course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ментор
+        <select name="pay_mentor" form="changelist-search">
+          <option value="">Все</option>
+          {% for m in mentors %}<option value="{{ m.id }}" {% if pay_filters.pay_mentor == m.id|stringformat:"s" %}selected{% endif %}>{{ m.user.get_full_name|default:m.user.username }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Способ оплаты
+        <select name="pay_method" form="changelist-search">
+          <option value="">Все</option>
+          {% for key, label in pay_methods %}<option value="{{ key }}" {% if pay_filters.pay_method == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>ID платежа <input type="text" name="pay_id" form="changelist-search" value="{{ pay_filters.pay_id }}"></label>
+      <label>Дата с <input type="date" name="pay_date_from" form="changelist-search" value="{{ pay_filters.pay_date_from }}"></label>
+      <label>Дата по <input type="date" name="pay_date_to" form="changelist-search" value="{{ pay_filters.pay_date_to }}"></label>
+      <label>Оплачивали?
+        <select name="pay_first" form="changelist-search">
+          <option value="">Все</option>
+          <option value="1" {% if pay_filters.pay_first == "1" %}selected{% endif %}>Да</option>
+          <option value="0" {% if pay_filters.pay_first == "0" %}selected{% endif %}>Нет</option>
+        </select>
+      </label>
+    </div>
+    <div class="crm-filter-panel__actions">
+      <button type="button" onclick="document.getElementById('changelist-search').submit()" class="crm-btn crm-btn--primary">Применить</button>
+      <a href="?" class="crm-btn crm-btn--outline">Сбросить</a>
+    </div>
+  </div>
+
+  {{ block.super }}
+</div>
+
+<div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'admin:student_drawer' 1 %}">
+  <div class="crm-drawer__backdrop" data-st-close></div>
+  <div class="crm-drawer__panel"></div>
+</div>
+<script src="{% static 'crm_dashboard/students.js' %}"></script>
+{% endblock %}

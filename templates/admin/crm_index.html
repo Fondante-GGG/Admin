@@ -1,0 +1,131 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'crm_dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Дашборд</h1>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.students }}</span><span class="crm-stat__label">Студенты</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.mentors }}</span><span class="crm-stat__label">Менторы</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.leads }}</span><span class="crm-stat__label">Лиды</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.courses }}</span><span class="crm-stat__label">Курсы</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.users }}</span><span class="crm-stat__label">Пользователи</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ stats.tasks_open }}</span><span class="crm-stat__label">Открытые задачи</span></div>
+  </div>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat crm-stat--green">
+      <span class="crm-stat__value">{{ payments_month|floatformat:"0" }}</span>
+      <span class="crm-stat__label">Оплат за месяц (с.)</span>
+    </div>
+    <div class="crm-stat">
+      <span class="crm-stat__value">{{ leads_today }}</span>
+      <span class="crm-stat__label">Лидов сегодня</span>
+    </div>
+    <div class="crm-stat">
+      <span class="crm-stat__value">{{ leads_month }}</span>
+      <span class="crm-stat__label">Лидов за месяц</span>
+    </div>
+  </div>
+
+  <div class="crm-dash-grid">
+    <div class="crm-dash-card">
+      <h2>Топ курсов</h2>
+      <table class="crm-dash-table">
+        {% for c in courses_top %}
+        <tr>
+          <td>{{ c.title }}</td>
+          <td>{{ c.students_cnt }} студ.</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2">Нет курсов</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <div class="crm-dash-card">
+      <h2>Задачи на сегодня</h2>
+      <table class="crm-dash-table">
+        {% for t in tasks_today %}
+        <tr>
+          <td>{% if t.is_done %}&check;{% else %}&#9679;{% endif %}</td>
+          <td>{{ t.title }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2">Нет задач</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <div class="crm-dash-card" id="profitChart" data-series="{{ profit_series_json|escape }}">
+    <h2>Прибыль по месяцам</h2>
+    <canvas id="profitCanvas" width="600" height="200"></canvas>
+  </div>
+
+  <div class="crm-app-list">
+    <h2>Модули</h2>
+    {% for app in available_apps %}
+    <div class="crm-app-block">
+      <h3>{{ app.name }}</h3>
+      <table>
+        {% for model in app.models %}
+        <tr>
+          <td><a href="{{ model.admin_url }}">{{ model.name }}</a></td>
+          <td><a href="{{ model.add_url }}">+</a></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  var el = document.getElementById('profitChart');
+  if (!el) return;
+  var raw = el.getAttribute('data-series');
+  if (!raw) return;
+  var series = JSON.parse(raw);
+  var canvas = document.getElementById('profitCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  var income = series.income.values;
+  var expense = series.expense.values;
+  var labels = series.income.labels;
+  if (!labels.length) return;
+
+  var max = Math.max.apply(null, income.concat(expense));
+  if (max < 1) max = 1;
+  var scale = (H - 30) / max;
+  var barW = Math.max(4, (W - 60) / labels.length / 2.5);
+
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#6b7280';
+  ctx.textAlign = 'center';
+  for (var i=0; i<labels.length; i++) {
+    var x = 40 + i * (barW*2 + 6) + barW;
+    ctx.fillText(labels[i], x, H - 10);
+  }
+
+  for (var i=0; i<labels.length; i++) {
+    var x = 40 + i * (barW*2 + 6);
+    var h = Math.max(0, income[i] * scale);
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(x, H - 20 - h, barW, h);
+    x += barW + 4;
+    h = Math.max(0, expense[i] * scale);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x, H - 20 - h, barW, h);
+  }
+})();
+</script>
+{% endblock %}

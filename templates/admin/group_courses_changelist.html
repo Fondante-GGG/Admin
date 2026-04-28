@@ -1,0 +1,49 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Групповые курсы</h1>
+
+  <div class="crm-toolbar">
+    <div class="crm-toolbar__views">
+      <button type="button" data-set-view="grid" class="crm-btn {% if view_mode == 'grid' or not view_mode %}is-active{% endif %}">Сетка</button>
+      <button type="button" data-set-view="list" class="crm-btn {% if view_mode == 'list' %}is-active{% endif %}">Список</button>
+    </div>
+    <div class="crm-filter-dd">
+      <button type="button" data-filter-toggle class="crm-btn crm-btn--outline">Предмет ▾</button>
+      <div class="crm-filter-dd__menu">
+        <a href="#" data-set-param="subject" data-value="" class="crm-filter-dd__item {% if not selected_subject %}is-active{% endif %}">Все</a>
+        {% for s in subjects %}<a href="#" data-set-param="subject" data-value="{{ s }}" class="crm-filter-dd__item {% if selected_subject == s %}is-active{% endif %}">{{ s }}</a>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if view_mode == 'grid' or not view_mode %}
+  <div class="crm-kanban-grid">
+    {% for section in status_sections %}
+    <div class="crm-kanban-col">
+      <h3 class="crm-kanban-col__title">{{ section.title }} <span>({{ section.items|length }})</span></h3>
+      <div class="crm-kanban-col__cards">
+        {% for course in section.items %}
+        <a href="{% url 'admin:settings_groupcourse_change' course.id %}" class="crm-kanban-card">
+          <div class="crm-kanban-card__header">{{ course.title }}</div>
+          <div class="crm-kanban-card__meta"><span>{{ course.subject }}</span><span>{{ course.students.count }}/{{ course.capacity }}</span></div>
+          {% if course.price %}<div class="crm-kanban-card__price">{{ course.price }} с.</div>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {{ block.super }}
+  {% endif %}
+</div>
+<script src="{% static 'crm_dashboard/group_courses.js' %}"></script>
+{% endblock %}

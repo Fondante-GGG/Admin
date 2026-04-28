@@ -1,0 +1,3 @@
+{% extends "admin/change_form.html" %}{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'crm_dashboard/student_detail.css' %}">{% endblock %}
+{% block content %}{{ block.super }}<script src="{% static 'crm_dashboard/courses.js' %}"></script>{% endblock %}

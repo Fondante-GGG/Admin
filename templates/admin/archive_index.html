@@ -1,0 +1,20 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'crm_dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>{{ title }}</h1>
+  <div class="crm-archive-grid">
+    {% for item in items %}
+    <a href="{{ item.url }}" class="crm-archive-card">
+      <span class="crm-archive-card__title">{{ item.title }}</span>
+      <span class="crm-archive-card__arrow">&rarr;</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

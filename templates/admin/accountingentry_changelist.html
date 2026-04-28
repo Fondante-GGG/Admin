@@ -1,0 +1,74 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/accounting.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Бухгалтерия</h1>
+
+  <div data-acc-toolbar class="crm-acc-toolbar" data-acc-month="{{ month }}">
+    <button type="button" data-acc-prev class="crm-btn crm-btn--icon">&larr;</button>
+    <h2 data-acc-label class="crm-acc-toolbar__title"></h2>
+    <button type="button" data-acc-next class="crm-btn crm-btn--icon">&rarr;</button>
+    <div class="crm-acc-toolbar__spacer"></div>
+    <a href="?{{ export_qs }}&export=pdf" class="crm-btn crm-btn--outline">PDF</a>
+    <button type="button" data-acc-open="income" class="crm-btn crm-btn--success">+ Приход</button>
+    <button type="button" data-acc-open="expense" class="crm-btn crm-btn--danger">+ Расход</button>
+    <button type="button" data-acc-open="transfer" class="crm-btn crm-btn--outline">+ Перевод</button>
+  </div>
+
+  <div data-acc-filter class="crm-acc-filter">
+    <input type="text" data-acc-q placeholder="Поиск по названию..." value="{{ filters.q }}">
+    <button type="button" data-acc-apply class="crm-btn crm-btn--primary">Применить</button>
+  </div>
+
+  <div class="crm-stats-row">
+    <div class="crm-stat crm-stat--green"><span class="crm-stat__value">{{ total_income|floatformat:"0" }}</span><span class="crm-stat__label">Приход</span></div>
+    <div class="crm-stat crm-stat--red"><span class="crm-stat__value">{{ total_expense|floatformat:"0" }}</span><span class="crm-stat__label">Расход</span></div>
+    <div class="crm-stat"><span class="crm-stat__value">{{ total_net|floatformat:"0" }}</span><span class="crm-stat__label">Баланс</span></div>
+  </div>
+
+  {{ block.super }}
+</div>
+
+<div data-acc-modal class="crm-modal" hidden>
+  <div class="crm-modal__backdrop"></div>
+  <div class="crm-modal__content">
+    <div class="crm-modal__header">
+      <h3 data-acc-modal-title>Приход</h3>
+      <button type="button" data-acc-close class="crm-modal__close">&times;</button>
+    </div>
+    <form data-acc-form>
+      {% csrf_token %}
+      <div data-acc-form-entry class="crm-form-grid">
+        <input type="hidden" name="entry_type" value="income">
+        <label>Счёт <select name="account" data-acc-account required></select></label>
+        <label>Сумма <input type="number" name="amount" step="0.01" min="0.01" required></label>
+        <label>Дата <input type="datetime-local" name="operated_at"></label>
+        <label>Проект <select name="project" data-acc-project><option value="">---------</option></select></label>
+        <label>Категория <select name="category" data-acc-category><option value="">---------</option></select></label>
+        <label>Название <input type="text" name="title"></label>
+      </div>
+      <div data-acc-form-transfer class="crm-form-grid" hidden>
+        <label>Со счёта <select name="from_account" data-acc-from required></select></label>
+        <label>На счёт <select name="to_account" data-acc-to required></select></label>
+        <label>Сумма <input type="number" name="amount" step="0.01" min="0.01" required></label>
+        <label>Дата <input type="datetime-local" name="operated_at"></label>
+        <label>Проект <select name="project" data-acc-project><option value="">---------</option></select></label>
+        <label>Категория <select name="category" data-acc-category><option value="">---------</option></select></label>
+        <label>Название <input type="text" name="title"></label>
+      </div>
+      <div class="crm-modal__footer">
+        <button type="submit" class="crm-btn crm-btn--primary">Сохранить</button>
+        <button type="button" data-acc-close class="crm-btn crm-btn--outline">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'crm_dashboard/accounting.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,6 @@
+asgiref==3.11.1
+Django==4.2
+django-jazzmin==2.6.0
+pillow==12.2.0
+python-dotenv==1.2.2
+sqlparse==0.5.5

@@ -1,0 +1,150 @@
+ .hero {
+    background: #006257;
+}
+
+.title {
+    margin: 100px 0 50px 0;
+    max-width: 850px;
+}
+
+.description {
+    max-width: 60%;
+
+}
+
+.about {
+    padding-top: 150px;
+
+    h5 {
+        font-weight: 400;
+        max-width: 947px;
+        color: #000;
+        font-family: 'Gotham Pro';
+        font-size: 34px;
+        line-height: 33px;
+
+        span {
+            font-weight: 700;
+        }
+    }
+}
+
+.about_textOne {
+    border-radius: 20px;
+    background: #B4EDD8;
+    padding: 40px;
+    min-height: 450px;
+    display: flex;
+    align-items: center;
+
+}
+
+.about_group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.about_block {
+    margin: 20px;
+    width: 50%;
+    min-height: 360px;
+    border-radius: 20px;
+    background: #F5F5F5;
+    padding: 0 30px;
+    background-size: contain;
+
+    h4 {
+        font-family: "Gotham Pro" sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        max-width: 200px;
+
+    }
+
+    p {
+        width: 80%;
+        margin-top: 10px;
+        font-family: "SF Pro Text";
+        font-weight: 400;
+        font-size: 18px;
+    }
+
+}
+
+.about_block:not([style]) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+}
+
+.about_block[style] {
+    padding: 0;
+    background-size: cover !important;
+}
+
+
+.green {
+    background: #B4EDD8;
+
+}
+
+@media (max-width: 1024px) {
+    .about h5 {
+        font-size: 28px;
+        line-height: 30px;
+    }
+
+    .about_block h4 {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .about_group {
+        flex-direction: column;
+    }
+
+    .about_block {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .title {
+        margin: 60px 0 30px 0;
+    }
+
+    .about {
+        padding-top: 100px;
+    }
+
+    .about_textOne {
+        min-height: 350px;
+        padding: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about h5 {
+        font-size: 24px;
+        line-height: 28px;
+    }
+
+    .about_block {
+        min-height: 300px;
+        padding: 0 20px;
+    }
+
+    .about_block h4 {
+        font-size: 24px;
+    }
+
+    .about_block p {
+        font-size: 16px;
+    }
+
+    .description {
+        max-width: 95%;
+    }
+}
