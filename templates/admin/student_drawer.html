@@ -1,92 +1,37 @@
 {% load static %}
-
 <div class="crm-drawer__header">
   <h2 class="crm-drawer__name">{{ user.get_full_name|default:user.username }}</h2>
   <button type="button" data-st-close class="crm-drawer__close">&times;</button>
 </div>
-
 <div class="crm-drawer__body">
   <div class="crm-drawer__section">
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">ID</span>
-      <span class="crm-drawer__value">#{{ student.id }}</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Телефон</span>
-      <span class="crm-drawer__value">{{ user.phone_number|default:"—" }}</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Статус</span>
-      <span class="crm-drawer__value">{{ student.get_status_display }}</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Аккаунт</span>
-      <span class="crm-drawer__value">{% if user.is_active %}Да{% else %}Нет{% endif %}</span>
-    </div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">ID</span><span class="crm-drawer__value">#{{ student.id }}</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Телефон</span><span class="crm-drawer__value">{{ user.phone_number|default:"—" }}</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Статус</span><span class="crm-drawer__value">{{ student.get_status_display }}</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Аккаунт</span><span class="crm-drawer__value">{% if user.is_active %}Да{% else %}Нет{% endif %}</span></div>
     {% if course %}
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Курс</span>
-      <span class="crm-drawer__value">{{ course.title }}</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">К оплате</span>
-      <span class="crm-drawer__value">{{ tuition_amount|floatformat:"0" }} с.</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Оплачено</span>
-      <span class="crm-drawer__value">{{ paid_total|floatformat:"0" }} с.</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Долг</span>
-      <span class="crm-drawer__value" style="color:{% if tuition_amount > paid_total %}#ef4444{% else %}#10b981{% endif %}">{{ tuition_amount|add:paid_total|floatformat:"0" }} с.</span>
-    </div>
-    <div class="crm-drawer__row">
-      <span class="crm-drawer__label">Месяцы</span>
-      <span class="crm-drawer__value">{{ months_paid }} / {{ months_total }}</span>
-    </div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Курс</span><span class="crm-drawer__value">{{ course.title }}</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">К оплате</span><span class="crm-drawer__value">{{ tuition_amount|floatformat:"0" }} с.</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Оплачено</span><span class="crm-drawer__value">{{ paid_total|floatformat:"0" }} с.</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Долг</span><span class="crm-drawer__value" style="color:{% if tuition_amount > paid_total %}#ef4444{% else %}#10b981{% endif %}">{{ tuition_amount|floatformat:"0" }} с.</span></div>
+    <div class="crm-drawer__row"><span class="crm-drawer__label">Месяцы</span><span class="crm-drawer__value">{{ months_paid }} / {{ months_total }}</span></div>
     {% endif %}
   </div>
-
-  <!-- Payments list -->
   <div class="crm-drawer__section">
     <h3>Платежи ({{ payments_total|floatformat:"0" }} с.)</h3>
     {% if payments_page %}
     <table class="crm-drawer__table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Курс</th>
-          <th>Сумма</th>
-          <th>Дата</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in payments_page %}
-        <tr>
-          <td>#{{ p.id }}</td>
-          <td>{{ p.course.title|default:"—" }}</td>
-          <td>{{ p.amount }}</td>
-          <td>{{ p.created_at|date:"d.m.Y" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
+      <thead><tr><th>ID</th><th>Курс</th><th>Сумма</th><th>Дата</th></tr></thead>
+      <tbody>{% for p in payments_page %}<tr><td>#{{ p.id }}</td><td>{{ p.course.title|default:"—" }}</td><td>{{ p.amount }}</td><td>{{ p.created_at|date:"d.m.Y" }}</td></tr>{% endfor %}</tbody>
     </table>
     <div class="crm-drawer__pager">
-      {% if payments_page.has_previous %}
-      <a href="?p={{ payments_page.previous_page_number }}" class="crm-pg">&larr;</a>
-      {% endif %}
+      {% if payments_page.has_previous %}<a href="?p={{ payments_page.previous_page_number }}" class="crm-pg">&larr;</a>{% endif %}
       <span>{{ payments_page.number }} / {{ payments_page.paginator.num_pages }}</span>
-      {% if payments_page.has_next %}
-      <a href="?p={{ payments_page.next_page_number }}" class="crm-pg">&rarr;</a>
-      {% endif %}
+      {% if payments_page.has_next %}<a href="?p={{ payments_page.next_page_number }}" class="crm-pg">&rarr;</a>{% endif %}
     </div>
-    {% else %}
-    <p>Нет платежей</p>
-    {% endif %}
+    {% else %}<p>Нет платежей</p>{% endif %}
   </div>
-
-  <!-- Links -->
   <div class="crm-drawer__section">
-    <a href="{% url 'admin:settings_student_change' student.id %}" class="crm-btn crm-btn--primary">Редактировать студента</a>
+    <a href="{% url 'admin:settings_student_change' student.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
   </div>
 </div>

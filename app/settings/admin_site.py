@@ -627,39 +627,64 @@ def _simple_pdf_table(title: str, headers: list[str], rows: list[list[str]]) -> 
 
         today = timezone.localdate()
         start_month = today.replace(day=1)
+        this_week_start = today - timedelta(days=today.weekday())
+        this_year_start = today.replace(month=1, day=1)
 
-        context.update(
-            {
-                "stats": {
-                    "students": Student.objects.count(),
-                    "mentors": Mentor.objects.count(),
-                    "leads": Lead.objects.count(),
-                    "courses": Cursues.objects.count(),
-                    "users": User.objects.count(),
-                    "tasks_open": Task.objects.filter(is_done=False).count(),
+        def _cnt_today(qs):
+            return qs.filter(created_at__date=today).count()
+        def _cnt_week(qs):
+            return qs.filter(created_at__date__gte=this_week_start).count()
+        def _cnt_month(qs):
+            return qs.filter(created_at__date__gte=start_month).count()
+        def _cnt_year(qs):
+            return qs.filter(created_at__date__gte=this_year_start).count()
+        def _sum_today(qs):
+            return float(qs.filter(created_at__date=today).aggregate(total=Sum("amount"))["total"] or 0)
+        def _sum_week(qs):
+            return float(qs.filter(created_at__date__gte=this_week_start).aggregate(total=Sum("amount"))["total"] or 0)
+        def _sum_month(qs):
+            return float(qs.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))["total"] or 0)
+        def _sum_year(qs):
+            return float(qs.filter(created_at__date__gte=this_year_start).aggregate(total=Sum("amount"))["total"] or 0)
+
+        pay_qs = Payment.objects.all()
+
+        context.update({
+            "kpi": {
+                "students": Student.objects.filter(is_archived=False).count(),
+                "mentors": Mentor.objects.count(),
+                "leads": Lead.objects.filter(is_archived=False).count(),
+                "courses": Cursues.objects.filter(is_archived=False).count(),
+            },
+            "cards": {
+                "leads": {
+                    "today": _cnt_today(Lead.objects.all()),
+                    "week": _cnt_week(Lead.objects.all()),
+                    "month": _cnt_month(Lead.objects.all()),
+                    "year": _cnt_year(Lead.objects.all()),
                 },
-                "leads_today": Lead.objects.filter(created_at__date=today).count(),
-                "leads_month": Lead.objects.filter(created_at__date__gte=start_month).count(),
-                "payments_month": float(
-                    Payment.objects.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))[
-                        "total"
-                    ]
-                    or 0
-                ),
-                "profit_series_json": json.dumps(
-                    {
-                        "income": _sum_by_month(Payment.objects.all(), months=12, field="amount").__dict__,
-                        "expense": _sum_by_month(Salary.objects.all(), months=12, field="amount").__dict__,
-                    },
-                    ensure_ascii=False,
-                ),
-                "courses_top": (
-                    Cursues.objects.annotate(students_cnt=Count("students"))
-                    .order_by("-students_cnt", "title")[:8]
-                ),
-                "tasks_today": Task.objects.filter(due_date=today, is_done=False).order_by("created_at")[:8],
-            }
-        )
+                "students": {
+                    "today": _cnt_today(Student.objects.all()),
+                    "week": _cnt_week(Student.objects.all()),
+                    "month": _cnt_month(Student.objects.all()),
+                    "year": _cnt_year(Student.objects.all()),
+                },
+            },
+            "money": {
+                "paid": {
+                    "today": _sum_today(pay_qs),
+                    "week": _sum_week(pay_qs),
+                    "month": _sum_month(pay_qs),
+                    "year": _sum_year(pay_qs),
+                },
+            },
+            "series": json.dumps({
+                "income": _sum_by_month(Payment.objects.all(), months=12, field="amount").__dict__,
+                "expense": _sum_by_month(Salary.objects.all(), months=12, field="amount").__dict__,
+                "students_active": _sum_by_month(Student.objects.filter(is_archived=False), months=6, field="id").__dict__,
+                "leads": _sum_by_month(Lead.objects.filter(is_archived=False), months=6, field="id").__dict__,
+            }, ensure_ascii=False),
+        })
 
         return super().index(request, extra_context=context)
 
