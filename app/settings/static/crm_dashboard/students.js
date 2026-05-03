@@ -60,6 +60,7 @@
     // click on student id link (#123) or name link
     const a = e.target.closest("a");
     if (!a) return;
+    if (a.hasAttribute("data-st-nodrawer")) return;
     if (e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const href = a.getAttribute("href") || "";

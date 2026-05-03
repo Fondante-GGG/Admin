@@ -8,15 +8,107 @@
 {% block content %}
 <div class="crm-about">
   <h1>{{ title }}</h1>
-  {% if about %}
-    <div class="crm-about__content">{{ about.content|safe }}</div>
-    {% if can_edit %}
+
+  {% if can_edit and about %}
     <div class="crm-about__actions">
       <a href="{% url 'admin:config_crmabout_change' about.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
     </div>
-    {% endif %}
+  {% endif %}
+
+  {% if about %}
+    <div class="crm-about__grid">
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Оставить отзыв</div>
+        <div class="crm-about-card__body">
+          {% if about.feedback_phone %}<div class="crm-about-line"><span class="crm-about-ico">☎</span>{{ about.feedback_phone }}</div>{% endif %}
+          {% if about.feedback_whatsapp %}<div class="crm-about-line"><span class="crm-about-ico">💬</span>{{ about.feedback_whatsapp }}</div>{% endif %}
+          {% if about.feedback_email %}<div class="crm-about-line"><span class="crm-about-ico">✉</span><a href="mailto:{{ about.feedback_email }}">{{ about.feedback_email }}</a></div>{% endif %}
+          {% if about.feedback_person %}<div class="crm-about-muted">{{ about.feedback_person }}</div>{% endif %}
+          {% if not about.feedback_phone and not about.feedback_whatsapp and not about.feedback_email and not about.feedback_person %}
+            <div class="crm-about-muted">—</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">О нас</div>
+        <div class="crm-about-card__body">
+          {% if about.about_subtitle %}<div class="crm-about-muted">{{ about.about_subtitle }}</div>{% endif %}
+          {% if about.about_text or about.body %}
+            {{ about.about_text|default:about.body|linebreaksbr }}
+          {% else %}
+            <div class="crm-about-muted">—</div>
+          {% endif %}
+          {% if about.about_site_url %}
+            <div class="crm-about-more"><a href="{{ about.about_site_url }}" target="_blank" rel="noopener">Подробнее</a></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Контакты</div>
+        <div class="crm-about-card__body">
+          {% if about.contacts_text %}<div class="crm-about-muted">{{ about.contacts_text|linebreaksbr }}</div>{% endif %}
+          {% if about.contacts_phone %}<div class="crm-about-line"><span class="crm-about-ico">☎</span>{{ about.contacts_phone }}</div>{% endif %}
+          {% if about.contacts_whatsapp %}<div class="crm-about-line"><span class="crm-about-ico">💬</span>{{ about.contacts_whatsapp }}</div>{% endif %}
+          {% if about.contacts_email %}<div class="crm-about-line"><span class="crm-about-ico">✉</span><a href="mailto:{{ about.contacts_email }}">{{ about.contacts_email }}</a></div>{% endif %}
+          {% if not about.contacts_text and not about.contacts_phone and not about.contacts_whatsapp and not about.contacts_email %}
+            <div class="crm-about-muted">—</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Политика конфиденциальности<br>и безопасности</div>
+        <div class="crm-about-card__body">
+          <div class="crm-about-clamp">{% if about.privacy_text %}{{ about.privacy_text|linebreaksbr }}{% else %}—{% endif %}</div>
+          {% if about.privacy_text %}
+            <details class="crm-about-details">
+              <summary>Подробнее</summary>
+              <div class="crm-about-details__body">{{ about.privacy_text|linebreaksbr }}</div>
+            </details>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Пользовательское<br>соглашение</div>
+        <div class="crm-about-card__body">
+          <div class="crm-about-clamp">{% if about.agreement_text %}{{ about.agreement_text|linebreaksbr }}{% else %}—{% endif %}</div>
+          {% if about.agreement_text %}
+            <details class="crm-about-details">
+              <summary>Подробнее</summary>
+              <div class="crm-about-details__body">{{ about.agreement_text|linebreaksbr }}</div>
+            </details>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   {% else %}
-    <p>Нет информации</p>
+    <div class="crm-about__grid">
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Оставить отзыв</div>
+        <div class="crm-about-card__body">
+          Добавьте текст и контакты в разделе <b>О нас</b>.
+        </div>
+      </div>
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">О нас</div>
+        <div class="crm-about-card__body">Нет информации.</div>
+      </div>
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Контакты</div>
+        <div class="crm-about-card__body">Нет информации.</div>
+      </div>
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Политика конфиденциальности</div>
+        <div class="crm-about-card__body">Нет информации.</div>
+      </div>
+      <div class="crm-about-card">
+        <div class="crm-about-card__title">Пользовательское соглашение</div>
+        <div class="crm-about-card__body">Нет информации.</div>
+      </div>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

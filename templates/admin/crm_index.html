@@ -14,49 +14,82 @@
 
 {% block content %}
   <div class="crm-dashboard">
-    <div class="crm-top">
-      <div class="crm-grid crm-grid--2">
+    <div class="crm-grid crm-grid--2 crm-grid--top">
+      <div class="crm-stack">
         <div class="crm-card crm-card--welcome">
           <div class="crm-card__title">Привет, {{ request.user.get_short_name|default:request.user.get_username }}</div>
           <div class="crm-card__subtitle">Хорошего дня!</div>
+          <div class="crm-medal" aria-hidden="true"></div>
         </div>
 
-        <div class="crm-card">
-          <div class="crm-card__title">Статистика</div>
-          <div class="crm-kpis">
-            <div class="crm-kpi">
-              <div class="crm-kpi__num">{{ kpi.students }}</div>
-              <div class="crm-kpi__label">Студентов</div>
+        <div class="crm-card crm-card--server">
+          <div class="crm-card__title">Сервер для мобильного приложения студентов:</div>
+          <div class="crm-server">
+            <div class="crm-server__logo" aria-hidden="true"></div>
+            <div class="crm-server__meta">
+              <div class="crm-server__name">{{ site_header|default:"Codify CRM" }}</div>
+              <div class="crm-server__sub">Земля</div>
             </div>
-            <div class="crm-kpi">
-              <div class="crm-kpi__num">{{ kpi.mentors }}</div>
-              <div class="crm-kpi__label">Менторов</div>
-            </div>
-            <div class="crm-kpi">
-              <div class="crm-kpi__num">{{ kpi.leads }}</div>
-              <div class="crm-kpi__label">Лидов</div>
-            </div>
-            <div class="crm-kpi">
-              <div class="crm-kpi__num">{{ kpi.courses }}</div>
-              <div class="crm-kpi__label">Курсов</div>
-            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="crm-card crm-card--stats">
+        <div class="crm-card__title">Статистика <span class="crm-i" title="Общие показатели">?</span></div>
+        <div class="crm-kpis">
+          <div class="crm-kpi">
+            <div class="crm-kpi__icon crm-kpi__icon--violet" aria-hidden="true"></div>
+            <div class="crm-kpi__num">{{ kpi.students }}</div>
+            <div class="crm-kpi__label">Студентов</div>
+          </div>
+          <div class="crm-kpi">
+            <div class="crm-kpi__icon crm-kpi__icon--cyan" aria-hidden="true"></div>
+            <div class="crm-kpi__num">{{ kpi.mentors }}</div>
+            <div class="crm-kpi__label">Менторов</div>
+          </div>
+          <div class="crm-kpi">
+            <div class="crm-kpi__icon crm-kpi__icon--red" aria-hidden="true"></div>
+            <div class="crm-kpi__num">{{ kpi.leads }}</div>
+            <div class="crm-kpi__label">Лидов</div>
+          </div>
+          <div class="crm-kpi">
+            <div class="crm-kpi__icon crm-kpi__icon--green" aria-hidden="true"></div>
+            <div class="crm-kpi__num">{{ kpi.courses }}</div>
+            <div class="crm-kpi__label">Курсов</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="crm-grid crm-grid--2">
+    <div class="crm-grid crm-grid--2 crm-grid--profit">
       <div class="crm-card">
-        <div class="crm-card__title">Студенты</div>
-        <div class="crm-chart">
-          <canvas data-chart="donut" data-series="students_active" height="220"></canvas>
+        <div class="crm-card__title">Курс</div>
+        <div class="crm-table">
+          <div class="crm-table__head">
+            <div>Курс</div>
+            <div>Доход</div>
+            <div>Зарплата</div>
+            <div>Выгода</div>
+          </div>
+          <div class="crm-table__body">
+            {% for c in courses_top %}
+              <div class="crm-table__row">
+                <div class="crm-table__title">{{ c.title }}</div>
+                <div class="crm-money crm-money--green">{{ c.income|floatformat:0 }} c.</div>
+                <div class="crm-money crm-money--red">{{ c.salary|floatformat:0 }} c.</div>
+                <div class="crm-money crm-money--violet">{{ c.profit|floatformat:0 }} c.</div>
+              </div>
+            {% empty %}
+              <div class="crm-table__row crm-table__row--empty">Нет данных</div>
+            {% endfor %}
+          </div>
         </div>
       </div>
 
       <div class="crm-card">
         <div class="crm-card__title">Отчет о прибыли</div>
         <div class="crm-chart">
-          <canvas data-chart="bar" data-series="income" data-series2="expense" height="220"></canvas>
+          <canvas data-chart="bar" data-series="income" data-series2="expense" height="260"></canvas>
           <div class="crm-legend">
             <span><i class="crm-dot crm-dot--violet"></i> Приход</span>
             <span><i class="crm-dot crm-dot--orange"></i> Расход</span>
@@ -69,80 +102,108 @@
       <div class="crm-card">
         <div class="crm-card__title">Активные студенты за последние полгода</div>
         <div class="crm-chart">
-          <canvas data-chart="bar" data-series="students_active" height="220"></canvas>
+          <canvas data-chart="bar" data-series="students_6m" height="240"></canvas>
+        </div>
+      </div>
+
+      <div class="crm-card">
+        <div class="crm-card__title">Посещения за последние 30 дней</div>
+        <div class="crm-chart">
+          <canvas data-chart="line" data-series="leads_30d" height="240"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="crm-grid crm-grid--2">
+      <div class="crm-card">
+        <div class="crm-card__title">Платежи за последние полгода</div>
+        <div class="crm-chart">
+          <canvas data-chart="bar" data-series="payments_6m" height="260"></canvas>
         </div>
       </div>
 
       <div class="crm-card">
         <div class="crm-card__title">Лиды последние полгода</div>
         <div class="crm-chart">
-          <canvas data-chart="line" data-series="leads" height="220"></canvas>
+          <canvas data-chart="line" data-series="leads_6m" height="260"></canvas>
         </div>
       </div>
     </div>
 
     <div class="crm-cards-4">
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Сегодня</div>
         <div class="crm-mini__num">{{ cards.leads.today }}</div>
-        <div class="crm-mini__label">Новых лидов</div>
+        <div class="crm-mini__label">Новых лидов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--tag" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Последняя неделя</div>
         <div class="crm-mini__num">{{ cards.leads.week }}</div>
-        <div class="crm-mini__label">Новых лидов</div>
+        <div class="crm-mini__label">Новых лидов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--tag" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">{% now "F Y" %}</div>
         <div class="crm-mini__num">{{ cards.leads.month }}</div>
-        <div class="crm-mini__label">Новых лидов</div>
+        <div class="crm-mini__label">Новых лидов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--tag" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Текущий год</div>
         <div class="crm-mini__num">{{ cards.leads.year }}</div>
-        <div class="crm-mini__label">Новых лидов</div>
+        <div class="crm-mini__label">Новых лидов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--tag" aria-hidden="true"></div>
       </div>
 
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Сегодня</div>
         <div class="crm-mini__num">{{ cards.students.today }}</div>
-        <div class="crm-mini__label">Новых студентов</div>
+        <div class="crm-mini__label">Новых студентов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--user" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Последняя неделя</div>
         <div class="crm-mini__num">{{ cards.students.week }}</div>
-        <div class="crm-mini__label">Новых студентов</div>
+        <div class="crm-mini__label">Новых студентов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--user" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">{% now "F Y" %}</div>
         <div class="crm-mini__num">{{ cards.students.month }}</div>
-        <div class="crm-mini__label">Новых студентов</div>
+        <div class="crm-mini__label">Новых студентов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--user" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Текущий год</div>
         <div class="crm-mini__num">{{ cards.students.year }}</div>
-        <div class="crm-mini__label">Новых студентов</div>
+        <div class="crm-mini__label">Новых студентов <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--user" aria-hidden="true"></div>
       </div>
 
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Сегодня</div>
         <div class="crm-mini__num">{{ money.paid.today|floatformat:0 }}</div>
-        <div class="crm-mini__label">Оплачено</div>
+        <div class="crm-mini__label">Оплачено <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--money" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Последняя неделя</div>
         <div class="crm-mini__num">{{ money.paid.week|floatformat:0 }}</div>
-        <div class="crm-mini__label">Оплачено</div>
+        <div class="crm-mini__label">Оплачено <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--money" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">{% now "F Y" %}</div>
         <div class="crm-mini__num">{{ money.paid.month|floatformat:0 }}</div>
-        <div class="crm-mini__label">Оплачено</div>
+        <div class="crm-mini__label">Оплачено <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--money" aria-hidden="true"></div>
       </div>
-      <div class="crm-mini">
+      <div class="crm-mini crm-mini--link">
         <div class="crm-mini__head">Текущий год</div>
         <div class="crm-mini__num">{{ money.paid.year|floatformat:0 }}</div>
-        <div class="crm-mini__label">Оплачено</div>
+        <div class="crm-mini__label">Оплачено <span class="crm-ext" aria-hidden="true">↗</span></div>
+        <div class="crm-mini__icon crm-mini__icon--money" aria-hidden="true"></div>
       </div>
     </div>
   </div>

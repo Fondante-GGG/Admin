@@ -1,13 +1,124 @@
 {% extends "admin/change_form.html" %}
 {% load static %}
+{% load admin_modify %}
 
 {% block extrastyle %}
 {{ block.super }}
 <link href="{% static 'crm_dashboard/courses.css' %}" rel="stylesheet">
 <style>
+  /* Stretch admin content full width (like dashboard.css) */
+  #content {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  /* Django admin change form layout: remove right sidebar and let main be 100% */
+  #content-main,
+  .colM,
+  .colMS {
+    float: none !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  #content-related,
+  .colSM {
+    display: none !important;
+  }
+  .content-wrapper .container,
+  .content-wrapper .content > .container,
+  .content-wrapper .content > .container-fluid,
+  .content-wrapper .content .container,
+  .content-wrapper .content .container-fluid,
+  .content-wrapper,
+  .content-wrapper .content {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Hide default admin submit (usually in right sidebar) */
+  .crm-default-admin-form .submit-row { display: none !important; }
+
+  /* Submit row after the list (in normal flow) */
+  .crm-submitbar { margin-top: 18px; }
+  .crm-submitbar .submit-row {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+    margin: 0 !important;
+    padding: 12px 0 0 !important;
+    border-top: 1px solid #e5e7eb !important;
+    background: transparent !important;
+  }
+
+  .crm-course-head {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: stretch;
+    margin: 12px 0 14px;
+  }
+  .crm-course-head__main {
+    flex: 1 1 360px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .crm-course-head__title {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .crm-course-head__title h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #111827;
+    letter-spacing: .2px;
+  }
+  .crm-course-head__meta {
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+  .crm-course-head__aside {
+    flex: 1 1 360px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 980px) {
+    .crm-course-head__aside { grid-template-columns: 1fr; }
+  }
+  .crm-course-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-height: 74px;
+  }
+  .crm-course-card__lbl { color: #6b7280; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .crm-course-card__val { color: #111827; font-size: 13px; font-weight: 700; }
+  .crm-course-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0 8px;
+  }
+  .crm-btn--secondary { background: #6366f1; color: #fff; border-color: #6366f1; }
+  .crm-btn--success { background: #10b981; color: #fff; border-color: #10b981; }
+  .crm-btn--warning { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+  .crm-btn--outline { background: #fff; color: #374151; border-color: #d1d5db; }
+
   .crm-course-tabs {
     display: flex;
     gap: 0;
+    width: 100%;
+    clear: both;
     border-bottom: 2px solid #e5e7eb;
     margin-bottom: 24px;
     margin-top: 16px;
@@ -30,6 +141,7 @@
   }
   .crm-course-panel { display: none; }
   .crm-course-panel.is-active { display: block; }
+  .crm-course-panel { width: 100%; clear: both; }
 
   .crm-course-summary {
     display: flex;
@@ -38,11 +150,12 @@
     margin-bottom: 20px;
   }
   .crm-course-summary__card {
+    flex: 1 1 220px;
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px 20px;
-    min-width: 140px;
+    min-width: 220px;
   }
   .crm-course-summary__card .num {
     display: block;
@@ -64,12 +177,16 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    table-layout: fixed;
   }
   .crm-enroll-table th,
   .crm-enroll-table td {
     padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid #f3f4f6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .crm-enroll-table th {
     font-weight: 600;
@@ -77,6 +194,21 @@
     font-size: 12px;
     text-transform: uppercase;
   }
+  /* Stretch student list columns to full width */
+  .crm-enroll-table th:nth-child(1),
+  .crm-enroll-table td:nth-child(1) { width: 7%; }
+  .crm-enroll-table th:nth-child(2),
+  .crm-enroll-table td:nth-child(2) { width: 23%; }
+  .crm-enroll-table th:nth-child(3),
+  .crm-enroll-table td:nth-child(3) { width: 18%; }
+  .crm-enroll-table th:nth-child(4),
+  .crm-enroll-table td:nth-child(4) { width: 12%; }
+  .crm-enroll-table th:nth-child(5),
+  .crm-enroll-table td:nth-child(5) { width: 12%; }
+  .crm-enroll-table th:nth-child(6),
+  .crm-enroll-table td:nth-child(6) { width: 10%; }
+  .crm-enroll-table th:nth-child(7),
+  .crm-enroll-table td:nth-child(7) { width: 18%; }
   .crm-enroll-table .status-paid {
     display: inline-block;
     padding: 2px 10px;
@@ -173,23 +305,58 @@
 {% endblock %}
 
 {% block content %}
-<div class="crm-toolbar" data-students-csv-url="{% url 'admin:course_students_csv' original.pk %}">
-  <div class="crm-dd">
-    <button type="button" data-dd-toggle class="crm-btn crm-btn--outline">Действия ▾</button>
-    <div class="crm-dd__menu">
-      <button type="button" data-action="export" class="crm-dd__item">Экспорт CSV</button>
-      <button type="button" data-action="add-student" class="crm-dd__item">Добавить студента</button>
-      <button type="button" data-action="reg-link" class="crm-dd__item">Копировать ссылку</button>
-      <button type="button" data-action="invite" class="crm-dd__item">Пригласить</button>
-      <button type="button" data-action="landing" class="crm-dd__item">Landing</button>
+<div class="crm-course-head">
+  <div class="crm-course-head__main">
+    <div class="crm-course-head__title">
+      <h2>{{ original.title }}</h2>
+      <span style="color:#6b7280;font-size:12px;">с {{ original.start|date:"d M Y" }}</span>
+    </div>
+    <div class="crm-course-head__meta">
+      Статус: <strong style="color:#111827;">{{ original.status|default:"—" }}</strong>
+    </div>
+    <div class="crm-course-actions crm-toolbar" data-students-csv-url="{% url 'admin:course_students_csv' original.pk %}">
+      <button type="button" class="crm-btn crm-btn--secondary" data-course-tab="info">Изменить</button>
+      <button type="button" class="crm-btn crm-btn--outline" data-course-tab="info">Статус</button>
+      <button type="button" class="crm-btn crm-btn--secondary" data-course-tab="students">Студенты</button>
+      <button type="button" class="crm-btn crm-btn--outline" data-course-tab="payments">Оплата</button>
+      <a class="crm-btn crm-btn--success" href="#" onclick="return false;">Кабинет учителя</a>
+      <a class="crm-btn crm-btn--warning" href="#" onclick="return false;">Лэндинг</a>
+    </div>
+  </div>
+  <div class="crm-course-head__aside">
+    <div class="crm-course-card">
+      <div class="crm-course-card__lbl">Оплата</div>
+      <div class="crm-course-card__val">{{ course_duration_label|default:"—" }} · {{ original.price|floatformat:"0" }} с.</div>
+    </div>
+    <div class="crm-course-card">
+      <div class="crm-course-card__lbl">Расписание</div>
+      <div class="crm-course-card__val">{{ original.schedule_note|default:"—" }}</div>
+    </div>
+    <div class="crm-course-card">
+      <div class="crm-course-card__lbl">Менторы</div>
+      <div class="crm-course-card__val">
+        {% for m in original.mentors.all %}
+          {{ m.user.get_full_name|default:m.user.username }}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+          —
+        {% endfor %}
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Tabs -->
 <div class="crm-course-tabs">
+  <button type="button" class="crm-course-tab" data-course-tab="info">Основная информация</button>
   <button type="button" class="crm-course-tab is-active" data-course-tab="students">Студенты</button>
   <button type="button" class="crm-course-tab" data-course-tab="payments">Оплата</button>
+</div>
+
+<!-- Info panel (Django admin form) -->
+<div class="crm-course-panel" data-course-panel="info">
+  <div class="crm-default-admin-form">
+    {{ block.super }}
+  </div>
 </div>
 
 <!-- Students panel -->
@@ -208,7 +375,7 @@
       <span class="lbl">Оплачено (с.)</span>
     </div>
     <div class="crm-course-summary__card red">
-      <span class="num">{{ course_tuition_total|add:course_payments_total|floatformat:"0" }}</span>
+      <span class="num">{{ course_debt_total|floatformat:"0" }}</span>
       <span class="lbl">Долг (с.)</span>
     </div>
   </div>
@@ -249,6 +416,10 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <div class="crm-submitbar">
+    {% submit_row %}
+  </div>
 </div>
 
 <!-- Payments panel -->
@@ -288,11 +459,6 @@
   </table>
 </div>
 
-<!-- Django admin form inline (hidden, used via tab) -->
-<div style="margin-top: 32px;">
-  {{ block.super }}
-</div>
-
 <!-- Student drawer -->
 <div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'admin:student_drawer' 1 %}">
   <div class="crm-drawer__backdrop" data-st-close></div>
@@ -305,14 +471,20 @@
   function qsa(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
   // Tab switching
-  qsa("[data-course-tab]").forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var panelName = tab.getAttribute("data-course-tab");
-      qsa("[data-course-tab]").forEach(function (t) { t.classList.remove("is-active"); });
-      qsa("[data-course-panel]").forEach(function (p) { p.classList.remove("is-active"); });
-      tab.classList.add("is-active");
-      var panel = qs('[data-course-panel="' + panelName + '"]');
-      if (panel) panel.classList.add("is-active");
+  function activatePanel(panelName) {
+    qsa(".crm-course-tab").forEach(function (t) { t.classList.remove("is-active"); });
+    qsa("[data-course-panel]").forEach(function (p) { p.classList.remove("is-active"); });
+    var tabEl = qs('.crm-course-tab[data-course-tab="' + panelName + '"]');
+    if (tabEl) tabEl.classList.add("is-active");
+    var panel = qs('[data-course-panel="' + panelName + '"]');
+    if (panel) panel.classList.add("is-active");
+  }
+
+  qsa("[data-course-tab]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var panelName = el.getAttribute("data-course-tab");
+      if (!panelName) return;
+      activatePanel(panelName);
     });
   });
 
@@ -359,4 +531,5 @@
 })();
 </script>
 <script src="{% static 'crm_dashboard/courses.js' %}"></script>
+
 {% endblock %}

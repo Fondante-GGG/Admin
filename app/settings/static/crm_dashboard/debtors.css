@@ -1,110 +1,179 @@
-.crm-debt-toolbar {
+.crm-dashboard h1 {
+  margin: 8px 0 14px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(16, 24, 40, 0.92);
+}
+
+.crm-toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--crm-border);
+  margin-bottom: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.crm-toolbar__filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: end;
-  margin-bottom: 0.75rem;
+  gap: 12px;
+  align-items: flex-end;
+  flex: 1 1 auto;
 }
 
-.crm-field__label {
-  font-weight: 800;
-  color: #374151;
-  margin-bottom: 0.25rem;
-  font-size: 0.85rem;
+.crm-toolbar__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--crm-muted);
+  min-width: 170px;
 }
 
-.crm-input, .crm-select {
-  width: 100%;
-  border: 1px solid rgba(17, 24, 39, 0.12);
-  border-radius: 6px;
-  padding: 0.55rem 0.7rem;
-  min-width: 120px;
+.crm-toolbar__filters input,
+.crm-toolbar__filters select {
+  padding: 8px 10px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 12px;
+  font-size: 14px;
+  background: #fff;
+  outline: none;
 }
 
-.crm-field--wide {
-  min-width: 240px;
+.crm-toolbar__filters input:focus,
+.crm-toolbar__filters select:focus {
+  border-color: rgba(108, 92, 231, 0.5);
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.16);
 }
 
-.crm-pill-btn {
-  border: 0;
-  border-radius: 6px;
-  padding: 0.55rem 0.9rem;
-  font-weight: 900;
+.crm-toolbar__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.crm-btn {
+  padding: 8px 16px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 12px;
+  background: #fff;
   cursor: pointer;
+  font-size: 14px;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  color: rgba(16, 24, 40, 0.8);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.crm-btn:hover {
+  border-color: rgba(108, 92, 231, 0.45);
+  box-shadow: 0 10px 24px rgba(108, 92, 231, 0.12);
+  transform: translateY(-1px);
   text-decoration: none;
 }
 
-.crm-pill-btn--primary { background: #6366f1; color: #fff; }
-.crm-pill-btn--muted { background: #6b7280; color: #fff; }
-.crm-pill-btn:hover { filter: brightness(0.97); text-decoration: none; color: #fff; }
+.crm-btn--outline { background: #fff; }
+.crm-btn--primary { background: var(--crm-violet); color: #fff; border-color: var(--crm-violet); }
 
-.crm-table-wrap {
-  background: #fff;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
-  overflow-x: auto;
-  width: 100%;
-  max-width: none;
-}
-
-.crm-table-wrap .card,
-.crm-table-wrap .card-body,
-.crm-table-wrap .table-responsive {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-.crm-debt-layout {
+.crm-stats-row {
   display: flex;
-  flex-direction: column;
-  min-height: calc(100vh);
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.crm-table-wrap--fill {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
+.crm-stat {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  padding: 16px 24px;
+  text-align: center;
+  min-width: 180px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
 }
 
-.crm-debt-footer {
-  position: sticky;
-  bottom: 0;
-  background: #f9fafb;
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid rgba(17, 24, 39, 0.08);
-}
-
-.crm-table-wrap .results,
-.crm-table-wrap table {
-  width: 100%;
-}
-
-.crm-debt-total {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0.5rem 0.25rem 0.75rem;
+.crm-stat__value {
+  display: block;
+  font-size: 24px;
   font-weight: 800;
-  color: #111827;
+  color: rgba(16, 24, 40, 0.92);
 }
 
-/* Make changelist stretch full width (Jazzmin uses a fixed-width .container). */
-.content-wrapper .container,
-.content-wrapper .content > .container,
-.content-wrapper .content > .container-fluid,
-.content-wrapper .content .container,
-.content-wrapper .content .container-fluid,
-#content {
-  max-width: none !important;
-  width: 100% !important;
+.crm-stat__label {
+  display: block;
+  font-size: 12px;
+  color: var(--crm-muted);
+  margin-top: 4px;
 }
 
-/* Some Jazzmin/AdminLTE skins constrain main content width via inner wrappers. */
-.content-wrapper .content {
-  max-width: none !important;
+/* Changelist table style */
+.crm-dashboard #changelist {
+  background: transparent;
+  border: 0;
+}
+
+.crm-dashboard #changelist-form .results {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.crm-dashboard #result_list {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.crm-dashboard #result_list thead th {
+  background: rgba(108, 92, 231, 0.06);
+  color: rgba(16, 24, 40, 0.62);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--crm-border);
+  padding: 14px 14px;
+}
+
+.crm-dashboard #result_list tbody td,
+.crm-dashboard #result_list tbody th {
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  background: #fff;
+  vertical-align: middle;
+}
+
+.crm-dashboard #result_list tbody tr:hover td,
+.crm-dashboard #result_list tbody tr:hover th {
+  background: rgba(108, 92, 231, 0.03);
+}
+
+.crm-dashboard #result_list tbody tr:last-child td,
+.crm-dashboard #result_list tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.crm-dashboard .paginator {
+  margin-top: 14px;
+  background: transparent;
+}
+
+.crm-dashboard .paginator a,
+.crm-dashboard .paginator span.this-page {
+  border-radius: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  background: #fff;
+}
+
+.crm-dashboard .paginator span.this-page {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: rgba(108, 92, 231, 0.3);
 }

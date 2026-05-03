@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import F, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_date
-from django.utils.dateparse import parse_datetime
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils import timezone
@@ -47,36 +46,42 @@ class RoleRestrictedAdminMixin:
 
     def _is_allowed(self, request) -> bool:
         role = _role(request.user)
+        if role == "Админ":
+            role = "Администратор"
         if self.denied_roles and role in self.denied_roles:
             return False
         if self.allowed_roles is None:
             return True
         return role in self.allowed_roles
 
+    def _has_crm_access(self, request) -> bool:
+        user = request.user
+        return bool(user.is_authenticated and user.is_active and user.is_staff and self._is_allowed(request))
+
     def has_module_permission(self, request):
-        if not self._is_allowed(request):
-            return False
-        return super().has_module_permission(request)
+        return self._has_crm_access(request)
 
     def has_view_permission(self, request, obj=None):
-        if not self._is_allowed(request):
-            return False
-        return super().has_view_permission(request, obj=obj)
+        return self._has_crm_access(request)
 
     def has_add_permission(self, request):
-        if not self._is_allowed(request):
-            return False
-        return super().has_add_permission(request)
+        return self._has_crm_access(request)
 
     def has_change_permission(self, request, obj=None):
-        if not self._is_allowed(request):
-            return False
-        return super().has_change_permission(request, obj=obj)
+        return self._has_crm_access(request)
 
     def has_delete_permission(self, request, obj=None):
-        if not self._is_allowed(request):
-            return False
-        return super().has_delete_permission(request, obj=obj)
+        return self._has_crm_access(request)
+
+    def get_model_perms(self, request):
+        if not self.has_module_permission(request):
+            return {}
+        return {
+            "add": self.has_add_permission(request),
+            "change": self.has_change_permission(request),
+            "delete": self.has_delete_permission(request),
+            "view": self.has_view_permission(request),
+        }
 
 
 class ArchiveFilter(admin.SimpleListFilter):
@@ -121,16 +126,26 @@ class ArchiveAdminMixin:
 
 
 @admin.register(User, site=crm_admin_site)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("username", "email", "phone_number", "role", "is_staff", "is_active")
     list_filter = ("role", "is_staff", "is_active")
     search_fields = ("username", "email", "phone_number")
 
 
 @admin.register(Student, site=crm_admin_site)
-class StudentAdmin(admin.ModelAdmin):
+class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     change_list_template = "admin/students_changelist.html"
-    list_display = ("student_id", "full_name", "group_display", "paid_total_display", "status_badge", "account_display")
+    list_display = (
+        "student_id",
+        "full_name",
+        "group_display",
+        "paid_total_display",
+        "status_badge",
+        "account_display",
+        "details_button",
+    )
     list_display_links = ("student_id", "full_name")
     search_fields = ("user__username", "user__first_name", "user__last_name", "user__phone_number")
     autocomplete_fields = ("user",)
@@ -242,6 +257,14 @@ class StudentAdmin(admin.ModelAdmin):
 
     account_display.short_description = "Аккаунт"
 
+    def details_button(self, obj: Student):
+        return format_html(
+            '<a class="crm-btn crm-btn--outline crm-btn--sm" data-st-nodrawer href="{}">Подробнее</a>',
+            f"{obj.pk}/change/",
+        )
+
+    details_button.short_description = ""
+
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
         qs = self.get_queryset(request)
@@ -291,14 +314,16 @@ StudentAdmin.inlines = [StudentEnrollmentInline, StudentPaymentInline, StudentCo
 
 
 @admin.register(Mentor, site=crm_admin_site)
-class MentorAdmin(admin.ModelAdmin):
+class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("user", "created_at")
     search_fields = ("user__username", "user__phone_number")
     autocomplete_fields = ("user",)
 
 
 @admin.register(Cursues, site=crm_admin_site)
-class CursuesAdmin(ArchiveAdminMixin, admin.ModelAdmin):
+class CursuesAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "course_type", "subject", "start", "status", "price", "students_badge")
     list_filter = ("course_type", "status", "subject", ArchiveFilter)
     search_fields = ("title",)
@@ -346,6 +371,10 @@ class CursuesAdmin(ArchiveAdminMixin, admin.ModelAdmin):
             extra_context["course_tuition_total"] = float(
                 enrollments.aggregate(total=Sum("tuition_amount"))["total"] or 0
             )
+            extra_context["course_debt_total"] = float(
+                (extra_context["course_tuition_total"] or 0) - (extra_context["course_payments_total"] or 0)
+            )
+            extra_context["course_duration_label"] = getattr(course, "duration_label", "—")
 
         return super().change_view(request, object_id, form_url, extra_context)
 
@@ -367,6 +396,7 @@ CursuesAdmin.inlines = [EnrollmentInline, CourseDropInline]
 
 @admin.register(GroupCourse, site=crm_admin_site)
 class GroupCourseAdmin(CursuesAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     change_list_template = "admin/group_courses_changelist.html"
 
     def get_queryset(self, request):
@@ -409,6 +439,7 @@ class GroupCourseAdmin(CursuesAdmin):
 
 @admin.register(IndividualCourse, site=crm_admin_site)
 class IndividualCourseAdmin(CursuesAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.filter(course_type=Cursues.CourseType.INDIVIDUAL)
@@ -438,7 +469,8 @@ class IndividualCourseAdmin(CursuesAdmin):
 
 
 @admin.register(Lead, site=crm_admin_site)
-class LeadAdmin(ArchiveAdminMixin, admin.ModelAdmin):
+class LeadAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("full_name", "phone_number", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
     search_fields = ("full_name", "phone_number")
@@ -446,7 +478,8 @@ class LeadAdmin(ArchiveAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Payment, site=crm_admin_site)
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("student", "course", "amount", "created_at")
     list_filter = ("course",)
     search_fields = ("student__user__username", "student__user__phone_number")
@@ -461,7 +494,8 @@ class SalaryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Task, site=crm_admin_site)
-class TaskAdmin(ArchiveAdminMixin, admin.ModelAdmin):
+class TaskAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "due_date", "is_done", "created_at")
     list_filter = ("is_done", ArchiveFilter)
     search_fields = ("title",)
@@ -541,7 +575,8 @@ class EnrollmentBaseAdmin(admin.ModelAdmin):
 
 
 @admin.register(StudentPayments, site=crm_admin_site)
-class StudentPaymentsAdmin(EnrollmentBaseAdmin):
+class StudentPaymentsAdmin(RoleRestrictedAdminMixin, EnrollmentBaseAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     def changelist_view(self, request, extra_context=None):
         if "finance" not in request.GET:
             mutable = request.GET.copy()
@@ -552,7 +587,8 @@ class StudentPaymentsAdmin(EnrollmentBaseAdmin):
 
 
 @admin.register(TuitionPayment, site=crm_admin_site)
-class TuitionPaymentAdmin(admin.ModelAdmin):
+class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/tuition_payment_changelist.html"
     list_per_page = 20
     list_display = ("id", "student_name", "created_at", "method", "course", "amount")
@@ -689,7 +725,8 @@ class TuitionPaymentAdmin(admin.ModelAdmin):
 
 
 @admin.register(CalendarEvent, site=crm_admin_site)
-class CalendarEventAdmin(ArchiveAdminMixin, admin.ModelAdmin):
+class CalendarEventAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "start_at", "end_at", "created_at")
     search_fields = ("title", "note")
     list_filter = ("start_at", ArchiveFilter)
@@ -700,7 +737,8 @@ class CalendarEventAdmin(ArchiveAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Call, site=crm_admin_site)
-class CallAdmin(ArchiveAdminMixin, admin.ModelAdmin):
+class CallAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("contact_name", "phone_number", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
     search_fields = ("contact_name", "phone_number")
@@ -806,7 +844,8 @@ class AccountingCategoryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     search_fields = ("title",)
 
 @admin.register(DebtorEnrollment, site=crm_admin_site)
-class DebtorEnrollmentAdmin(admin.ModelAdmin):
+class DebtorEnrollmentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/debtors_changelist.html"
     list_per_page = 20
     list_display = ("id", "student_name", "course", "tuition_amount", "paid_total_display", "debt_display")

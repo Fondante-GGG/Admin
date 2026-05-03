@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from django.contrib.admin import AdminSite
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.http import HttpResponseForbidden
 from django.urls import path
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
@@ -79,6 +80,48 @@ def _sum_by_month(qs, months: int, field: str) -> MonthSeries:
     return MonthSeries(labels=labels, values=values)
 
 
+def _count_by_month(qs, months: int) -> MonthSeries:
+    month_starts = _last_month_starts(months)
+    start = month_starts[0]
+    end = (month_starts[-1].replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    grouped = (
+        qs.filter(created_at__gte=start, created_at__lt=end)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(total=Count("id"))
+        .order_by("month")
+    )
+    totals = {row["month"].date(): float(row["total"] or 0) for row in grouped if row["month"]}
+
+    labels: list[str] = []
+    values: list[float] = []
+    for m in month_starts:
+        labels.append(m.strftime("%b"))
+        values.append(totals.get(m, 0.0))
+    return MonthSeries(labels=labels, values=values)
+
+
+def _count_by_day(qs, days: int) -> MonthSeries:
+    today = timezone.localdate()
+    start = today - timedelta(days=days - 1)
+    grouped = (
+        qs.filter(created_at__date__gte=start, created_at__date__lte=today)
+        .values("created_at__date")
+        .annotate(total=Count("id"))
+        .order_by("created_at__date")
+    )
+    totals = {row["created_at__date"]: float(row["total"] or 0) for row in grouped}
+
+    labels: list[str] = []
+    values: list[float] = []
+    for i in range(days):
+        d = start + timedelta(days=i)
+        labels.append(d.strftime("%d.%m"))
+        values.append(totals.get(d, 0.0))
+    return MonthSeries(labels=labels, values=values)
+
+
 class CRMAdminSite(AdminSite):
     site_header = "Codify CRM"
     site_title = "Codify CRM"
@@ -87,7 +130,16 @@ class CRMAdminSite(AdminSite):
 
     @staticmethod
     def _role(user) -> str:
-        return getattr(user, "role", "") or ""
+        role = getattr(user, "role", "") or ""
+        return "Администратор" if role == "Админ" else role
+
+    def _is_manager(self, request) -> bool:
+        return self._role(request.user) == "Менеджер"
+
+    def _deny_accounting_for_manager(self, request):
+        if self._is_manager(request):
+            return HttpResponseForbidden("Managers cannot access accounting.")
+        return None
 
     def has_permission(self, request):
         user = request.user
@@ -104,7 +156,7 @@ class CRMAdminSite(AdminSite):
 
         def filter_models(models):
             if role == "Менеджер":
-                blocked = {"Salary", "AccountingEntry", "AccountingAccount", "AccountingProject", "AccountingCategory"}
+                blocked = {"AccountingEntry", "AccountingAccount", "AccountingProject", "AccountingCategory"}
                 return [m for m in models if m.get("object_name") not in blocked]
             if role == "Ментор":
                 allowed = {
@@ -163,12 +215,18 @@ class CRMAdminSite(AdminSite):
         return TemplateResponse(request, "admin/about.html", context)
 
     def accounting_meta(self, request):
+        denied = self._deny_accounting_for_manager(request)
+        if denied:
+            return denied
         accounts = list(AccountingAccount.objects.order_by("title").values("id", "title"))
         projects = list(AccountingProject.objects.order_by("title").values("id", "title"))
         categories = list(AccountingCategory.objects.order_by("title").values("id", "title"))
         return JsonResponse({"accounts": accounts, "projects": projects, "categories": categories})
 
     def accounting_entry_create(self, request):
+        denied = self._deny_accounting_for_manager(request)
+        if denied:
+            return denied
         if request.method != "POST":
             return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
         entry_type = (request.POST.get("entry_type") or "").strip()
@@ -208,6 +266,9 @@ class CRMAdminSite(AdminSite):
         return JsonResponse({"ok": True})
 
     def accounting_transfer_create(self, request):
+        denied = self._deny_accounting_for_manager(request)
+        if denied:
+            return denied
         if request.method != "POST":
             return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
         from_account = (request.POST.get("from_account") or "").strip()
@@ -284,9 +345,10 @@ class CRMAdminSite(AdminSite):
             {"title": "Лиды", "url": "/admin/settings/lead/?archived=1"},
             {"title": "Звонки", "url": "/admin/settings/call/?archived=1"},
             {"title": "Календарь", "url": "/admin/settings/calendarevent/?archived=1"},
-            {"title": "Бухгалтерия", "url": "/admin/settings/accountingentry/?archived=1"},
             {"title": "Задачи", "url": "/admin/settings/task/?archived=1"},
         ]
+        if not self._is_manager(request):
+            items.insert(4, {"title": "Бухгалтерия", "url": "/admin/settings/accountingentry/?archived=1"})
         context = {"title": "Архив", "items": items, **self.each_context(request)}
         return TemplateResponse(request, "admin/archive_index.html", context)
 
@@ -627,64 +689,84 @@ def _simple_pdf_table(title: str, headers: list[str], rows: list[list[str]]) -> 
 
         today = timezone.localdate()
         start_month = today.replace(day=1)
-        this_week_start = today - timedelta(days=today.weekday())
-        this_year_start = today.replace(month=1, day=1)
+        start_year = today.replace(month=1, day=1)
+        start_week = today - timedelta(days=6)
 
-        def _cnt_today(qs):
-            return qs.filter(created_at__date=today).count()
-        def _cnt_week(qs):
-            return qs.filter(created_at__date__gte=this_week_start).count()
-        def _cnt_month(qs):
-            return qs.filter(created_at__date__gte=start_month).count()
-        def _cnt_year(qs):
-            return qs.filter(created_at__date__gte=this_year_start).count()
-        def _sum_today(qs):
-            return float(qs.filter(created_at__date=today).aggregate(total=Sum("amount"))["total"] or 0)
-        def _sum_week(qs):
-            return float(qs.filter(created_at__date__gte=this_week_start).aggregate(total=Sum("amount"))["total"] or 0)
-        def _sum_month(qs):
-            return float(qs.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))["total"] or 0)
-        def _sum_year(qs):
-            return float(qs.filter(created_at__date__gte=this_year_start).aggregate(total=Sum("amount"))["total"] or 0)
+        leads_qs = Lead.objects.all()
+        students_qs = Student.objects.all()
+        payments_qs = Payment.objects.all()
+        salary_qs = Salary.objects.all()
 
-        pay_qs = Payment.objects.all()
+        money_paid_today = float(payments_qs.filter(created_at__date=today).aggregate(total=Sum("amount"))["total"] or 0)
+        money_paid_week = float(
+            payments_qs.filter(created_at__date__gte=start_week).aggregate(total=Sum("amount"))["total"] or 0
+        )
+        money_paid_month = float(
+            payments_qs.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))["total"] or 0
+        )
+        money_paid_year = float(
+            payments_qs.filter(created_at__date__gte=start_year).aggregate(total=Sum("amount"))["total"] or 0
+        )
 
-        context.update({
-            "kpi": {
-                "students": Student.objects.filter(is_archived=False).count(),
-                "mentors": Mentor.objects.count(),
-                "leads": Lead.objects.filter(is_archived=False).count(),
-                "courses": Cursues.objects.filter(is_archived=False).count(),
-            },
-            "cards": {
-                "leads": {
-                    "today": _cnt_today(Lead.objects.all()),
-                    "week": _cnt_week(Lead.objects.all()),
-                    "month": _cnt_month(Lead.objects.all()),
-                    "year": _cnt_year(Lead.objects.all()),
+        leads_today = leads_qs.filter(created_at__date=today).count()
+        leads_week = leads_qs.filter(created_at__date__gte=start_week).count()
+        leads_month = leads_qs.filter(created_at__date__gte=start_month).count()
+        leads_year = leads_qs.filter(created_at__date__gte=start_year).count()
+
+        students_today = students_qs.filter(created_at__date=today).count()
+        students_week = students_qs.filter(created_at__date__gte=start_week).count()
+        students_month = students_qs.filter(created_at__date__gte=start_month).count()
+        students_year = students_qs.filter(created_at__date__gte=start_year).count()
+
+        courses_income = (
+            payments_qs.values("course_id", "course__title")
+            .annotate(income=Sum("amount"))
+            .order_by("-income")
+        )
+        courses_income = [c for c in courses_income if c.get("course_id")][:8]
+        courses_top = []
+        for row in courses_income:
+            income = float(row["income"] or 0)
+            courses_top.append(
+                {
+                    "title": row.get("course__title") or "—",
+                    "income": income,
+                    "salary": 0.0,
+                    "profit": income,
+                }
+            )
+
+        series = {
+            "income": _sum_by_month(payments_qs, months=12, field="amount").__dict__,
+            "expense": _sum_by_month(salary_qs, months=12, field="amount").__dict__,
+            "payments_6m": _sum_by_month(payments_qs, months=6, field="amount").__dict__,
+            "leads_6m": _count_by_month(leads_qs, months=6).__dict__,
+            "students_6m": _count_by_month(students_qs, months=6).__dict__,
+            "leads_30d": _count_by_day(leads_qs, days=30).__dict__,
+        }
+
+        context.update(
+            {
+                "kpi": {
+                    "students": students_qs.count(),
+                    "mentors": Mentor.objects.count(),
+                    "leads": leads_qs.count(),
+                    "courses": Cursues.objects.count(),
                 },
-                "students": {
-                    "today": _cnt_today(Student.objects.all()),
-                    "week": _cnt_week(Student.objects.all()),
-                    "month": _cnt_month(Student.objects.all()),
-                    "year": _cnt_year(Student.objects.all()),
+                "courses_top": courses_top,
+                "cards": {
+                    "leads": {"today": leads_today, "week": leads_week, "month": leads_month, "year": leads_year},
+                    "students": {
+                        "today": students_today,
+                        "week": students_week,
+                        "month": students_month,
+                        "year": students_year,
+                    },
                 },
-            },
-            "money": {
-                "paid": {
-                    "today": _sum_today(pay_qs),
-                    "week": _sum_week(pay_qs),
-                    "month": _sum_month(pay_qs),
-                    "year": _sum_year(pay_qs),
-                },
-            },
-            "series": json.dumps({
-                "income": _sum_by_month(Payment.objects.all(), months=12, field="amount").__dict__,
-                "expense": _sum_by_month(Salary.objects.all(), months=12, field="amount").__dict__,
-                "students_active": _sum_by_month(Student.objects.filter(is_archived=False), months=6, field="id").__dict__,
-                "leads": _sum_by_month(Lead.objects.filter(is_archived=False), months=6, field="id").__dict__,
-            }, ensure_ascii=False),
-        })
+                "money": {"paid": {"today": money_paid_today, "week": money_paid_week, "month": money_paid_month, "year": money_paid_year}},
+                "series": series,
+            }
+        )
 
         return super().index(request, extra_context=context)
 

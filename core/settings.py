@@ -140,15 +140,6 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_models": [
-        "settings.appsetting",
-        "settings.billingrecord",
-        "settings.aboutpage",
-        "admin.logentry",
-        "settings.payment",
-        "settings.task",
-        "settings.groupcourse",
-        "settings.individualcourse",
-        "settings.calendarevent",
         "settings.studentpayments",
     ],
     "order_with_respect_to": [
@@ -158,8 +149,8 @@ JAZZMIN_SETTINGS = {
         "settings.individualcourse",
         "settings.student",
         "settings.mentor",
-        "settings.studentpayments",
         "settings.tuitionpayment",
+        "settings.payment",
         "settings.salary",
         "settings.lead",
         "settings.call",
@@ -171,21 +162,6 @@ JAZZMIN_SETTINGS = {
     ],
     "custom_links": {
         "settings": [
-            {
-                "name": "Групповые",
-                "url": "/admin/settings/cursues/?course_type=group",
-                "icon": "fas fa-users",
-            },
-            {
-                "name": "Индивидуальные",
-                "url": "/admin/settings/cursues/?course_type=individual",
-                "icon": "fas fa-user",
-            },
-            {
-                "name": "Календарь",
-                "url": "/admin/calendar/",
-                "icon": "fas fa-calendar-alt",
-            },
             {
                 "name": "Архив",
                 "url": "/admin/archive/",

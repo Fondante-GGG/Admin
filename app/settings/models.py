@@ -457,6 +457,22 @@ class BillingRecord(models.Model):
 class AboutPage(models.Model):
     title = models.CharField(max_length=255, default="О нас", verbose_name="Заголовок")
     body = models.TextField(blank=True, verbose_name="Текст")
+    feedback_phone = models.CharField(max_length=64, blank=True, verbose_name="Телефон для отзыва")
+    feedback_whatsapp = models.CharField(max_length=64, blank=True, verbose_name="WhatsApp для отзыва")
+    feedback_email = models.EmailField(blank=True, verbose_name="Email для отзыва")
+    feedback_person = models.CharField(max_length=255, blank=True, verbose_name="Контактное лицо (подпись)")
+
+    about_subtitle = models.CharField(max_length=255, blank=True, verbose_name="Подзаголовок (О нас)")
+    about_text = models.TextField(blank=True, verbose_name="Текст (О нас)")
+    about_site_url = models.URLField(blank=True, verbose_name="Ссылка на сайт")
+
+    contacts_text = models.TextField(blank=True, verbose_name="Текст (Контакты)")
+    contacts_phone = models.CharField(max_length=64, blank=True, verbose_name="Телефон (Контакты)")
+    contacts_whatsapp = models.CharField(max_length=64, blank=True, verbose_name="WhatsApp (Контакты)")
+    contacts_email = models.EmailField(blank=True, verbose_name="Email (Контакты)")
+
+    privacy_text = models.TextField(blank=True, verbose_name="Политика конфиденциальности (текст)")
+    agreement_text = models.TextField(blank=True, verbose_name="Пользовательское соглашение (текст)")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
 
     def __str__(self):

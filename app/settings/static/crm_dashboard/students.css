@@ -1,9 +1,18 @@
+.crm-dashboard h1 {
+  margin: 8px 0 14px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(16, 24, 40, 0.92);
+}
+
 .crm-filter-panel {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
   padding: 16px;
   margin-bottom: 16px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
 }
 .crm-filter-panel.is-hidden { display: none; }
 .crm-filter-panel__grid {
@@ -17,14 +26,21 @@
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--crm-muted);
 }
 .crm-filter-panel__grid select,
 .crm-filter-panel__grid input {
   padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 10px;
   font-size: 14px;
+  background: #fff;
+  outline: none;
+}
+.crm-filter-panel__grid select:focus,
+.crm-filter-panel__grid input:focus {
+  border-color: rgba(108, 92, 231, 0.5);
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.16);
 }
 .crm-filter-panel__actions { display: flex; gap: 8px; }
 .crm-drawer {
@@ -56,42 +72,161 @@
   flex-wrap: wrap;
 }
 .crm-stat {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
   padding: 16px 24px;
   text-align: center;
   min-width: 120px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
 }
 .crm-stat__value {
   display: block;
   font-size: 24px;
   font-weight: 800;
-  color: #111827;
+  color: rgba(16, 24, 40, 0.92);
 }
 .crm-stat__label {
   display: block;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--crm-muted);
   margin-top: 4px;
 }
 .crm-toolbar {
   display: flex;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--crm-border);
   margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .crm-btn {
   padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 12px;
   background: #fff;
   cursor: pointer;
   font-size: 14px;
   text-decoration: none;
   display: inline-block;
-  color: #374151;
+  color: rgba(16, 24, 40, 0.8);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 .crm-btn--outline { background: #fff; color: #374151; }
-.crm-btn--primary { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.crm-btn:hover {
+  border-color: rgba(108, 92, 231, 0.45);
+  box-shadow: 0 10px 24px rgba(108, 92, 231, 0.12);
+  transform: translateY(-1px);
+}
+.crm-btn--primary { background: var(--crm-violet); color: #fff; border-color: var(--crm-violet); }
+.crm-btn--sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+/* Make Django admin changelist look like CRM table */
+.crm-dashboard #changelist {
+  background: transparent;
+  border: 0;
+}
+
+.crm-dashboard #toolbar,
+.crm-dashboard #changelist-search,
+.crm-dashboard #changelist .actions {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  padding: 12px 12px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.crm-dashboard #toolbar {
+  margin: 0 0 14px;
+}
+
+.crm-dashboard #changelist-search {
+  margin: 0;
+}
+
+.crm-dashboard #toolbar input[type="text"],
+.crm-dashboard #toolbar input[type="search"] {
+  border-radius: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  padding: 8px 10px;
+  outline: none;
+}
+
+.crm-dashboard #toolbar input[type="submit"],
+.crm-dashboard #toolbar button,
+.crm-dashboard #toolbar a.button,
+.crm-dashboard .object-tools a,
+.crm-dashboard .submit-row input {
+  border-radius: 12px;
+}
+
+.crm-dashboard #changelist-form .results {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.crm-dashboard #result_list {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.crm-dashboard #result_list thead th {
+  background: rgba(108, 92, 231, 0.06);
+  color: rgba(16, 24, 40, 0.62);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--crm-border);
+  padding: 14px 14px;
+}
+
+.crm-dashboard #result_list thead th a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.crm-dashboard #result_list tbody td,
+.crm-dashboard #result_list tbody th {
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  background: #fff;
+  vertical-align: middle;
+}
+
+.crm-dashboard #result_list tbody tr:hover td,
+.crm-dashboard #result_list tbody tr:hover th {
+  background: rgba(108, 92, 231, 0.03);
+}
+
+.crm-dashboard #result_list tbody tr:last-child td,
+.crm-dashboard #result_list tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.crm-dashboard .paginator {
+  margin-top: 14px;
+  background: transparent;
+}
+
+.crm-dashboard .paginator a,
+.crm-dashboard .paginator span.this-page {
+  border-radius: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  background: #fff;
+}
+
+.crm-dashboard .paginator span.this-page {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: rgba(108, 92, 231, 0.3);
+}

@@ -1,3 +1,120 @@
+.model-student.change-form #jazzy-actions {
+  display: none !important;
+}
+
+.model-student.change-form #content-main {
+  padding-bottom: 28px;
+}
+
+.model-student.change-form .crm-student-head {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  background: var(--crm-card, #fff);
+  border: 1px solid var(--crm-border, rgba(16, 24, 40, 0.08));
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.model-student.change-form .crm-student-head__title {
+  font-size: 12px;
+  color: rgba(16, 24, 40, 0.55);
+  margin-bottom: 4px;
+}
+
+.model-student.change-form .crm-student-head__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(16, 24, 40, 0.92);
+  text-decoration: none;
+}
+
+.model-student.change-form .crm-student-head__name:hover {
+  color: var(--crm-violet, #6c5ce7);
+}
+
+.model-student.change-form .crm-student-head__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  background: rgba(108, 92, 231, 0.08);
+  color: rgba(108, 92, 231, 0.95);
+  font-size: 14px;
+}
+
+.model-student.change-form .crm-student-card,
+.model-student.change-form .crm-student-actions {
+  border-radius: 14px;
+  border: 1px solid var(--crm-border, rgba(16, 24, 40, 0.08));
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.model-student.change-form .crm-student-actions .submit-row {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.model-student.change-form .crm-student-actions .submit-row > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.model-student.change-form .crm-student-actions .form-group {
+  margin: 0 !important;
+  display: inline-flex;
+}
+
+.model-student.change-form .crm-student-actions .submit-row input,
+.model-student.change-form .crm-student-actions .submit-row a.deletelink,
+.model-student.change-form .crm-student-actions .submit-row a {
+  width: auto !important;
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  line-height: 1.1;
+  border-radius: 12px !important;
+  letter-spacing: -0.01em;
+  box-shadow: 0 10px 22px rgba(16, 24, 40, 0.08);
+}
+
+.model-student.change-form .crm-student-actions .submit-row .form-control {
+  width: auto !important;
+}
+
+.model-student.change-form .crm-student-actions .submit-row input.btn-block,
+.model-student.change-form .crm-student-actions .submit-row a.btn-block {
+  flex: 0 0 auto !important;
+}
+
+.model-student.change-form .crm-student-actions .submit-row input:hover,
+.model-student.change-form .crm-student-actions .submit-row a.deletelink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(16, 24, 40, 0.12);
+}
+
+.model-student.change-form .crm-student-actions .submit-row a.deletelink {
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  background: rgba(239, 68, 68, 0.10) !important;
+  color: #b91c1c !important;
+}
+
 .crm-dd { position: relative; display: inline-block; }
 .crm-dd__menu {
   display: none;

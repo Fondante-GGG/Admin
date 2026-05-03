@@ -1,3 +1,24 @@
+#content {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Jazzmin/AdminLTE often wraps main content in a fixed-width `.container`.
+   Force dashboard to stretch full width. */
+.content-wrapper .container,
+.content-wrapper .content > .container,
+.content-wrapper .content > .container-fluid,
+.content-wrapper .content .container,
+.content-wrapper .content .container-fluid,
+.content-wrapper,
+.content-wrapper .content {
+  max-width: none !important;
+  width: 100% !important;
+}
+
 :root {
   --crm-violet: #6c5ce7;
   --crm-violet-2: #7c70f2;
@@ -8,8 +29,16 @@
   --crm-muted: rgba(16, 24, 40, 0.58);
 }
 
+body {
+  background: var(--crm-bg) !important;
+}
+
 .crm-dashboard {
-  padding: 18px 8px 8px;
+  /* Center on wide screens so cards don't get too large */
+  width: 100%;
+  max-width: 1600px;
+  margin: 0;
+  padding: 18px 16px 8px;
 }
 
 .crm-alert {
@@ -47,6 +76,19 @@
   }
 }
 
+.crm-grid--top {
+  align-items: stretch;
+}
+
+.crm-grid--profit {
+  margin-top: 16px;
+}
+
+.crm-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .crm-card {
   background: var(--crm-card);
   border: 1px solid var(--crm-border);
@@ -68,6 +110,67 @@
 
 .crm-card--welcome {
   background: linear-gradient(135deg, rgba(108, 92, 231, 0.07), rgba(108, 92, 231, 0.02));
+  position: relative;
+  overflow: hidden;
+  min-height: 92px;
+}
+
+.crm-medal {
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 40% 38%, #ffd48a 0 35%, transparent 36%),
+    radial-gradient(circle at 55% 58%, #ffb24a 0 38%, transparent 39%),
+    linear-gradient(180deg, rgba(124, 112, 242, 0.92), rgba(108, 92, 231, 0.82));
+  box-shadow: 0 12px 24px rgba(108, 92, 231, 0.16);
+  transform: rotate(10deg);
+}
+
+.crm-card--server .crm-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(16, 24, 40, 0.75);
+}
+
+.crm-server {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.crm-server__logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(0, 206, 201, 0.18));
+  border: 1px solid var(--crm-border);
+}
+
+.crm-server__name {
+  font-weight: 700;
+}
+
+.crm-server__sub {
+  color: var(--crm-muted);
+  font-size: 12px;
+}
+
+.crm-i {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--crm-border);
+  color: rgba(16, 24, 40, 0.55);
+  font-size: 12px;
+  margin-left: 6px;
+  vertical-align: 1px;
 }
 
 .crm-kpis {
@@ -86,10 +189,37 @@
 .crm-kpi {
   border: 1px solid var(--crm-border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  position: relative;
+  padding-left: 54px;
+}
+
+.crm-kpi__icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--crm-border);
+  box-shadow: 0 12px 22px rgba(16, 24, 40, 0.06);
+}
+
+.crm-kpi__icon--violet {
+  background: radial-gradient(circle at 30% 30%, rgba(108, 92, 231, 0.22), rgba(108, 92, 231, 0.08));
+}
+.crm-kpi__icon--cyan {
+  background: radial-gradient(circle at 30% 30%, rgba(0, 206, 201, 0.20), rgba(0, 206, 201, 0.07));
+}
+.crm-kpi__icon--red {
+  background: radial-gradient(circle at 30% 30%, rgba(255, 118, 117, 0.18), rgba(255, 118, 117, 0.06));
+}
+.crm-kpi__icon--green {
+  background: radial-gradient(circle at 30% 30%, rgba(0, 184, 148, 0.18), rgba(0, 184, 148, 0.06));
 }
 
 .crm-kpi__num {
@@ -105,6 +235,63 @@
 .crm-chart {
   position: relative;
   padding-top: 8px;
+}
+
+.crm-table {
+  margin-top: 8px;
+}
+
+.crm-table__head {
+  display: grid;
+  grid-template-columns: 1.6fr 0.6fr 0.6fr 0.6fr;
+  gap: 10px;
+  padding: 10px 10px;
+  background: rgba(108, 92, 231, 0.05);
+  border-radius: 12px;
+  color: rgba(16, 24, 40, 0.65);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.crm-table__body {
+  margin-top: 6px;
+}
+
+.crm-table__row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.6fr 0.6fr 0.6fr;
+  gap: 10px;
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  align-items: center;
+}
+
+.crm-table__row--empty {
+  display: block;
+  padding: 12px 10px;
+  color: var(--crm-muted);
+}
+
+.crm-table__title {
+  font-weight: 700;
+  color: rgba(16, 24, 40, 0.78);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crm-money {
+  font-weight: 800;
+  font-size: 13px;
+}
+.crm-money--green {
+  color: #00b894;
+}
+.crm-money--red {
+  color: #ff7675;
+}
+.crm-money--violet {
+  color: var(--crm-violet);
 }
 
 .crm-legend {
@@ -159,6 +346,8 @@
   border-radius: 14px;
   padding: 14px 16px;
   box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+  position: relative;
+  overflow: hidden;
 }
 
 .crm-mini__head {
@@ -176,4 +365,32 @@
 .crm-mini__label {
   color: var(--crm-violet);
   font-size: 12px;
+}
+
+.crm-mini__icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--crm-border);
+  background: rgba(108, 92, 231, 0.06);
+}
+
+.crm-mini__icon--user {
+  background: radial-gradient(circle at 35% 30%, rgba(108, 92, 231, 0.18), rgba(108, 92, 231, 0.06));
+}
+.crm-mini__icon--tag {
+  background: radial-gradient(circle at 35% 30%, rgba(0, 206, 201, 0.18), rgba(0, 206, 201, 0.06));
+}
+.crm-mini__icon--money {
+  background: radial-gradient(circle at 35% 30%, rgba(0, 184, 148, 0.18), rgba(0, 184, 148, 0.06));
+}
+
+.crm-ext {
+  font-size: 12px;
+  margin-left: 2px;
+  opacity: 0.8;
 }
