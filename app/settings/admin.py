@@ -376,6 +376,28 @@ class CursuesAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin
                 (extra_context["course_tuition_total"] or 0) - (extra_context["course_payments_total"] or 0)
             )
             extra_context["course_duration_label"] = getattr(course, "duration_label", "—")
+            extra_context["course_drops"] = (
+                CourseDrop.objects
+                .filter(course=course)
+                .select_related("student__user")
+                .order_by("-dropped_at", "student__user__first_name", "student__user__username")
+            )
+            extra_context["course_status_label"] = {
+                "Подготовка курсов": "Подготовка",
+                "Активные курсы": "Запущен",
+                "Завершенные курсы": "Завершен",
+            }.get(course.status, course.status or "—")
+            extra_context["course_duration_months"] = max(1, round((course.duration_days or 0) / 30)) if (course.duration_days or 0) > 0 else 1
+            extra_context["course_update_url"] = reverse(f"{crm_admin_site.name}:course_update", args=[course.pk])
+            extra_context["course_status_url"] = reverse(f"{crm_admin_site.name}:course_status_update", args=[course.pk])
+            extra_context["course_return_url"] = reverse(f"{crm_admin_site.name}:settings_groupcourse_change", args=[course.pk])
+            extra_context["course_students_csv_url"] = reverse(f"{crm_admin_site.name}:course_students_csv", args=[course.pk])
+            extra_context["course_payment_methods"] = Payment.Method.choices
+            extra_context["course_status_choices"] = list(course._meta.get_field("status").choices)
+            extra_context["course_subject_choices"] = list(
+                Cursues.objects.exclude(subject="").values_list("subject", flat=True).distinct().order_by("subject")
+            )
+            extra_context["course_student_add_url"] = reverse(f"{crm_admin_site.name}:settings_student_add")
 
         return super().change_view(request, object_id, form_url, extra_context)
 
@@ -399,6 +421,7 @@ CursuesAdmin.inlines = [EnrollmentInline, CourseDropInline]
 class GroupCourseAdmin(CursuesAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     change_list_template = "admin/group_courses_changelist.html"
+    change_form_template = "admin/group_course_change_form.html"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).prefetch_related("students", "mentors__user")

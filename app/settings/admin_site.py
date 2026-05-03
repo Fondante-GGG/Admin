@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from datetime import date, timedelta
 from urllib.parse import urlsplit
 
@@ -10,13 +11,13 @@ from django.contrib.admin import AdminSite
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import path, reverse
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.utils.text import slugify
 from django.template.response import TemplateResponse
-from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
@@ -396,6 +397,16 @@ class CRMAdminSite(AdminSite):
                 self.admin_view(self.course_students_csv),
                 name="course_students_csv",
             ),
+            path(
+                "settings/course/<int:course_id>/update/",
+                self.admin_view(self.course_update),
+                name="course_update",
+            ),
+            path(
+                "settings/course/<int:course_id>/status/",
+                self.admin_view(self.course_status_update),
+                name="course_status_update",
+            ),
             path("archive/", self.admin_view(self.archive_index), name="archive_index"),
             path("calendar/", self.admin_view(self.calendar_view), name="calendar"),
             path("calendar/events/", self.admin_view(self.calendar_events), name="calendar_events"),
@@ -472,6 +483,89 @@ class CRMAdminSite(AdminSite):
             category_id=int(category_id) if category_id else None,
         )
         return JsonResponse({"ok": True})
+
+    def course_update(self, request, course_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        course = get_object_or_404(Cursues, pk=course_id)
+
+        title = (request.POST.get("title") or "").strip()
+        subject = (request.POST.get("subject") or "").strip()
+        room = (request.POST.get("room") or "").strip()
+        status = (request.POST.get("status") or "").strip()
+        schedule_note = (request.POST.get("schedule_note") or "").strip()
+
+        if title:
+            course.title = title
+
+        capacity_raw = (request.POST.get("capacity") or "").strip()
+        if capacity_raw:
+            try:
+                course.capacity = max(0, int(capacity_raw))
+            except ValueError:
+                pass
+
+        start_raw = (request.POST.get("start") or "").strip()
+        if start_raw:
+            try:
+                parsed = (
+                    timezone.datetime.fromisoformat(start_raw).date()
+                    if "T" in start_raw
+                    else date.fromisoformat(start_raw)
+                )
+            except ValueError:
+                parsed = None
+            if parsed:
+                course.start = parsed
+
+        duration_raw = (request.POST.get("duration_months") or "").strip()
+        if duration_raw:
+            try:
+                duration_months = max(0, int(duration_raw))
+                course.duration_days = duration_months * 30
+            except ValueError:
+                pass
+
+        price_raw = (request.POST.get("price") or "").strip()
+        if price_raw:
+            try:
+                course.price = Decimal(price_raw)
+            except (InvalidOperation, ValueError):
+                pass
+
+        if status:
+            course.status = status
+        course.subject = subject
+        course.room = room
+        course.schedule_note = schedule_note
+        course.save()
+
+        next_url = (request.POST.get("next") or "").strip() or reverse(f"{self.name}:settings_groupcourse_change", args=[course.pk])
+        return redirect(next_url)
+
+    def course_status_update(self, request, course_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        course = get_object_or_404(Cursues, pk=course_id)
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "finish":
+            course.status = "Завершенные курсы"
+            course.save(update_fields=["status"])
+        elif action == "archive":
+            course.is_archived = True
+            course.archived_at = timezone.now()
+            course.save(update_fields=["is_archived", "archived_at"])
+
+        if action == "archive":
+            next_url = reverse(f"{self.name}:settings_groupcourse_changelist")
+            next_url = f"{next_url}?archived=1"
+        else:
+            next_url = (request.POST.get("next") or "").strip() or reverse(
+                f"{self.name}:settings_groupcourse_change",
+                args=[course.pk],
+            )
+        return redirect(next_url)
 
     def accounting_transfer_create(self, request):
         denied = self._deny_accounting_for_manager(request)
@@ -624,8 +718,9 @@ class CRMAdminSite(AdminSite):
             )
         return JsonResponse(events, safe=False)
 
-    @require_http_methods(["POST"])
     def calendar_event_create(self, request):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
         title = (request.POST.get("title") or "").strip()
         start = (request.POST.get("start_at") or "").strip()
         end = (request.POST.get("end_at") or "").strip()
