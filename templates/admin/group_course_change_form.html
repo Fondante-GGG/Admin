@@ -212,9 +212,12 @@
 
       <div class="crm-group-pay-panel" data-payment-tab="contracts">
         <div class="crm-group-pay-toolbar">
-          <button type="button" class="crm-group-action-btn crm-group-action-btn--small" data-payment-action="compose-contracts">
-            <i class="fas fa-file-contract"></i> Составить контракт всем
-          </button>
+          <form method="post" action="{{ course_contracts_generate_url }}" class="crm-group-inline-form">
+            {% csrf_token %}
+            <button type="submit" class="crm-group-action-btn crm-group-action-btn--small">
+              <i class="fas fa-file-contract"></i> Составить контракт всем
+            </button>
+          </form>
         </div>
 
         <div class="crm-group-table-card">
@@ -232,7 +235,7 @@
               {% for e in course_enrollments %}
               <tr>
                 <td>{{ forloop.counter }}. {{ e.student.user.get_full_name|default:e.student.user.username }}</td>
-                <td>Контракт не составлен</td>
+                <td>{{ e.contract.periods|default:"Контракт не составлен" }}</td>
                 <td>{{ e.paid_amount|floatformat:"0" }} с./{{ e.tuition_amount|floatformat:"0" }} с.</td>
                 <td>{{ e.debt_amount|floatformat:"0" }} с.</td>
                 <td>
@@ -421,7 +424,10 @@
     </div>
   </div>
 
-  <input type="file" data-student-upload hidden>
+  <form method="post" action="{{ course_students_upload_url }}" enctype="multipart/form-data" class="crm-group-upload-form" data-student-upload-form>
+    {% csrf_token %}
+    <input type="file" name="students_file" accept=".csv,.txt,.xlsx,.xlsm" data-student-upload hidden>
+  </form>
   <div class="crm-group-toast" data-course-toast hidden></div>
 </div>
 
@@ -617,19 +623,6 @@
       return;
     }
 
-    var paymentAction = event.target.closest("[data-payment-action]");
-    if (paymentAction) {
-      event.preventDefault();
-      closeDropdowns();
-      if (paymentAction.getAttribute("data-payment-action") === "compose-contracts") {
-        var contractText = getStudentRows().map(function (row, index) {
-          return (index + 1) + ". " + row.getAttribute("data-name");
-        }).join("\\n");
-        copyText(contractText, "Список для контрактов скопирован");
-      }
-      return;
-    }
-
     if (!event.target.closest(".crm-group-dd")) {
       closeDropdowns();
     }
@@ -638,6 +631,11 @@
   if (uploadInput) {
     uploadInput.addEventListener("change", function () {
       if (uploadInput.files && uploadInput.files.length) {
+        var uploadForm = qs("[data-student-upload-form]");
+        if (uploadForm) {
+          uploadForm.submit();
+          return;
+        }
         showToast("Файл выбран: " + uploadInput.files[0].name);
       }
     });
@@ -658,6 +656,9 @@
   activatePanel(params.get("panel") || "students");
   activatePaymentTab(params.get("payment_tab") || "contracts");
   applyPaymentFilters();
+  if (params.get("toast")) {
+    showToast(params.get("toast"));
+  }
 })();
 </script>
 {% endblock %}

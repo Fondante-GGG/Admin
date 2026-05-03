@@ -201,6 +201,43 @@ class CourseDrop(models.Model):
         verbose_name_plural = "Покинули курс"
 
 
+class CourseContract(models.Model):
+    course = models.ForeignKey(Cursues, on_delete=models.CASCADE, verbose_name="Курс")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name="Студент")
+    periods = models.CharField(max_length=255, verbose_name="Периоды")
+    amount_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Сумма на момент создания",
+    )
+    paid_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Оплачено на момент создания",
+    )
+    debt_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Долг на момент создания",
+    )
+    document_text = models.TextField(blank=True, verbose_name="Текст контракта")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
+
+    def __str__(self):
+        return f"Контракт {self.course} — {self.student}"
+
+    class Meta:
+        verbose_name = "Контракт курса"
+        verbose_name_plural = "Контракты курсов"
+        constraints = [
+            models.UniqueConstraint(fields=["course", "student"], name="uniq_course_contract"),
+        ]
+
+
 class DebtorEnrollment(Enrollment):
     class Meta:
         proxy = True

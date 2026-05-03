@@ -20,6 +20,7 @@ from .models import (
     AccountingProject,
     CalendarEvent,
     Call,
+    CourseContract,
     Cursues,
     CourseDrop,
     DebtorEnrollment,
@@ -351,9 +352,14 @@ class CursuesAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin
                 .select_related("student__user")
                 .order_by("student__user__first_name", "student__user__username")
             )
+            contract_map = {
+                contract.student_id: contract
+                for contract in CourseContract.objects.filter(course=course).select_related("student")
+            }
             for e in enrollments:
                 e.paid_amount = e.paid_total
                 e.debt_amount = e.debt
+                e.contract = contract_map.get(e.student_id)
 
             extra_context["course_enrollments"] = enrollments
             extra_context["course_students_count"] = enrollments.count()
@@ -392,6 +398,8 @@ class CursuesAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin
             extra_context["course_status_url"] = reverse(f"{crm_admin_site.name}:course_status_update", args=[course.pk])
             extra_context["course_return_url"] = reverse(f"{crm_admin_site.name}:settings_groupcourse_change", args=[course.pk])
             extra_context["course_students_csv_url"] = reverse(f"{crm_admin_site.name}:course_students_csv", args=[course.pk])
+            extra_context["course_students_upload_url"] = reverse(f"{crm_admin_site.name}:course_students_upload", args=[course.pk])
+            extra_context["course_contracts_generate_url"] = reverse(f"{crm_admin_site.name}:course_contracts_generate", args=[course.pk])
             extra_context["course_payment_methods"] = Payment.Method.choices
             extra_context["course_status_choices"] = list(course._meta.get_field("status").choices)
             extra_context["course_subject_choices"] = list(

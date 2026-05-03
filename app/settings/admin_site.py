@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
+import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from datetime import date, timedelta
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings as django_settings
 from django.contrib.admin import AdminSite
@@ -28,6 +31,7 @@ from .models import (
     AccountingEntry,
     AccountingProject,
     CalendarEvent,
+    CourseContract,
     Cursues,
     Enrollment,
     Lead,
@@ -389,6 +393,156 @@ class CRMAdminSite(AdminSite):
                 out.append(app2)
         return out
 
+    @staticmethod
+    def _with_query(url: str, **updates) -> str:
+        parsed = urlsplit(url)
+        params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        for key, value in updates.items():
+            if value in (None, ""):
+                params.pop(key, None)
+            else:
+                params[key] = str(value)
+        query = urlencode(params)
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, query, parsed.fragment))
+
+    def _course_change_url(self, course_id: int, **params) -> str:
+        url = reverse(f"{self.name}:settings_groupcourse_change", args=[course_id])
+        return self._with_query(url, **params)
+
+    @staticmethod
+    def _normalize_phone(value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            return ""
+        return re.sub(r"[^\d+]+", "", value)
+
+    @staticmethod
+    def _split_full_name(full_name: str) -> tuple[str, str]:
+        parts = [part for part in (full_name or "").strip().split() if part]
+        if not parts:
+            return "", ""
+        if len(parts) == 1:
+            return parts[0], ""
+        return parts[0], " ".join(parts[1:])
+
+    def _unique_username(self, base: str) -> str:
+        base = slugify(base or "") or "student"
+        candidate = base[:150]
+        suffix = 1
+        while User.objects.filter(username=candidate).exists():
+            tail = f"-{suffix}"
+            candidate = f"{base[:150-len(tail)]}{tail}"
+            suffix += 1
+        return candidate
+
+    @staticmethod
+    def _parse_decimal(value: str, default: Decimal | None = None) -> Decimal | None:
+        raw = (value or "").strip().replace(" ", "").replace(",", ".")
+        if not raw:
+            return default
+        try:
+            return Decimal(raw)
+        except InvalidOperation:
+            return default
+
+    def _decode_upload(self, uploaded_file) -> str:
+        payload = uploaded_file.read()
+        for encoding in ("utf-8-sig", "utf-8", "cp1251"):
+            try:
+                return payload.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        return payload.decode("utf-8", errors="ignore")
+
+    def _map_student_upload_rows(self, rows: list[list[str]]):
+        aliases = {
+            "fio": {"fio", "фио", "full_name", "fullname", "name", "имя", "imya", "student", "student_name"},
+            "phone": {"phone", "phone_number", "телефон", "telefon", "номер", "mobile"},
+            "tuition": {"tuition", "amount", "sum", "summa", "price", "оплата", "сумма", "tuition_amount"},
+            "username": {"username", "логин", "user", "login"},
+        }
+
+        def normalize_header(cell: str) -> str:
+            return re.sub(r"[^\w]+", "_", (cell or "").strip().lower(), flags=re.UNICODE).strip("_")
+
+        header = [normalize_header(cell) for cell in rows[0]]
+        flat_aliases = {item for values in aliases.values() for item in values}
+        has_header = any(cell in flat_aliases for cell in header)
+        data_rows = rows[1:] if has_header else rows
+
+        mapped_rows = []
+        for row in data_rows:
+            cells = [str(cell or "").strip() for cell in row]
+            if has_header:
+                row_map = {}
+                for idx, cell in enumerate(cells):
+                    if idx >= len(header):
+                        continue
+                    key = header[idx]
+                    row_map[key] = cell
+
+                def pick(alias_key: str) -> str:
+                    for alias in aliases[alias_key]:
+                        if alias in row_map and row_map[alias]:
+                            return row_map[alias]
+                    return ""
+
+                mapped_rows.append(
+                    {
+                        "full_name": pick("fio"),
+                        "phone": pick("phone"),
+                        "tuition": pick("tuition"),
+                        "username": pick("username"),
+                    }
+                )
+            else:
+                mapped_rows.append(
+                    {
+                        "full_name": cells[0] if len(cells) > 0 else "",
+                        "phone": cells[1] if len(cells) > 1 else "",
+                        "tuition": cells[2] if len(cells) > 2 else "",
+                        "username": cells[3] if len(cells) > 3 else "",
+                    }
+                )
+        return mapped_rows
+
+    def _iter_student_upload_rows(self, uploaded_file):
+        filename = (getattr(uploaded_file, "name", "") or "").lower()
+        if filename.endswith((".xlsx", ".xlsm")):
+            try:
+                from openpyxl import load_workbook
+            except ModuleNotFoundError as exc:
+                raise RuntimeError("openpyxl is required for xlsx imports") from exc
+
+            workbook = load_workbook(io.BytesIO(uploaded_file.read()), read_only=True, data_only=True)
+            sheet = workbook.active
+            rows = [
+                ["" if cell is None else str(cell).strip() for cell in row]
+                for row in sheet.iter_rows(values_only=True)
+                if any(str(cell).strip() for cell in row if cell is not None)
+            ]
+            return self._map_student_upload_rows(rows)
+
+        text = self._decode_upload(uploaded_file)
+        sample = text[:2048]
+        delimiter = ","
+        try:
+            delimiter = csv.Sniffer().sniff(sample, delimiters=",;\t|").delimiter
+        except csv.Error:
+            pass
+        reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+        rows = [row for row in reader if any((cell or "").strip() for cell in row)]
+        return self._map_student_upload_rows(rows)
+
+    @staticmethod
+    def _contract_periods(course: Cursues) -> str:
+        if not course.start:
+            return "Период не указан"
+        if course.duration_days:
+            end_date = course.start + timedelta(days=max(int(course.duration_days) - 1, 0))
+            return f"с {course.start.strftime('%d %b %Y')} по {end_date.strftime('%d %b %Y')}"
+        return f"с {course.start.strftime('%d %b %Y')}"
+
     def get_urls(self):
         urls = super().get_urls()
         custom = [
@@ -403,9 +557,19 @@ class CRMAdminSite(AdminSite):
                 name="course_update",
             ),
             path(
+                "settings/course/<int:course_id>/students/upload/",
+                self.admin_view(self.course_students_upload),
+                name="course_students_upload",
+            ),
+            path(
                 "settings/course/<int:course_id>/status/",
                 self.admin_view(self.course_status_update),
                 name="course_status_update",
+            ),
+            path(
+                "settings/course/<int:course_id>/contracts/generate/",
+                self.admin_view(self.course_contracts_generate),
+                name="course_contracts_generate",
             ),
             path("archive/", self.admin_view(self.archive_index), name="archive_index"),
             path("calendar/", self.admin_view(self.calendar_view), name="calendar"),
@@ -566,6 +730,148 @@ class CRMAdminSite(AdminSite):
                 args=[course.pk],
             )
         return redirect(next_url)
+
+    def course_students_upload(self, request, course_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+        course = get_object_or_404(Cursues, pk=course_id)
+        upload = request.FILES.get("students_file")
+        if not upload:
+            return redirect(self._course_change_url(course.pk, panel="students", toast="Файл не выбран"))
+
+        try:
+            rows = self._iter_student_upload_rows(upload)
+        except Exception:
+            return redirect(self._course_change_url(course.pk, panel="students", toast="Не удалось прочитать файл"))
+
+        if not rows:
+            return redirect(self._course_change_url(course.pk, panel="students", toast="Файл пустой"))
+
+        created_students = 0
+        created_enrollments = 0
+        skipped = 0
+        updated = 0
+
+        with transaction.atomic():
+            for row in rows:
+                full_name = (row.get("full_name") or "").strip()
+                phone = self._normalize_phone(row.get("phone") or "")
+                username_hint = (row.get("username") or "").strip()
+                tuition_amount = self._parse_decimal(row.get("tuition") or "", default=course.price) or course.price
+
+                if not full_name and not phone and not username_hint:
+                    skipped += 1
+                    continue
+
+                first_name, last_name = self._split_full_name(full_name)
+
+                user = None
+                if phone:
+                    user = User.objects.filter(phone_number=phone).first()
+                if user is None and username_hint:
+                    user = User.objects.filter(username=username_hint).first()
+
+                created_user = False
+                if user is None:
+                    username_base = username_hint or phone or full_name or f"student-{timezone.now().timestamp()}"
+                    user = User.objects.create(
+                        username=self._unique_username(username_base),
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone_number=phone or username_hint or "0000000000",
+                        role="Студент",
+                        is_active=True,
+                        is_staff=False,
+                    )
+                    user.set_unusable_password()
+                    user.save(update_fields=["password"])
+                    created_user = True
+                else:
+                    dirty_fields = []
+                    if first_name and not user.first_name:
+                        user.first_name = first_name
+                        dirty_fields.append("first_name")
+                    if last_name and not user.last_name:
+                        user.last_name = last_name
+                        dirty_fields.append("last_name")
+                    if phone and user.phone_number != phone:
+                        user.phone_number = phone
+                        dirty_fields.append("phone_number")
+                    if dirty_fields:
+                        user.save(update_fields=dirty_fields)
+
+                student, student_created = Student.objects.get_or_create(user=user)
+                if student_created:
+                    created_students += 1
+
+                enrollment, enrollment_created = Enrollment.objects.get_or_create(
+                    student=student,
+                    course=course,
+                    defaults={"tuition_amount": tuition_amount},
+                )
+                if not enrollment_created and tuition_amount is not None and enrollment.tuition_amount != tuition_amount:
+                    enrollment.tuition_amount = tuition_amount
+                    enrollment.save(update_fields=["tuition_amount"])
+                    updated += 1
+
+                course.students.add(student)
+                if enrollment_created:
+                    created_enrollments += 1
+
+        toast = (
+            f"Импорт завершен: студентов {created_students}, "
+            f"зачислений {created_enrollments}, обновлено {updated}, пропущено {skipped}"
+        )
+        return redirect(self._course_change_url(course.pk, panel="students", toast=toast))
+
+    def course_contracts_generate(self, request, course_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+        course = get_object_or_404(Cursues, pk=course_id)
+        enrollments = (
+            Enrollment.objects.filter(course=course)
+            .select_related("student__user")
+            .order_by("student__user__first_name", "student__user__username")
+        )
+
+        created = 0
+        updated = 0
+        periods = self._contract_periods(course)
+
+        with transaction.atomic():
+            for enrollment in enrollments:
+                student_name = enrollment.student.user.get_full_name() or enrollment.student.user.username
+                paid_total = enrollment.paid_total or Decimal("0")
+                debt_total = enrollment.debt or Decimal("0")
+                document_text = (
+                    f"Контракт на обучение\n"
+                    f"Курс: {course.title}\n"
+                    f"Студент: {student_name}\n"
+                    f"Период: {periods}\n"
+                    f"Сумма: {enrollment.tuition_amount} с.\n"
+                    f"Оплачено: {paid_total} с.\n"
+                    f"Долг: {debt_total} с."
+                )
+                contract, contract_created = CourseContract.objects.update_or_create(
+                    course=course,
+                    student=enrollment.student,
+                    defaults={
+                        "periods": periods,
+                        "amount_snapshot": enrollment.tuition_amount,
+                        "paid_snapshot": paid_total,
+                        "debt_snapshot": debt_total,
+                        "document_text": document_text,
+                    },
+                )
+                if contract_created:
+                    created += 1
+                else:
+                    updated += 1
+
+        toast = f"Контракты готовы: создано {created}, обновлено {updated}"
+        return redirect(self._course_change_url(course.pk, panel="payments", payment_tab="contracts", toast=toast))
 
     def accounting_transfer_create(self, request):
         denied = self._deny_accounting_for_manager(request)

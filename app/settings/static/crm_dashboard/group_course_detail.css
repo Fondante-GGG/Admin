@@ -349,6 +349,11 @@
   margin-bottom: 16px;
 }
 
+.crm-group-inline-form,
+.crm-group-upload-form {
+  margin: 0;
+}
+
 .crm-group-pay-filter-grid {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
