@@ -4,46 +4,137 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'crm_dashboard/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'crm_dashboard/group_courses.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="crm-dashboard">
-  <h1>Групповые курсы</h1>
+{% block page_actions %}{% endblock %}
 
-  <div class="crm-toolbar">
-    <div class="crm-toolbar__views">
-      <button type="button" data-set-view="grid" class="crm-btn {% if view_mode == 'grid' or not view_mode %}is-active{% endif %}">Сетка</button>
-      <button type="button" data-set-view="list" class="crm-btn {% if view_mode == 'list' %}is-active{% endif %}">Список</button>
+{% block search %}{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-group-page">
+  <h1>Курсы</h1>
+
+  <div class="crm-group-toolbar">
+    <div class="crm-group-toolbar__left">
+      {% if has_add_permission %}
+      <a href="{{ group_add_url }}" class="crm-group-split-btn">
+        <span class="crm-group-split-btn__main"><i class="fas fa-plus"></i> Добавить</span>
+        <span class="crm-group-split-btn__arrow"><i class="fas fa-caret-down"></i></span>
+      </a>
+      {% endif %}
+
+      <a href="{{ group_archive_url }}" class="crm-group-archive-btn{% if group_is_archive %} is-active{% endif %}">
+        <i class="far fa-trash-alt"></i> Архив
+      </a>
+
+      <form method="get" action="" class="crm-group-search">
+        {% if selected_subject %}<input type="hidden" name="subject" value="{{ selected_subject }}">{% endif %}
+        {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
+        {% if group_is_archive %}<input type="hidden" name="archived" value="1">{% endif %}
+        <input type="hidden" name="view" value="{{ view_mode|default:'grid' }}">
+        <input type="hidden" name="group_by" value="{{ group_by|default:'status' }}">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Поиск">
+        <button type="submit" aria-label="Поиск"><i class="fas fa-search"></i></button>
+      </form>
     </div>
-    <div class="crm-filter-dd">
-      <button type="button" data-filter-toggle class="crm-btn crm-btn--outline">Предмет ▾</button>
-      <div class="crm-filter-dd__menu">
-        <a href="#" data-set-param="subject" data-value="" class="crm-filter-dd__item {% if not selected_subject %}is-active{% endif %}">Все</a>
-        {% for s in subjects %}<a href="#" data-set-param="subject" data-value="{{ s }}" class="crm-filter-dd__item {% if selected_subject == s %}is-active{% endif %}">{{ s }}</a>{% endfor %}
-      </div>
+
+    <div class="crm-group-toolbar__right">
+      <a href="{{ group_grid_url }}" class="crm-group-icon-btn{% if view_mode == 'grid' or not view_mode %} is-active{% endif %}" aria-label="Сетка">
+        <i class="fas fa-th-large"></i>
+      </a>
+      <a href="{{ group_list_url }}" class="crm-group-icon-btn{% if view_mode == 'list' %} is-active{% endif %}" aria-label="Список">
+        <i class="fas fa-list"></i>
+      </a>
+      <a href="{{ group_status_url }}" class="crm-group-mode-btn{% if group_by != 'subject' %} is-active{% endif %}">
+        По статусам
+      </a>
+      <a href="{{ group_subject_url }}" class="crm-group-mode-btn{% if group_by == 'subject' %} is-active{% endif %}">
+        По предметам
+      </a>
     </div>
   </div>
 
   {% if view_mode == 'grid' or not view_mode %}
-  <div class="crm-kanban-grid">
     {% for section in status_sections %}
-    <div class="crm-kanban-col">
-      <h3 class="crm-kanban-col__title">{{ section.title }} <span>({{ section.items|length }})</span></h3>
-      <div class="crm-kanban-col__cards">
+    <details class="crm-group-section" open>
+      <summary class="crm-group-section__title">
+        <i class="fas fa-angle-down"></i>
+        {{ section.title }}
+      </summary>
+
+      <div class="crm-group-grid">
         {% for course in section.items %}
-        <a href="{% url 'admin:settings_groupcourse_change' course.id %}" class="crm-kanban-card">
-          <div class="crm-kanban-card__header">{{ course.title }}</div>
-          <div class="crm-kanban-card__meta"><span>{{ course.subject }}</span><span>{{ course.students.count }}/{{ course.capacity }}</span></div>
-          {% if course.price %}<div class="crm-kanban-card__price">{{ course.price }} с.</div>{% endif %}
+        <a href="{% url 'admin:settings_groupcourse_change' course.id %}" class="crm-group-card">
+          <div class="crm-group-card__top">
+            <div class="crm-group-card__room">{{ course.room }}</div>
+            <div class="crm-group-card__capacity">
+              <span class="crm-group-card__pill" style="background: {{ course.badge_bg }}; color: {{ course.badge_color }};">
+                {{ course.students_count }}/{{ course.capacity }}
+              </span>
+              <span class="crm-group-card__capacity-label">студентов</span>
+            </div>
+          </div>
+
+          <div class="crm-group-card__title">{{ course.title }}</div>
+          <div class="crm-group-card__mentor">{{ course.mentor_name }}</div>
+
+          <div class="crm-group-card__dates">
+            {% if course.start %}{{ course.start|date:"d M Y" }}{% endif %}
+            {% if course.end %} - {{ course.end|date:"d M Y" }}{% endif %}
+          </div>
+
+          <div class="crm-group-card__bottom">
+            <span>{{ course.schedule_note|default:"" }}</span>
+            <span>{{ course.duration_label }}</span>
+          </div>
         </a>
         {% endfor %}
       </div>
-    </div>
+    </details>
+    {% empty %}
+    <div class="crm-group-empty">Курсы не найдены.</div>
     {% endfor %}
-  </div>
   {% else %}
-  {{ block.super }}
+    <div class="crm-group-list-wrap">
+      {% for section in status_sections %}
+      <details class="crm-group-section" open>
+        <summary class="crm-group-section__title">
+          <i class="fas fa-angle-down"></i>
+          {{ section.title }}
+        </summary>
+
+        <div class="crm-group-table-wrap">
+          <table class="crm-group-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Название</th>
+                <th>Ментор</th>
+                <th>Дата начала</th>
+                <th>Длительность</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for course in section.items %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td class="crm-group-table__title">
+                  <a href="{{ course.change_url }}">{{ course.title }}</a>
+                </td>
+                <td>{{ course.mentor_name }}</td>
+                <td>{% if course.start %}с {{ course.start|date:"d M Y" }}{% else %}—{% endif %}</td>
+                <td>{{ course.duration_label }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% empty %}
+      <div class="crm-group-empty">Курсы не найдены.</div>
+      {% endfor %}
+    </div>
   {% endif %}
 </div>
-<script src="{% static 'crm_dashboard/group_courses.js' %}"></script>
 {% endblock %}

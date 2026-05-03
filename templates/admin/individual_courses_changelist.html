@@ -1,0 +1,81 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/individual_courses.css' %}">
+{% endblock %}
+
+{% block page_actions %}{% endblock %}
+
+{% block search %}{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-individual-page">
+  <h1>Индивидуальные курсы</h1>
+
+  <div class="crm-individual-toolbar">
+    <div class="crm-individual-toolbar__left">
+      {% if has_add_permission %}
+      <a href="{{ individual_add_url }}" class="crm-split-btn">
+        <span class="crm-split-btn__main"><i class="fas fa-plus"></i> Добавить</span>
+        <span class="crm-split-btn__arrow"><i class="fas fa-caret-down"></i></span>
+      </a>
+      {% endif %}
+      <a href="{{ individual_archive_url }}" class="crm-dark-btn{% if individual_is_archive %} is-active{% endif %}">
+        <i class="far fa-trash-alt"></i> Архив
+      </a>
+      <form method="get" action="" class="crm-searchbar">
+        {% if individual_is_archive %}
+        <input type="hidden" name="archived" value="1">
+        {% endif %}
+        <input type="search" name="q" value="{{ individual_search_query }}" placeholder="Поиск">
+        <button type="submit" aria-label="Поиск"><i class="fas fa-search"></i></button>
+      </form>
+    </div>
+  </div>
+
+  <div class="crm-individual-table-wrap">
+    <table class="crm-individual-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Название</th>
+          <th>Студент</th>
+          <th>Ментор</th>
+          <th>Дата начала</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in individual_course_rows %}
+        <tr>
+          <td class="crm-individual-table__id">{{ row.id }}</td>
+          <td class="crm-individual-table__title">
+            <a href="{{ row.change_url }}">{{ row.title }}</a>
+          </td>
+          <td>{{ row.student }}</td>
+          <td>{{ row.mentor }}</td>
+          <td>{{ row.start|date:"d M Y" }}</td>
+          <td>
+            <span class="crm-status-badge" style="color: {{ row.status_color }}; background: {{ row.status_bg }};">
+              {{ row.status }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="crm-individual-table__empty">Пока нет индивидуальных курсов.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if cl.result_count %}
+  <div class="crm-individual-pagination">
+    {% pagination cl %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

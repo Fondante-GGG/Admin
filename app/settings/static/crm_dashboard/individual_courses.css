@@ -1,0 +1,221 @@
+.app-settings.model-individualcourse.change-list .content-wrapper > .content.border-bottom.mb-2 {
+  display: none;
+}
+
+.crm-individual-page h1 {
+  margin: 8px 0 18px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(16, 24, 40, 0.92);
+}
+
+.crm-individual-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.crm-individual-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm-split-btn,
+.crm-dark-btn {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 6px;
+  overflow: hidden;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.crm-split-btn:hover,
+.crm-dark-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(108, 92, 231, 0.14);
+  text-decoration: none;
+}
+
+.crm-split-btn__main,
+.crm-split-btn__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  background: var(--crm-violet);
+  color: #fff;
+}
+
+.crm-split-btn__main {
+  gap: 8px;
+}
+
+.crm-split-btn__arrow {
+  padding-left: 10px;
+  padding-right: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.crm-dark-btn {
+  gap: 8px;
+  padding: 9px 14px;
+  background: #444;
+  color: #fff;
+}
+
+.crm-dark-btn.is-active {
+  background: #2f2f2f;
+}
+
+.crm-searchbar {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 280px;
+}
+
+.crm-searchbar input {
+  width: 100%;
+  min-width: 180px;
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+}
+
+.crm-searchbar input:focus {
+  border-color: rgba(108, 92, 231, 0.42);
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+  position: relative;
+  z-index: 1;
+}
+
+.crm-searchbar button {
+  border: 1px solid var(--crm-violet);
+  background: var(--crm-violet);
+  color: #fff;
+  padding: 0 14px;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+
+.crm-individual-table-wrap {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.crm-individual-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.crm-individual-table thead th {
+  padding: 16px 18px;
+  background: rgba(108, 92, 231, 0.04);
+  color: rgba(16, 24, 40, 0.62);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+}
+
+.crm-individual-table tbody td {
+  padding: 16px 18px;
+  background: #fff;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  color: rgba(16, 24, 40, 0.8);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.crm-individual-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.crm-individual-table tbody tr:hover td {
+  background: rgba(108, 92, 231, 0.03);
+}
+
+.crm-individual-table__id {
+  width: 90px;
+  color: rgba(16, 24, 40, 0.56);
+  font-weight: 700;
+}
+
+.crm-individual-table__title a {
+  color: var(--crm-violet);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.crm-individual-table__title a:hover {
+  text-decoration: underline;
+}
+
+.crm-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.crm-individual-table__empty {
+  text-align: center;
+  color: var(--crm-muted);
+  padding: 40px 18px !important;
+}
+
+.crm-individual-pagination {
+  margin-top: 16px;
+}
+
+.crm-individual-pagination .paginator {
+  margin-top: 0;
+  background: transparent;
+}
+
+.crm-individual-pagination .paginator a,
+.crm-individual-pagination .paginator span.this-page {
+  border-radius: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  background: #fff;
+}
+
+.crm-individual-pagination .paginator span.this-page {
+  background: rgba(108, 92, 231, 0.12);
+  border-color: rgba(108, 92, 231, 0.3);
+}
+
+@media (max-width: 960px) {
+  .crm-searchbar {
+    min-width: 100%;
+  }
+
+  .crm-individual-table-wrap {
+    overflow-x: auto;
+  }
+
+  .crm-individual-table {
+    min-width: 860px;
+  }
+}

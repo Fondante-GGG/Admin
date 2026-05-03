@@ -3,15 +3,18 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import date, timedelta
+from urllib.parse import urlsplit
 
+from django.conf import settings as django_settings
 from django.contrib.admin import AdminSite
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.http import HttpResponseForbidden
-from django.urls import path
+from django.urls import path, reverse
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from django.utils.text import slugify
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
@@ -146,6 +149,211 @@ class CRMAdminSite(AdminSite):
         if not user.is_authenticated or not user.is_active:
             return False
         return super().has_permission(request)
+
+    def _path_matches(self, request, url: str | None, *, exact: bool = False) -> bool:
+        if not url:
+            return False
+        target = (urlsplit(url).path or "").rstrip("/") or "/"
+        current = (request.path or "").rstrip("/") or "/"
+        if exact:
+            return current == target
+        return current == target or current.startswith(f"{target}/")
+
+    def _sidebar_item(
+        self,
+        request,
+        *,
+        title: str,
+        icon: str,
+        url: str | None = None,
+        children: list[dict] | None = None,
+        exact: bool = False,
+        match_url: bool = True,
+        force_open: bool = False,
+    ) -> dict:
+        children = children or []
+        child_active = any(child.get("active") or child.get("open") for child in children)
+        active = child_active or (match_url and self._path_matches(request, url, exact=exact))
+        return {
+            "title": title,
+            "icon": icon,
+            "url": url,
+            "children": children,
+            "active": active,
+            "open": force_open or child_active,
+        }
+
+    def _build_sidebar_menu(self, request) -> list[dict]:
+        jazzmin_settings = getattr(django_settings, "JAZZMIN_SETTINGS", {})
+        icon_map = jazzmin_settings.get("icons", {})
+        hidden_models = {m.lower() for m in jazzmin_settings.get("hide_models", [])}
+        ordered_models = [m.lower() for m in jazzmin_settings.get("order_with_respect_to", []) if "." in m]
+        default_child_icon = jazzmin_settings.get("default_icon_children", "far fa-circle")
+
+        model_map: dict[str, dict] = {}
+        model_order: list[str] = []
+        for app in self.get_app_list(request):
+            app_label = app["app_label"].lower()
+            for model in app.get("models", []):
+                model_str = f"{app_label}.{model['object_name']}".lower()
+                if model_str in hidden_models:
+                    continue
+                model_map[model_str] = {
+                    "title": model.get("name") or model["object_name"],
+                    "icon": icon_map.get(model_str, default_child_icon),
+                    "url": model.get("admin_url"),
+                }
+                model_order.append(model_str)
+
+        index_url = reverse(f"{self.name}:index")
+        menu: list[dict] = []
+        handled: set[str] = set()
+
+        org_items = getattr(django_settings, "CRM_ORGANIZATIONS", None)
+        if not org_items:
+            site_brand = jazzmin_settings.get("site_brand") or self.site_header
+            org_items = [site_brand]
+
+        org_children = []
+        for org in org_items:
+            if isinstance(org, dict):
+                org_title = (org.get("title") or org.get("name") or "").strip()
+                org_url = org.get("url") or f"{index_url}?organization={slugify(org_title or 'default')}"
+            else:
+                org_title = str(org).strip()
+                org_url = f"{index_url}?organization={slugify(org_title or 'default')}"
+            if not org_title:
+                continue
+            org_children.append(
+                self._sidebar_item(
+                    request,
+                    title=org_title,
+                    icon="fas fa-angle-right",
+                    url=org_url,
+                    match_url=False,
+                )
+            )
+
+        if org_children:
+            menu.append(
+                self._sidebar_item(
+                    request,
+                    title="Мои организации",
+                    icon="fas fa-map-marker-alt",
+                    children=org_children,
+                    match_url=False,
+                    force_open=True,
+                )
+            )
+
+        menu.append(
+            self._sidebar_item(
+                request,
+                title="Дашборд",
+                icon="fas fa-th-large",
+                url=index_url,
+                exact=True,
+            )
+        )
+
+        def take_model(model_str: str, *, title: str | None = None, icon: str | None = None, url: str | None = None) -> dict | None:
+            item = model_map.get(model_str)
+            if not item:
+                return None
+            handled.add(model_str)
+            return self._sidebar_item(
+                request,
+                title=title or item["title"],
+                icon=icon or item["icon"],
+                url=url or item["url"],
+            )
+
+        def add_courses_tree():
+            course_children = []
+            group_item = take_model("settings.groupcourse")
+            if group_item:
+                course_children.append(group_item)
+            individual_item = take_model("settings.individualcourse")
+            if individual_item:
+                course_children.append(individual_item)
+
+            handled.add("settings.cursues")
+            if course_children:
+                menu.append(
+                    self._sidebar_item(
+                        request,
+                        title="Курсы",
+                        icon=icon_map.get("settings.cursues", "fas fa-book"),
+                        children=course_children,
+                    )
+                )
+            else:
+                course_item = take_model("settings.cursues", title="Курсы")
+                if course_item:
+                    menu.append(course_item)
+
+        for model_str in ordered_models:
+            if model_str in handled or model_str in {"settings.groupcourse", "settings.individualcourse"}:
+                continue
+            if model_str == "settings.cursues":
+                add_courses_tree()
+                continue
+            if model_str == "settings.calendarevent" and model_str in model_map:
+                handled.add(model_str)
+                menu.append(
+                    self._sidebar_item(
+                        request,
+                        title=model_map[model_str]["title"],
+                        icon=model_map[model_str]["icon"],
+                        url=reverse(f"{self.name}:calendar"),
+                    )
+                )
+                continue
+            item = take_model(model_str)
+            if item:
+                menu.append(item)
+
+        if "settings.cursues" in model_map and "settings.cursues" not in handled:
+            add_courses_tree()
+
+        for model_str in model_order:
+            if model_str in handled or model_str in {"settings.groupcourse", "settings.individualcourse"}:
+                continue
+            if model_str == "settings.calendarevent":
+                handled.add(model_str)
+                menu.append(
+                    self._sidebar_item(
+                        request,
+                        title=model_map[model_str]["title"],
+                        icon=model_map[model_str]["icon"],
+                        url=reverse(f"{self.name}:calendar"),
+                    )
+                )
+                continue
+            item = take_model(model_str)
+            if item:
+                menu.append(item)
+
+        menu.append(
+            self._sidebar_item(
+                request,
+                title="Архив",
+                icon="fas fa-archive",
+                url=reverse(f"{self.name}:archive_index"),
+            )
+        )
+        return menu
+
+    def each_context(self, request):
+        context = super().each_context(request)
+        context.update(
+            {
+                "crm_admin_site_name": self.name,
+                "crm_sidebar_index_url": reverse(f"{self.name}:index"),
+                "crm_sidebar_menu": self._build_sidebar_menu(request),
+            }
+        )
+        return context
 
     def get_app_list(self, request, app_label=None):
         app_list = super().get_app_list(request, app_label=app_label)

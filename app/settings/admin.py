@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.http import HttpResponse
+from django.urls import reverse
 from django.db import models
 from django.db.models import F, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
@@ -8,7 +9,7 @@ from django.utils.dateparse import parse_date
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
 
 from .admin_site import crm_admin_site
 from .admin_site import _simple_pdf_table
@@ -400,54 +401,168 @@ class GroupCourseAdmin(CursuesAdmin):
     change_list_template = "admin/group_courses_changelist.html"
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).prefetch_related("students", "mentors__user")
         return qs.filter(course_type=Cursues.CourseType.GROUP)
 
     list_per_page = 20
 
+    @staticmethod
+    def _course_card(course: Cursues) -> dict:
+        mentors = list(course.mentors.all())
+        mentor = mentors[0] if mentors else None
+        mentor_user = mentor.user if mentor else None
+        students_count = len(course.students.all())
+
+        end_date = None
+        if course.start and course.duration_days:
+            end_date = course.start + timedelta(days=max(int(course.duration_days) - 1, 0))
+
+        badge_bg = "#adff2f" if course.capacity and students_count >= course.capacity else "#ff5757"
+        badge_color = "#15212f" if course.capacity and students_count >= course.capacity else "#ffffff"
+
+        return {
+            "id": course.pk,
+            "title": course.title,
+            "room": (course.room or "—").strip() or "—",
+            "mentor_name": (mentor_user.get_full_name() or mentor_user.username) if mentor_user else "—",
+            "start": course.start,
+            "end": end_date,
+            "schedule_note": (course.schedule_note or "").strip(),
+            "duration_label": getattr(course, "duration_label", "—"),
+            "students_count": students_count,
+            "capacity": course.capacity,
+            "badge_bg": badge_bg,
+            "badge_color": badge_color,
+            "change_url": reverse(f"{crm_admin_site.name}:settings_groupcourse_change", args=[course.pk]),
+        }
+
     def changelist_view(self, request, extra_context=None):
+        request._crm_group_params = request.GET.copy()
+        mutable = request.GET.copy()
+        for key in ("view", "group_by"):
+            mutable.pop(key, None)
+        request.GET = mutable
+        request.META["QUERY_STRING"] = mutable.urlencode()
+
         extra_context = extra_context or {}
         base = self.get_queryset(request)
+        params = request._crm_group_params
 
-        subject = request.GET.get("subject", "")
+        q = (params.get("q") or "").strip()
+        if q:
+            base = base.filter(title__icontains=q)
+
+        subject = params.get("subject", "")
         if subject:
             base = base.filter(subject=subject)
 
-        status = request.GET.get("status", "")
+        status = params.get("status", "")
         if status:
             base = base.filter(status=status)
 
-        extra_context["view_mode"] = request.GET.get("view", "grid")
-        extra_context["selected_status"] = request.GET.get("status", "")
-        extra_context["selected_subject"] = request.GET.get("subject", "")
-
+        group_by = params.get("group_by", "status")
         statuses = ["Подготовка курсов", "Активные курсы", "Завершенные курсы"]
-        extra_context["status_sections"] = [
-            {"title": s, "key": s, "items": list(base.filter(status=s).order_by("-created_at"))}
-            for s in statuses
-        ]
-        extra_context["subjects"] = list(
+
+        def build_url(**updates):
+            params = request._crm_group_params.copy()
+            for key, value in updates.items():
+                if value in (None, "", False):
+                    params.pop(key, None)
+                else:
+                    params[key] = str(value)
+            qs = params.urlencode()
+            return f"{request.path}?{qs}" if qs else request.path
+
+        extra_context["view_mode"] = params.get("view", "grid")
+        extra_context["group_by"] = group_by
+        extra_context["selected_status"] = params.get("status", "")
+        extra_context["selected_subject"] = params.get("subject", "")
+        extra_context["search_query"] = q
+
+        subjects = list(
             self.get_queryset(request)
             .exclude(subject="")
             .values_list("subject", flat=True)
             .distinct()
             .order_by("subject")
         )
+        extra_context["subjects"] = subjects
         extra_context["status_choices"] = statuses
+
+        if group_by == "subject":
+            sections = []
+            for subj in subjects:
+                items = list(base.filter(subject=subj).order_by("-created_at"))
+                if not items:
+                    continue
+                sections.append(
+                    {
+                        "title": subj,
+                        "key": subj,
+                        "items": [self._course_card(course) for course in items],
+                    }
+                )
+            if not sections:
+                no_subject_items = list(base.filter(subject="").order_by("-created_at"))
+                if no_subject_items:
+                    sections.append(
+                        {
+                            "title": "Без предмета",
+                            "key": "without-subject",
+                            "items": [self._course_card(course) for course in no_subject_items],
+                        }
+                    )
+        else:
+            sections = []
+            for s in statuses:
+                items = list(base.filter(status=s).order_by("-created_at"))
+                if not items:
+                    continue
+                sections.append(
+                    {
+                        "title": s,
+                        "key": s,
+                        "items": [self._course_card(course) for course in items],
+                    }
+                )
+
+        extra_context["status_sections"] = sections
+        extra_context["group_add_url"] = reverse(
+            f"{self.admin_site.name}:{self.opts.app_label}_{self.opts.model_name}_add"
+        )
+        is_archive = params.get("archived") == "1"
+        extra_context["group_archive_url"] = build_url(archived="" if is_archive else "1")
+        extra_context["group_is_archive"] = is_archive
+        extra_context["group_grid_url"] = build_url(view="grid")
+        extra_context["group_list_url"] = build_url(view="list")
+        extra_context["group_status_url"] = build_url(group_by="status")
+        extra_context["group_subject_url"] = build_url(group_by="subject")
         return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(IndividualCourse, site=crm_admin_site)
 class IndividualCourseAdmin(CursuesAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
+    change_list_template = "admin/individual_courses_changelist.html"
+
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).prefetch_related("students__user", "mentors__user")
         return qs.filter(course_type=Cursues.CourseType.INDIVIDUAL)
 
     list_display = ("id", "title", "student_display", "mentor_display", "start", "status")
     list_display_links = ("title",)
     ordering = ("-created_at",)
     list_per_page = 20
+
+    @staticmethod
+    def _status_meta(status: str) -> tuple[str, str]:
+        mapping = {
+            "Подготовка курсов": ("#f59e0b", "#fff7ed"),
+            "Активные курсы": ("#10b981", "#ecfdf5"),
+            "Завершенные курсы": ("#6b7280", "#f3f4f6"),
+        }
+        color, bg = mapping.get(status, ("#6c5ce7", "#f3f0ff"))
+        return color, bg
 
     def student_display(self, obj: Cursues):
         st = obj.students.select_related("user").first()
@@ -466,6 +581,52 @@ class IndividualCourseAdmin(CursuesAdmin):
         return user.get_full_name() or user.username
 
     mentor_display.short_description = "Ментор"
+
+    def changelist_view(self, request, extra_context=None):
+        response = super().changelist_view(request, extra_context=extra_context)
+        if not hasattr(response, "context_data") or "cl" not in response.context_data:
+            return response
+
+        cl = response.context_data["cl"]
+        row_items = []
+        for course in cl.result_list:
+            student = course.students.all().first()
+            student_user = student.user if student else None
+            mentor = course.mentors.all().first()
+            mentor_user = mentor.user if mentor else None
+            status_color, status_bg = self._status_meta(course.status)
+            row_items.append(
+                {
+                    "id": course.pk,
+                    "title": course.title,
+                    "student": (student_user.get_full_name() or student_user.username) if student_user else "—",
+                    "mentor": (mentor_user.get_full_name() or mentor_user.username) if mentor_user else "—",
+                    "start": course.start,
+                    "status": course.status,
+                    "status_color": status_color,
+                    "status_bg": status_bg,
+                    "change_url": reverse(
+                        f"{self.admin_site.name}:{self.opts.app_label}_{self.opts.model_name}_change",
+                        args=[course.pk],
+                    ),
+                }
+            )
+
+        add_url = reverse(f"{self.admin_site.name}:{self.opts.app_label}_{self.opts.model_name}_add")
+        params = request.GET.copy()
+        params["archived"] = "1"
+        archive_url = f"{request.path}?{params.urlencode()}"
+
+        response.context_data.update(
+            {
+                "individual_course_rows": row_items,
+                "individual_add_url": add_url,
+                "individual_archive_url": archive_url,
+                "individual_search_query": (request.GET.get("q") or "").strip(),
+                "individual_is_archive": request.GET.get("archived") == "1",
+            }
+        )
+        return response
 
 
 @admin.register(Lead, site=crm_admin_site)
