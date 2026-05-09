@@ -3,7 +3,7 @@
 
 {% block sidebar %}
   {% if jazzmin_settings.show_sidebar %}
-    <aside class="main-sidebar elevation-4 {{ jazzmin_ui.sidebar_classes }}" id="jazzy-sidebar">
+    <aside class="main-sidebar elevation-2 crm-sidebar-light {{ jazzmin_ui.sidebar_classes }}" id="jazzy-sidebar">
       <a href="{{ crm_sidebar_index_url }}" class="brand-link {{ jazzmin_ui.brand_classes }}" id="jazzy-logo">
         <img src="{% static jazzmin_settings.site_logo %}" alt="{{ jazzmin_settings.site_header }} Logo" class="{{ jazzmin_settings.site_logo_classes }} brand-image elevation-3" style="opacity: .8">
         <span class="brand-text font-weight-light">{{ jazzmin_settings.site_brand }}</span>
@@ -22,7 +22,7 @@
             {% if perms|can_view_self %}
               <a href="{% jazzy_admin_url request.user crm_admin_site_name %}" class="d-block">{{ request.user }}</a>
             {% else %}
-              <span class="d-block" style="color: white;">{{ request.user }}</span>
+              <span class="d-block crm-sidebar-user-name">{{ request.user }}</span>
             {% endif %}
           </div>
         </div>
@@ -30,11 +30,13 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column {{ jazzmin_ui.sidebar_list_classes }} crm-sidebar-nav" data-widget="treeview" role="menu" data-collapsible="false">
             {% for item in crm_sidebar_menu %}
-              {% if item.children %}
+              {% if item.heading %}
+                <li class="nav-header crm-sidebar-section-heading">{{ item.title }}</li>
+              {% elif item.children %}
                 <li class="nav-item has-treeview{% if item.open %} menu-open{% endif %}">
                   <a href="{% if item.url %}{{ item.url }}{% else %}#{% endif %}" class="nav-link{% if item.active %} active{% endif %}">
                     <i class="nav-icon {{ item.icon }}"></i>
-                    <p>{{ item.title }}<i class="right fas fa-angle-left"></i></p>
+                    <p>{{ item.title }}<i class="right fas fa-angle-right"></i></p>
                   </a>
                   <ul class="nav nav-treeview"{% if item.open %} style="display: block;"{% else %} style="display: none;"{% endif %}>
                     {% for child in item.children %}

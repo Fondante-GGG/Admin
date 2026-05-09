@@ -222,6 +222,25 @@ body {
   background: radial-gradient(circle at 30% 30%, rgba(0, 184, 148, 0.18), rgba(0, 184, 148, 0.06));
 }
 
+.crm-kpi__icon--orange {
+  background: radial-gradient(circle at 30% 30%, rgba(245, 162, 93, 0.22), rgba(245, 162, 93, 0.08));
+}
+
+.crm-kpi__icon--teal {
+  background: radial-gradient(circle at 30% 30%, rgba(0, 184, 204, 0.2), rgba(0, 184, 204, 0.07));
+}
+
+.crm-kpis--6 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .crm-kpis--6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .crm-kpi__num {
   font-size: 20px;
   font-weight: 800;
@@ -235,6 +254,122 @@ body {
 .crm-chart {
   position: relative;
   padding-top: 8px;
+}
+
+.crm-chart__subtitle {
+  font-size: 11px;
+  color: var(--crm-muted);
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.crm-grid--hero {
+  align-items: stretch;
+}
+
+@media (min-width: 1100px) {
+  .crm-grid--hero > .crm-stack {
+    max-width: none;
+  }
+}
+
+.crm-license-banner {
+  background: #ffe9ea;
+  border: 1px solid rgba(255, 0, 0, 0.08);
+  color: #d63031;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.crm-card__title--muted {
+  color: var(--crm-muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.crm-card--income {
+  min-height: auto;
+}
+
+.crm-income__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.crm-income__label {
+  font-size: 11px;
+  color: var(--crm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.crm-income__value {
+  font-size: 26px;
+  font-weight: 900;
+  margin-top: 4px;
+  letter-spacing: -0.02em;
+}
+
+.crm-income__hint {
+  font-size: 12px;
+  margin-top: 8px;
+  color: rgba(16, 24, 40, 0.55);
+}
+
+.crm-income__hint--down {
+  color: #d63031;
+}
+
+.crm-income__hint--up {
+  color: #00b894;
+}
+
+.crm-income-ring {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--crm-card) 58%, transparent 59%),
+    conic-gradient(
+      from -90deg,
+      #00b894 0deg,
+      #00b894 calc(var(--crm-ring-pct, 0) * 3.6deg),
+      rgba(16, 24, 40, 0.09) 0
+    );
+  box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.06);
+}
+
+.crm-income-ring__inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+}
+
+.crm-income-ring__pct {
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(16, 24, 40, 0.88);
+}
+
+.crm-income-ring__cap {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(16, 24, 40, 0.5);
+  margin-top: 2px;
+  line-height: 1.2;
 }
 
 .crm-table {
@@ -266,6 +401,14 @@ body {
   align-items: center;
 }
 
+.crm-table__row:not(.crm-table__row--empty) {
+  align-items: start;
+}
+
+.crm-table__row .crm-money {
+  padding-top: 4px;
+}
+
 .crm-table__row--empty {
   display: block;
   padding: 12px 10px;
@@ -278,6 +421,15 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.crm-table__sub {
+  font-size: 11px;
+  color: var(--crm-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .crm-money {
@@ -393,4 +545,192 @@ body {
   font-size: 12px;
   margin-left: 2px;
   opacity: 0.8;
+}
+
+.crm-ext-label {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+
+.crm-metric-board {
+  display: grid;
+  grid-template-columns: minmax(136px, auto) repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+  align-items: stretch;
+}
+
+@media (max-width: 980px) {
+  .crm-metric-board {
+    overflow-x: auto;
+    grid-template-columns: minmax(120px, auto) repeat(4, minmax(140px, 1fr));
+    padding-bottom: 6px;
+  }
+}
+
+.crm-metric-board__top {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--crm-muted);
+  padding: 6px 4px;
+}
+
+.crm-metric-board__side {
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(16, 24, 40, 0.82);
+  padding: 6px 6px 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crm-metric-board .crm-mini {
+  padding: 12px 48px 12px 12px;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.crm-metric-board .crm-mini__num {
+  margin-bottom: 0;
+}
+
+.crm-mini__circle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--crm-border);
+}
+
+.crm-mini--tag .crm-mini__circle {
+  background: radial-gradient(circle at 35% 30%, rgba(108, 92, 231, 0.22), rgba(108, 92, 231, 0.08));
+}
+
+.crm-mini--user .crm-mini__circle {
+  background: radial-gradient(circle at 35% 30%, rgba(108, 92, 231, 0.16), rgba(0, 206, 201, 0.1));
+}
+
+.crm-mini--drop .crm-mini__circle {
+  background: radial-gradient(circle at 35% 30%, rgba(245, 162, 93, 0.24), rgba(245, 162, 93, 0.08));
+}
+
+.crm-mini--money .crm-mini__circle {
+  background: radial-gradient(circle at 35% 30%, rgba(0, 184, 148, 0.2), rgba(0, 184, 148, 0.07));
+}
+
+/* ─── Light sidebar (CRM menu) ─────────────────────────────────────────── */
+.crm-sidebar-light.main-sidebar {
+  background: #ffffff !important;
+  color: rgba(16, 24, 40, 0.72) !important;
+  border-right: 1px solid rgba(16, 24, 40, 0.08);
+  box-shadow: 8px 0 24px rgba(16, 24, 40, 0.04);
+}
+
+.crm-sidebar-light .sidebar,
+.crm-sidebar-light .os-content {
+  background: transparent !important;
+}
+
+.crm-sidebar-light .brand-link {
+  border-bottom: 1px solid rgba(16, 24, 40, 0.08);
+  background: #ffffff !important;
+  color: rgba(16, 24, 40, 0.88) !important;
+}
+
+.crm-sidebar-light .brand-link .brand-text {
+  color: rgba(16, 24, 40, 0.88) !important;
+  font-weight: 600 !important;
+}
+
+.crm-sidebar-light .user-panel {
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+}
+
+.crm-sidebar-light .user-panel .info a,
+.crm-sidebar-light .crm-sidebar-user-name {
+  color: rgba(16, 24, 40, 0.78) !important;
+}
+
+.crm-sidebar-light .user-profile {
+  color: rgba(16, 24, 40, 0.35) !important;
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link {
+  color: rgba(16, 24, 40, 0.62) !important;
+  border-radius: 10px;
+  margin: 2px 10px;
+  padding: 0.55rem 0.65rem;
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link .nav-icon {
+  color: rgba(16, 24, 40, 0.45) !important;
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link:hover {
+  background: rgba(108, 92, 231, 0.08) !important;
+  color: rgba(16, 24, 40, 0.88) !important;
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link:hover .nav-icon {
+  color: var(--crm-violet) !important;
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link.active {
+  background: linear-gradient(90deg, var(--crm-violet) 0%, var(--crm-violet-2) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(108, 92, 231, 0.22);
+}
+
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link.active .nav-icon,
+.crm-sidebar-light .nav-sidebar > .nav-item > .nav-link.active p {
+  color: #ffffff !important;
+}
+
+.crm-sidebar-light .nav-treeview {
+  padding-left: 0;
+}
+
+.crm-sidebar-light .nav-treeview .nav-link {
+  color: rgba(16, 24, 40, 0.55) !important;
+  border-radius: 8px;
+  margin: 1px 10px 1px 18px;
+  padding: 0.45rem 0.55rem;
+}
+
+.crm-sidebar-light .nav-treeview .nav-link.active {
+  background: rgba(108, 92, 231, 0.14) !important;
+  color: var(--crm-violet) !important;
+}
+
+.crm-sidebar-light .menu-open > .nav-link .right.fa-angle-right {
+  transform: rotate(90deg);
+}
+
+.crm-sidebar-light .crm-sidebar-section-heading {
+  padding: 1.05rem 1.15rem 0.35rem 1rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.15rem !important;
+  font-size: 10px !important;
+  letter-spacing: 0.12em !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  color: rgba(16, 24, 40, 0.38) !important;
+}
+
+.crm-sidebar-light .crm-sidebar-section-heading:first-of-type {
+  padding-top: 0.55rem !important;
+  margin-top: 0 !important;
+}
+
+.crm-sidebar-light .crm-sidebar-section-heading:not(:first-of-type) {
+  margin-top: 0.95rem !important;
 }

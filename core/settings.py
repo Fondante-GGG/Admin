@@ -150,18 +150,22 @@ JAZZMIN_SETTINGS = {
         "settings.cursues",
         "settings.groupcourse",
         "settings.individualcourse",
+        "settings.calendarevent",
         "settings.student",
         "settings.mentor",
         "settings.tuitionpayment",
         "settings.payment",
         "settings.salary",
         "settings.lead",
-        "settings.call",
         "settings.accountingentry",
+        "settings.accountingaccount",
+        "settings.accountingproject",
+        "settings.accountingcategory",
+        "settings.task",
+        "settings.user",
+        "settings.debtorenrollment",
         "config",
         "config.crmsetting",
-        "config.crmbilling",
-        "config.crmabout",
     ],
     "custom_links": {
         "settings": [
@@ -173,7 +177,6 @@ JAZZMIN_SETTINGS = {
         ],
         "config": [
             {"name": "История действий", "url": "/admin/admin/logentry/", "icon": "fas fa-history"},
-            {"name": "О нас", "url": "/admin/about/", "icon": "fas fa-info-circle"},
         ],
     },
     "icons": {

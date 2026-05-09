@@ -6,7 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings as django_settings
@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import path, reverse
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
-from django.utils import timezone
+from django.utils import formats, timezone
 from django.utils.text import slugify
 from django.template.response import TemplateResponse
 from django.core.paginator import Paginator
@@ -30,8 +30,10 @@ from .models import (
     AccountingCategory,
     AccountingEntry,
     AccountingProject,
+    BillingRecord,
     CalendarEvent,
     CourseContract,
+    CourseDrop,
     Cursues,
     Enrollment,
     Lead,
@@ -40,6 +42,7 @@ from .models import (
     Salary,
     Student,
     Task,
+    TuitionPayment,
     User,
 )
 from app.config.models import CRMAbout
@@ -130,11 +133,84 @@ def _count_by_day(qs, days: int) -> MonthSeries:
     return MonthSeries(labels=labels, values=values)
 
 
+def _distinct_paying_students_by_month(qs, months: int) -> MonthSeries:
+    """Students with at least one payment in each calendar month (activity proxy)."""
+    month_starts = _last_month_starts(months)
+    start = month_starts[0]
+    end = (month_starts[-1].replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    grouped = (
+        qs.filter(created_at__gte=start, created_at__lt=end)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(total=Count("student", distinct=True))
+        .order_by("month")
+    )
+    totals = {row["month"].date(): float(row["total"] or 0) for row in grouped if row["month"]}
+
+    labels: list[str] = []
+    values: list[float] = []
+    for m in month_starts:
+        labels.append(formats.date_format(datetime.combine(m, datetime.min.time()), "F").title())
+        values.append(totals.get(m, 0.0))
+    return MonthSeries(labels=labels, values=values)
+
+
+def _calendar_events_by_day(days: int) -> MonthSeries:
+    today = timezone.localdate()
+    start = today - timedelta(days=days - 1)
+    grouped = (
+        CalendarEvent.objects.filter(is_archived=False, start_at__date__gte=start, start_at__date__lte=today)
+        .values("start_at__date")
+        .annotate(total=Count("id"))
+        .order_by("start_at__date")
+    )
+    totals = {row["start_at__date"]: float(row["total"] or 0) for row in grouped}
+
+    labels: list[str] = []
+    values: list[float] = []
+    for i in range(days):
+        d = start + timedelta(days=i)
+        labels.append(d.strftime("%d.%m"))
+        values.append(totals.get(d, 0.0))
+    return MonthSeries(labels=labels, values=values)
+
+
+def _compact_money(amount: float) -> str:
+    n = float(amount or 0)
+    if abs(n) >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M c."
+    if abs(n) >= 1000:
+        return f"{n / 1000:.0f}K c."
+    return f"{n:.0f} c."
+
+
 class CRMAdminSite(AdminSite):
     site_header = "Codify CRM"
     site_title = "Codify CRM"
     index_title = "Дашборд"
     index_template = "admin/crm_index.html"
+
+    SIDEBAR_SKIP_MODELS: frozenset[str] = frozenset({"settings.call", "config.crmbilling", "config.crmabout"})
+
+    SIDEBAR_PRIMARY_ORDER: tuple[str, ...] = (
+        "settings.calendarevent",
+        "settings.student",
+        "settings.mentor",
+        "settings.tuitionpayment",
+        "settings.debtorenrollment",
+        "settings.payment",
+        "settings.salary",
+        "settings.lead",
+        "settings.accountingentry",
+        "settings.accountingaccount",
+        "settings.accountingproject",
+        "settings.accountingcategory",
+        "settings.task",
+        "settings.user",
+    )
+
+    SIDEBAR_SETTINGS_ONLY_MODELS: frozenset[str] = frozenset({"config.crmsetting"})
 
     @staticmethod
     def _role(user) -> str:
@@ -192,7 +268,7 @@ class CRMAdminSite(AdminSite):
         jazzmin_settings = getattr(django_settings, "JAZZMIN_SETTINGS", {})
         icon_map = jazzmin_settings.get("icons", {})
         hidden_models = {m.lower() for m in jazzmin_settings.get("hide_models", [])}
-        ordered_models = [m.lower() for m in jazzmin_settings.get("order_with_respect_to", []) if "." in m]
+        skip_sidebar = hidden_models | set(self.SIDEBAR_SKIP_MODELS)
         default_child_icon = jazzmin_settings.get("default_icon_children", "far fa-circle")
 
         model_map: dict[str, dict] = {}
@@ -201,7 +277,7 @@ class CRMAdminSite(AdminSite):
             app_label = app["app_label"].lower()
             for model in app.get("models", []):
                 model_str = f"{app_label}.{model['object_name']}".lower()
-                if model_str in hidden_models:
+                if model_str in skip_sidebar:
                     continue
                 model_map[model_str] = {
                     "title": model.get("name") or model["object_name"],
@@ -211,13 +287,54 @@ class CRMAdminSite(AdminSite):
                 model_order.append(model_str)
 
         index_url = reverse(f"{self.name}:index")
+        brand_label = (jazzmin_settings.get("site_brand") or self.site_header or "CRM").strip().upper()
+
         menu: list[dict] = []
         handled: set[str] = set()
+        course_children_keys = frozenset({"settings.groupcourse", "settings.individualcourse", "settings.cursues"})
 
         org_items = getattr(django_settings, "CRM_ORGANIZATIONS", None)
         if not org_items:
             site_brand = jazzmin_settings.get("site_brand") or self.site_header
             org_items = [site_brand]
+
+        def take_model(model_str: str, *, title: str | None = None, icon: str | None = None, url: str | None = None) -> dict | None:
+            item = model_map.get(model_str)
+            if not item:
+                return None
+            handled.add(model_str)
+            return self._sidebar_item(
+                request,
+                title=title or item["title"],
+                icon=icon or item["icon"],
+                url=url or item["url"],
+            )
+
+        def append_courses(bucket: list[dict]):
+            course_children: list[dict] = []
+            group_item = take_model("settings.groupcourse")
+            if group_item:
+                course_children.append(group_item)
+            individual_item = take_model("settings.individualcourse")
+            if individual_item:
+                course_children.append(individual_item)
+
+            handled.add("settings.cursues")
+            if course_children:
+                bucket.append(
+                    self._sidebar_item(
+                        request,
+                        title="Курсы",
+                        icon=icon_map.get("settings.cursues", "fas fa-book"),
+                        children=course_children,
+                    )
+                )
+            else:
+                course_item = take_model("settings.cursues", title="Курсы")
+                if course_item:
+                    bucket.append(course_item)
+
+        menu.append({"heading": True, "title": brand_label})
 
         org_children = []
         for org in org_items:
@@ -255,54 +372,16 @@ class CRMAdminSite(AdminSite):
             self._sidebar_item(
                 request,
                 title="Дашборд",
-                icon="fas fa-th-large",
+                icon="fas fa-home",
                 url=index_url,
                 exact=True,
             )
         )
 
-        def take_model(model_str: str, *, title: str | None = None, icon: str | None = None, url: str | None = None) -> dict | None:
-            item = model_map.get(model_str)
-            if not item:
-                return None
-            handled.add(model_str)
-            return self._sidebar_item(
-                request,
-                title=title or item["title"],
-                icon=icon or item["icon"],
-                url=url or item["url"],
-            )
+        if "settings.cursues" in model_map:
+            append_courses(menu)
 
-        def add_courses_tree():
-            course_children = []
-            group_item = take_model("settings.groupcourse")
-            if group_item:
-                course_children.append(group_item)
-            individual_item = take_model("settings.individualcourse")
-            if individual_item:
-                course_children.append(individual_item)
-
-            handled.add("settings.cursues")
-            if course_children:
-                menu.append(
-                    self._sidebar_item(
-                        request,
-                        title="Курсы",
-                        icon=icon_map.get("settings.cursues", "fas fa-book"),
-                        children=course_children,
-                    )
-                )
-            else:
-                course_item = take_model("settings.cursues", title="Курсы")
-                if course_item:
-                    menu.append(course_item)
-
-        for model_str in ordered_models:
-            if model_str in handled or model_str in {"settings.groupcourse", "settings.individualcourse"}:
-                continue
-            if model_str == "settings.cursues":
-                add_courses_tree()
-                continue
+        for model_str in self.SIDEBAR_PRIMARY_ORDER:
             if model_str == "settings.calendarevent" and model_str in model_map:
                 handled.add(model_str)
                 menu.append(
@@ -318,11 +397,8 @@ class CRMAdminSite(AdminSite):
             if item:
                 menu.append(item)
 
-        if "settings.cursues" in model_map and "settings.cursues" not in handled:
-            add_courses_tree()
-
         for model_str in model_order:
-            if model_str in handled or model_str in {"settings.groupcourse", "settings.individualcourse"}:
+            if model_str in handled or model_str in course_children_keys or model_str in self.SIDEBAR_SETTINGS_ONLY_MODELS:
                 continue
             if model_str == "settings.calendarevent":
                 handled.add(model_str)
@@ -347,6 +423,27 @@ class CRMAdminSite(AdminSite):
                 url=reverse(f"{self.name}:archive_index"),
             )
         )
+
+        menu.append({"heading": True, "title": "НАСТРОЙКИ"})
+
+        settings_item = take_model("config.crmsetting")
+        if settings_item:
+            menu.append(settings_item)
+
+        history_url = "/admin/admin/logentry/"
+        for link in jazzmin_settings.get("custom_links", {}).get("config", []):
+            if (link.get("name") or "").strip() == "История действий" and link.get("url"):
+                history_url = link["url"]
+                break
+        menu.append(
+            self._sidebar_item(
+                request,
+                title="История действий",
+                icon="fas fa-history",
+                url=history_url,
+            )
+        )
+
         return menu
 
     def each_context(self, request):
@@ -1173,6 +1270,169 @@ class CRMAdminSite(AdminSite):
         }
         return TemplateResponse(request, "admin/student_drawer.html", context)
 
+    def index(self, request, extra_context=None):
+        context = extra_context or {}
+
+        today = timezone.localdate()
+        start_month = today.replace(day=1)
+        start_year = today.replace(month=1, day=1)
+        start_week = today - timedelta(days=6)
+        first_prev_month = (start_month - timedelta(days=1)).replace(day=1)
+        prev_month_end = start_month - timedelta(days=1)
+
+        leads_qs = Lead.objects.all()
+        students_qs = Student.objects.filter(is_archived=False)
+        tuition_qs = TuitionPayment.objects.all()
+        payments_qs = Payment.objects.all()
+        salary_qs = Salary.objects.all()
+        drops_qs = CourseDrop.objects.all()
+
+        license_alert = None
+        bill = (
+            BillingRecord.objects.filter(status=BillingRecord.Status.ACTIVE, expires_at__isnull=False)
+            .order_by("expires_at")
+            .first()
+        )
+        if bill and bill.expires_at:
+            days_left = (bill.expires_at - today).days
+            if days_left <= 30:
+                if days_left <= 0:
+                    msg = "Лицензия на использование системы истекла"
+                elif days_left == 1:
+                    msg = "Лицензия на использование системы истечет через 1 день"
+                else:
+                    msg = f"Лицензия на использование системы истечет через {days_left} дней"
+                license_alert = {"show": True, "message": msg, "days_left": days_left}
+
+        this_month_tuition = float(
+            tuition_qs.filter(created_at__date__gte=start_month, created_at__date__lte=today).aggregate(
+                t=Sum("amount")
+            )["t"]
+            or 0
+        )
+        prev_month_tuition = float(
+            tuition_qs.filter(
+                created_at__date__gte=first_prev_month, created_at__date__lte=prev_month_end
+            ).aggregate(t=Sum("amount"))["t"]
+            or 0
+        )
+        if prev_month_tuition > 0:
+            pct_vs_prev = round(100.0 * (this_month_tuition - prev_month_tuition) / prev_month_tuition, 1)
+            ring_pct = min(100, int(round(100.0 * this_month_tuition / prev_month_tuition)))
+        else:
+            pct_vs_prev = 100.0 if this_month_tuition > 0 else 0.0
+            ring_pct = 100 if this_month_tuition > 0 else 0
+
+        money_paid_today = float(payments_qs.filter(created_at__date=today).aggregate(total=Sum("amount"))["total"] or 0)
+        money_paid_week = float(
+            payments_qs.filter(created_at__date__gte=start_week).aggregate(total=Sum("amount"))["total"] or 0
+        )
+        money_paid_month = float(
+            payments_qs.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))["total"] or 0
+        )
+        money_paid_year = float(
+            payments_qs.filter(created_at__date__gte=start_year).aggregate(total=Sum("amount"))["total"] or 0
+        )
+
+        leads_today = leads_qs.filter(created_at__date=today).count()
+        leads_week = leads_qs.filter(created_at__date__gte=start_week).count()
+        leads_month = leads_qs.filter(created_at__date__gte=start_month).count()
+        leads_year = leads_qs.filter(created_at__date__gte=start_year).count()
+
+        students_today = students_qs.filter(created_at__date=today).count()
+        students_week = students_qs.filter(created_at__date__gte=start_week).count()
+        students_month = students_qs.filter(created_at__date__gte=start_month).count()
+        students_year = students_qs.filter(created_at__date__gte=start_year).count()
+
+        drops_today = drops_qs.filter(dropped_at=today).count()
+        drops_week = drops_qs.filter(dropped_at__gte=start_week).count()
+        drops_month = drops_qs.filter(dropped_at__gte=start_month).count()
+        drops_year = drops_qs.filter(dropped_at__gte=start_year).count()
+
+        courses_income = (
+            payments_qs.values("course_id", "course__title", "course__subject")
+            .annotate(income=Sum("amount"))
+            .order_by("-income")
+        )
+        courses_income = [c for c in courses_income if c.get("course_id")][:8]
+        course_ids = [int(c["course_id"]) for c in courses_income]
+        courses_by_id = {c.id: c for c in Cursues.objects.filter(pk__in=course_ids).prefetch_related("mentors")}
+        courses_top = []
+        for row in courses_income:
+            cid = int(row["course_id"])
+            course = courses_by_id.get(cid)
+            income = float(row["income"] or 0)
+            mentor_ids = list(course.mentors.values_list("id", flat=True)) if course else []
+            salary_total = float(
+                Salary.objects.filter(mentor_id__in=mentor_ids).aggregate(s=Sum("amount"))["s"] or 0
+            )
+            profit = income - salary_total
+            courses_top.append(
+                {
+                    "title": row.get("course__title") or "—",
+                    "subtitle": (row.get("course__subject") or "").strip(),
+                    "income": income,
+                    "salary": salary_total,
+                    "profit": profit,
+                    "income_compact": _compact_money(income),
+                    "salary_compact": _compact_money(salary_total),
+                    "profit_compact": _compact_money(profit),
+                }
+            )
+
+        series = {
+            "income": _sum_by_month(payments_qs, months=12, field="amount").__dict__,
+            "expense": _sum_by_month(salary_qs, months=12, field="amount").__dict__,
+            "payments_6m": _sum_by_month(payments_qs, months=6, field="amount").__dict__,
+            "leads_6m": _count_by_month(leads_qs, months=6).__dict__,
+            "students_6m": _distinct_paying_students_by_month(payments_qs, 6).__dict__,
+            "visits_30d": _calendar_events_by_day(30).__dict__,
+        }
+
+        context.update(
+            {
+                "license_alert": license_alert,
+                "income_block": {
+                    "this_month": this_month_tuition,
+                    "this_month_compact": _compact_money(this_month_tuition),
+                    "prev_month": prev_month_tuition,
+                    "pct_vs_prev": pct_vs_prev,
+                    "ring_pct": ring_pct,
+                },
+                "kpi": {
+                    "students": students_qs.count(),
+                    "mentors": Mentor.objects.count(),
+                    "leads": leads_qs.count(),
+                    "courses": Cursues.objects.filter(is_archived=False).count(),
+                    "users": User.objects.count(),
+                    "staff": User.objects.filter(is_staff=True).count(),
+                },
+                "courses_top": courses_top,
+                "cards": {
+                    "leads": {"today": leads_today, "week": leads_week, "month": leads_month, "year": leads_year},
+                    "students": {
+                        "today": students_today,
+                        "week": students_week,
+                        "month": students_month,
+                        "year": students_year,
+                    },
+                    "drops": {"today": drops_today, "week": drops_week, "month": drops_month, "year": drops_year},
+                },
+                "money": {
+                    "paid": {
+                        "today": money_paid_today,
+                        "week": money_paid_week,
+                        "month": money_paid_month,
+                        "year": money_paid_year,
+                    }
+                },
+                "series": series,
+                "dashboard_month_title": formats.date_format(today, "F Y"),
+            }
+        )
+
+        return super().index(request, extra_context=context)
+
 
 def _pdf_escape(text: str) -> str:
     return (
@@ -1292,92 +1552,6 @@ def _simple_pdf_table(title: str, headers: list[str], rows: list[list[str]]) -> 
         )
     )
     return bytes(out)
-
-    def index(self, request, extra_context=None):
-        context = extra_context or {}
-
-        today = timezone.localdate()
-        start_month = today.replace(day=1)
-        start_year = today.replace(month=1, day=1)
-        start_week = today - timedelta(days=6)
-
-        leads_qs = Lead.objects.all()
-        students_qs = Student.objects.all()
-        payments_qs = Payment.objects.all()
-        salary_qs = Salary.objects.all()
-
-        money_paid_today = float(payments_qs.filter(created_at__date=today).aggregate(total=Sum("amount"))["total"] or 0)
-        money_paid_week = float(
-            payments_qs.filter(created_at__date__gte=start_week).aggregate(total=Sum("amount"))["total"] or 0
-        )
-        money_paid_month = float(
-            payments_qs.filter(created_at__date__gte=start_month).aggregate(total=Sum("amount"))["total"] or 0
-        )
-        money_paid_year = float(
-            payments_qs.filter(created_at__date__gte=start_year).aggregate(total=Sum("amount"))["total"] or 0
-        )
-
-        leads_today = leads_qs.filter(created_at__date=today).count()
-        leads_week = leads_qs.filter(created_at__date__gte=start_week).count()
-        leads_month = leads_qs.filter(created_at__date__gte=start_month).count()
-        leads_year = leads_qs.filter(created_at__date__gte=start_year).count()
-
-        students_today = students_qs.filter(created_at__date=today).count()
-        students_week = students_qs.filter(created_at__date__gte=start_week).count()
-        students_month = students_qs.filter(created_at__date__gte=start_month).count()
-        students_year = students_qs.filter(created_at__date__gte=start_year).count()
-
-        courses_income = (
-            payments_qs.values("course_id", "course__title")
-            .annotate(income=Sum("amount"))
-            .order_by("-income")
-        )
-        courses_income = [c for c in courses_income if c.get("course_id")][:8]
-        courses_top = []
-        for row in courses_income:
-            income = float(row["income"] or 0)
-            courses_top.append(
-                {
-                    "title": row.get("course__title") or "—",
-                    "income": income,
-                    "salary": 0.0,
-                    "profit": income,
-                }
-            )
-
-        series = {
-            "income": _sum_by_month(payments_qs, months=12, field="amount").__dict__,
-            "expense": _sum_by_month(salary_qs, months=12, field="amount").__dict__,
-            "payments_6m": _sum_by_month(payments_qs, months=6, field="amount").__dict__,
-            "leads_6m": _count_by_month(leads_qs, months=6).__dict__,
-            "students_6m": _count_by_month(students_qs, months=6).__dict__,
-            "leads_30d": _count_by_day(leads_qs, days=30).__dict__,
-        }
-
-        context.update(
-            {
-                "kpi": {
-                    "students": students_qs.count(),
-                    "mentors": Mentor.objects.count(),
-                    "leads": leads_qs.count(),
-                    "courses": Cursues.objects.count(),
-                },
-                "courses_top": courses_top,
-                "cards": {
-                    "leads": {"today": leads_today, "week": leads_week, "month": leads_month, "year": leads_year},
-                    "students": {
-                        "today": students_today,
-                        "week": students_week,
-                        "month": students_month,
-                        "year": students_year,
-                    },
-                },
-                "money": {"paid": {"today": money_paid_today, "week": money_paid_week, "month": money_paid_month, "year": money_paid_year}},
-                "series": series,
-            }
-        )
-
-        return super().index(request, extra_context=context)
 
 
 crm_admin_site = CRMAdminSite(name="crm_admin")
