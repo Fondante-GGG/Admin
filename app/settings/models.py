@@ -1,8 +1,15 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db.models import Sum
 
 from .enum import STATUS_CURSUES, USER_ROLE
+
+
+def validate_mentor_contract_pdf(file):
+    if file.size > 5 * 1024 * 1024:
+        raise ValidationError("Файл контракта не должен превышать 5 МБ.")
 
 
 class ArchiveQuerySet(models.QuerySet):
@@ -44,6 +51,11 @@ class User(AbstractUser):
 
 
 class Mentor(models.Model):
+    class PaymentForm(models.TextChoices):
+        FIXED = "fixed", "Фиксированная"
+        PER_LESSON = "per_lesson", "За занятие"
+        HOURLY = "hourly", "Почасовая"
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -51,6 +63,53 @@ class Mentor(models.Model):
         verbose_name="Пользователь",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+
+    middle_name = models.CharField("Отчество", max_length=150, blank=True, default="")
+    birth_date = models.DateField("Дата рождения", null=True, blank=True)
+    skills = models.CharField("Навыки", max_length=255, blank=True, default="")
+    workplace = models.CharField("Место работы", max_length=255, blank=True, default="")
+    documents_folder = models.CharField(
+        "Папка с документами",
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Ссылка или путь к папке",
+    )
+
+    payment_form = models.CharField(
+        "Форма оплаты",
+        max_length=16,
+        choices=PaymentForm.choices,
+        default=PaymentForm.FIXED,
+    )
+    payment_rate = models.DecimalField(
+        "Ставка оплаты",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Для почасовой или за занятие",
+    )
+    fixed_rate = models.DecimalField(
+        "Фикс. ставка",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    contract_file = models.FileField(
+        "Контракт (PDF)",
+        upload_to="mentor_contracts/%Y/%m/",
+        blank=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=["pdf"]),
+            validate_mentor_contract_pdf,
+        ],
+    )
+    note = models.TextField("Примечание", blank=True, default="")
+
+    departure_date = models.DateField("Дата ухода", null=True, blank=True)
+    departure_reason = models.CharField("Причина ухода", max_length=255, blank=True, default="")
 
     def __str__(self):
         return f"{self.user.username}"

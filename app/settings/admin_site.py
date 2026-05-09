@@ -16,14 +16,19 @@ from django.http import JsonResponse
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import path, reverse
-from django.db.models import Count, Sum
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db.models import Count, Prefetch, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import formats, timezone
+from django.utils.dateparse import parse_date
 from django.utils.text import slugify
 from django.template.response import TemplateResponse
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 from .models import (
     AccountingAccount,
@@ -701,6 +706,9 @@ class CRMAdminSite(AdminSite):
             path("students.csv", self.admin_view(self.students_csv), name="students_csv"),
             path("students.pdf", self.admin_view(self.students_pdf), name="students_pdf"),
             path("students/<int:student_id>/drawer/", self.admin_view(self.student_drawer), name="student_drawer"),
+            path("mentors/export.xlsx", self.admin_view(self.mentors_export_xlsx), name="mentors_export_xlsx"),
+            path("mentors/salary/", self.admin_view(self.mentors_salary), name="mentors_salary"),
+            path("mentors/create/", self.admin_view(self.mentor_quick_create), name="mentor_quick_create"),
             path("about/", self.admin_view(self.about_view), name="about"),
             path("accounting/meta/", self.admin_view(self.accounting_meta), name="accounting_meta"),
             path("accounting/entry/create/", self.admin_view(self.accounting_entry_create), name="accounting_entry_create"),
@@ -1187,6 +1195,254 @@ class CRMAdminSite(AdminSite):
             description=description,
         )
         return JsonResponse({"ok": True, "id": ev.id})
+
+    def _mentor_changelist_qs(self, request):
+        qs = Mentor.objects.select_related("user").order_by("-id")
+        q = (request.GET.get("q") or "").strip()
+        if q:
+            text_q = (
+                Q(user__first_name__icontains=q)
+                | Q(user__last_name__icontains=q)
+                | Q(user__username__icontains=q)
+                | Q(user__phone_number__icontains=q)
+                | Q(user__email__icontains=q)
+            )
+            if q.isdigit():
+                qs = qs.filter(Q(pk=int(q)) | text_q)
+            else:
+                qs = qs.filter(text_q)
+        return qs.distinct()
+
+    def _can_manage_mentors(self, request) -> bool:
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return False
+        return self._role(request.user) in ("Администратор", "Менеджер")
+
+    def mentors_export_xlsx(self, request):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        qs = self._mentor_changelist_qs(request)[:5000]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Менторы"
+        headers = ("ID", "ФИО", "Курс", "Статус", "Аккаунт", "Телефон", "Почта")
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+        course_qs = Cursues.objects.filter(is_archived=False).only("title")
+        for m in qs.prefetch_related(Prefetch("cursues_set", queryset=course_qs)):
+            u = m.user
+            names = [c.title for c in m.cursues_set.all()[:12]]
+            course_str = ", ".join(names) if names else "—"
+            status_lbl = "Активный" if u.is_active else "Неактивен"
+            account = "Да" if u.is_active else "Нет"
+            ws.append(
+                [
+                    m.pk,
+                    u.get_full_name() or u.username,
+                    course_str,
+                    status_lbl,
+                    account,
+                    u.phone_number or "",
+                    u.email or "",
+                ]
+            )
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = 'attachment; filename="mentors-export.xlsx"'
+        return resp
+
+    def mentors_salary(self, request):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        changelist_url = reverse(f"{self.name}:settings_mentor_changelist")
+        if request.method == "GET":
+            today = timezone.localdate()
+            start_default = today - timedelta(days=6)
+            ctx = {
+                "title": "Расчёт зарплаты менторов",
+                "changelist_url": changelist_url,
+                "date_from": request.GET.get("date_from") or start_default.isoformat(),
+                "date_to": request.GET.get("date_to") or today.isoformat(),
+                **self.each_context(request),
+            }
+            return TemplateResponse(request, "admin/mentor_salary.html", ctx)
+        raw_from = (request.POST.get("date_from") or "").strip()
+        raw_to = (request.POST.get("date_to") or "").strip()
+        try:
+            d0 = date.fromisoformat(raw_from)
+            d1 = date.fromisoformat(raw_to)
+        except ValueError:
+            messages.error(request, "Укажите корректные даты.")
+            return redirect(reverse(f"{self.name}:mentors_salary"))
+        if d0 > d1:
+            d0, d1 = d1, d0
+        events = (
+            CalendarEvent.objects.filter(
+                course__isnull=False,
+                course__is_archived=False,
+                is_archived=False,
+                start_at__date__gte=d0,
+                start_at__date__lte=d1,
+            )
+            .select_related("course")
+            .prefetch_related("course__mentors__user")
+            .order_by("start_at")
+        )
+        summary: dict[int, dict] = {}
+        rows_detail: list[dict] = []
+        for ev in events:
+            course = ev.course
+            if not course:
+                continue
+            for mentor in course.mentors.all():
+                u = mentor.user
+                name = u.get_full_name() or u.username
+                mid = mentor.pk
+                if mid not in summary:
+                    summary[mid] = {"name": name, "count": 0}
+                summary[mid]["count"] += 1
+                end_s = ""
+                if ev.end_at:
+                    end_s = timezone.localtime(ev.end_at).strftime("%d.%m.%Y %H:%M")
+                rows_detail.append(
+                    {
+                        "mentor": name,
+                        "mentor_id": mid,
+                        "course": course.title,
+                        "title": ev.title,
+                        "start": timezone.localtime(ev.start_at).strftime("%d.%m.%Y %H:%M"),
+                        "end": end_s,
+                    }
+                )
+        wb = Workbook()
+        ws0 = wb.active
+        ws0.title = "Сводка"
+        ws0.append(("ID ментора", "ФИО", "Количество занятий", "Примечание"))
+        for cell in ws0[1]:
+            cell.font = Font(bold=True)
+        note = (
+            "В CRM не заданы ставки за занятие — итоговую сумму начисляйте вручную по внутренним правилам."
+        )
+        for mid, data in sorted(summary.items(), key=lambda x: x[1]["name"].lower()):
+            ws0.append((mid, data["name"], data["count"], note))
+        ws1 = wb.create_sheet("Занятия")
+        ws1.append(("Ментор", "ID", "Курс", "Событие", "Начало", "Конец"))
+        for cell in ws1[1]:
+            cell.font = Font(bold=True)
+        for r in rows_detail:
+            ws1.append((r["mentor"], r["mentor_id"], r["course"], r["title"], r["start"], r["end"]))
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        fn = f"mentors-salary-{d0.strftime('%d.%m.%Y')}-{d1.strftime('%d.%m.%Y')}.xlsx"
+        resp = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = f'attachment; filename="{fn}"'
+        return resp
+
+    def mentor_quick_create(self, request):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        if request.method != "POST":
+            return redirect(reverse(f"{self.name}:settings_mentor_changelist"))
+        cl_url = reverse(f"{self.name}:settings_mentor_changelist")
+        first_name = (request.POST.get("first_name") or "").strip()
+        last_name = (request.POST.get("last_name") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        phone = (request.POST.get("phone_number") or "").strip()
+        if not first_name or not last_name:
+            messages.error(request, "Укажите имя и фамилию.")
+            return redirect(cl_url)
+
+        def _parse_dec(val, default=None):
+            raw = (val or "").strip().replace(",", ".")
+            if raw == "":
+                return default
+            try:
+                return Decimal(raw)
+            except InvalidOperation:
+                return None
+
+        payment_form = (request.POST.get("payment_form") or Mentor.PaymentForm.FIXED).strip()
+        if payment_form not in Mentor.PaymentForm:
+            payment_form = Mentor.PaymentForm.FIXED
+        fixed_raw = request.POST.get("fixed_rate")
+        fixed_rate = _parse_dec(fixed_raw, Decimal("0"))
+        if fixed_rate is None:
+            messages.error(request, "Укажите корректную фиксированную ставку.")
+            return redirect(cl_url)
+        payment_rate = _parse_dec(request.POST.get("payment_rate"), None)
+
+        middle_name = (request.POST.get("middle_name") or "").strip()
+        skills = (request.POST.get("skills") or "").strip()
+        workplace = (request.POST.get("workplace") or "").strip()
+        documents_folder = (request.POST.get("documents_folder") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+        departure_reason = (request.POST.get("departure_reason") or "").strip()
+
+        birth_date = parse_date((request.POST.get("birth_date") or "").strip())
+        departure_date = parse_date((request.POST.get("departure_date") or "").strip())
+
+        base_user = slugify(f"{first_name}-{last_name}")[:40] or "mentor"
+        username = base_user
+        n = 0
+        while User.objects.filter(username=username).exists():
+            n += 1
+            username = f"{base_user}{n}"
+        try:
+            with transaction.atomic():
+                user = User(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email or "",
+                    phone_number=phone or "",
+                    role="Ментор",
+                    is_staff=False,
+                )
+                user.set_unusable_password()
+                user.save()
+                mentor = Mentor(
+                    user=user,
+                    middle_name=middle_name,
+                    birth_date=birth_date,
+                    skills=skills,
+                    workplace=workplace,
+                    documents_folder=documents_folder,
+                    payment_form=payment_form,
+                    payment_rate=payment_rate,
+                    fixed_rate=fixed_rate,
+                    note=note,
+                    departure_date=departure_date,
+                    departure_reason=departure_reason,
+                )
+                f = request.FILES.get("contract_file")
+                if f:
+                    mentor.contract_file = f
+                mentor.full_clean()
+                mentor.save()
+        except ValidationError as exc:
+            parts = []
+            if hasattr(exc, "error_dict"):
+                for errs in exc.error_dict.values():
+                    parts.extend(str(e) for e in errs)
+            else:
+                parts = list(getattr(exc, "messages", []) or [str(exc)])
+            messages.error(request, " ".join(parts))
+            return redirect(cl_url)
+        except Exception as exc:
+            messages.error(request, f"Не удалось создать ментора: {exc}")
+            return redirect(cl_url)
+        messages.success(request, "Ментор создан.")
+        return redirect(cl_url)
 
     def students_csv(self, request):
         qs = Student.objects.select_related("user")

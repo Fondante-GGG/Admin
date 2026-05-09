@@ -1,0 +1,167 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/students.css' %}">
+<link rel="stylesheet" href="{% static 'crm_dashboard/mentors.css' %}">
+{% endblock %}
+
+{% block object-tools-items %}
+{# «Добавить» в CRM-панели инструментов #}
+{% endblock %}
+
+{% block search %}
+{% if cl.search_fields %}
+<div id="toolbar" class="crm-mentor-toolbar">
+  <form id="changelist-search" method="get" role="search">
+    <div class="crm-mentor-toolbar__row">
+      <div class="crm-mentor-search-wrap">
+        <span class="crm-mentor-search-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+        <input
+          type="search"
+          name="{{ search_var }}"
+          value="{{ cl.query }}"
+          id="searchbar"
+          class="crm-mentor-search-input"
+          placeholder="Поиск по ФИО или ID"
+          autofocus
+        >
+      </div>
+      <button type="submit" class="crm-btn crm-btn--primary">Поиск</button>
+      <a href="{{ mentors_export_url }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--success crm-mentor-icon-btn">
+        <i class="far fa-file-excel"></i> Экспорт
+      </a>
+      <a href="{{ mentors_salary_url }}" class="crm-btn crm-btn--success crm-mentor-icon-btn">
+        <i class="far fa-file-excel"></i> Зарплата
+      </a>
+      {% if has_add_permission %}
+      <button type="button" class="crm-btn crm-btn--primary crm-mentor-add-btn" data-mentor-open-modal>
+        + Добавить
+      </button>
+      {% endif %}
+      {% if show_result_count %}
+      <span class="crm-mentor-result-count">{{ cl.result_count }} / {{ cl.full_result_count }}</span>
+      {% endif %}
+      {% for pair in cl.params.items %}
+        {% if pair.0 != search_var %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">{% endif %}
+      {% endfor %}
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-mentors-page">
+  <div class="crm-mentors-header">
+    <h1>Менторы</h1>
+    <p class="crm-mentors-subtitle">Общее количество: {{ mentor_total }}</p>
+  </div>
+  {{ block.super }}
+
+  <div id="crm-mentor-modal" class="crm-mentor-modal is-hidden" hidden>
+    <div class="crm-mentor-modal__backdrop" data-mentor-close-modal></div>
+    <div class="crm-mentor-modal__dialog crm-mentor-modal__dialog--wide" role="dialog" aria-modal="true" aria-labelledby="crm-mentor-modal-title">
+      <div class="crm-mentor-modal__head">
+        <h2 id="crm-mentor-modal-title">Новый ментор</h2>
+        <button type="button" class="crm-mentor-modal__close" data-mentor-close-modal aria-label="Закрыть">&times;</button>
+      </div>
+      <form method="post" action="{{ mentor_create_url }}" class="crm-mentor-modal__form" enctype="multipart/form-data" id="crm-mentor-create-form">
+        {% csrf_token %}
+
+        <div class="crm-mentor-modal__section">
+          <div class="crm-mentor-modal__grid">
+            <label class="crm-mentor-modal__field">
+              <span>Имя <span class="crm-mentor-req">*</span></span>
+              <input type="text" name="first_name" required autocomplete="given-name">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Навыки</span>
+              <input type="text" name="skills" autocomplete="off">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Фамилия <span class="crm-mentor-req">*</span></span>
+              <input type="text" name="last_name" required autocomplete="family-name">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Место работы</span>
+              <input type="text" name="workplace" autocomplete="organization">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Отчество</span>
+              <input type="text" name="middle_name" autocomplete="additional-name">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Адрес электронной почты</span>
+              <input type="email" name="email" autocomplete="email">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Номер телефона</span>
+              <input type="text" name="phone_number" autocomplete="tel">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Папка с документами</span>
+              <input type="text" name="documents_folder" placeholder="Ссылка или путь">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Дата рождения</span>
+              <input type="date" name="birth_date">
+            </label>
+          </div>
+        </div>
+
+        <hr class="crm-mentor-modal__sep">
+
+        <div class="crm-mentor-modal__section">
+          <div class="crm-mentor-modal__grid crm-mentor-modal__grid--pay">
+            <label class="crm-mentor-modal__field">
+              <span>Форма оплаты</span>
+              <select name="payment_form">
+                {% for val, label in mentor_payment_form_choices %}
+                <option value="{{ val }}"{% if val == "fixed" %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Ставка оплаты</span>
+              <input type="text" name="payment_rate" inputmode="decimal" placeholder="Для почасовой / за занятие">
+            </label>
+            <label class="crm-mentor-modal__field crm-mentor-modal__field--full">
+              <span>Фикс. ставка <span class="crm-mentor-req">*</span></span>
+              <input type="text" name="fixed_rate" value="0" required inputmode="decimal">
+            </label>
+            <label class="crm-mentor-modal__field crm-mentor-modal__field--full">
+              <span>Контракт <span class="crm-mentor-muted">(PDF, до 5 МБ)</span></span>
+              <input type="file" name="contract_file" accept=".pdf,application/pdf" data-max-bytes="5242880">
+            </label>
+            <label class="crm-mentor-modal__field crm-mentor-modal__field--full">
+              <span>Примечание</span>
+              <textarea name="note" rows="2"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <hr class="crm-mentor-modal__sep">
+
+        <div class="crm-mentor-modal__section">
+          <div class="crm-mentor-modal__grid">
+            <label class="crm-mentor-modal__field">
+              <span>Дата ухода</span>
+              <input type="date" name="departure_date">
+            </label>
+            <label class="crm-mentor-modal__field">
+              <span>Причина ухода</span>
+              <input type="text" name="departure_reason">
+            </label>
+          </div>
+        </div>
+
+        <p class="crm-mentor-modal__file-hint" data-mentor-file-error hidden></p>
+        <button type="submit" class="crm-btn crm-btn--primary crm-mentor-modal__submit">Сохранить</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="{% static 'crm_dashboard/mentors.js' %}"></script>
+{% endblock %}

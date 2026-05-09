@@ -1,13 +1,17 @@
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
+import io
+
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from django.urls import reverse
 from django.db import models
-from django.db.models import F, OuterRef, Subquery, Sum, Value
+from django.db.models import F, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_date
 from django.utils.html import format_html
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from datetime import date, timedelta
@@ -319,9 +323,133 @@ StudentAdmin.inlines = [StudentEnrollmentInline, StudentPaymentInline, StudentCo
 @admin.register(Mentor, site=crm_admin_site)
 class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
-    list_display = ("user", "created_at")
-    search_fields = ("user__username", "user__phone_number")
+    change_list_template = "admin/mentors_changelist.html"
+    fieldsets = (
+        (None, {"fields": ("user",)}),
+        (
+            "Личные данные",
+            {
+                "fields": (
+                    "middle_name",
+                    "birth_date",
+                    "skills",
+                    "workplace",
+                    "documents_folder",
+                )
+            },
+        ),
+        (
+            "Оплата",
+            {"fields": ("payment_form", "payment_rate", "fixed_rate")},
+        ),
+        ("Контракт и примечания", {"fields": ("contract_file", "note")}),
+        ("Уход", {"fields": ("departure_date", "departure_reason")}),
+        ("Системное", {"fields": ("created_at",)}),
+    )
+    readonly_fields = ("created_at",)
+    list_display = (
+        "mentor_id_display",
+        "full_name_display",
+        "course_display",
+        "status_badge_display",
+        "account_display",
+        "phone_display",
+        "email_display",
+    )
+    list_display_links = None
+    search_fields = (
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "user__phone_number",
+        "user__email",
+    )
+    list_filter = ()
     autocomplete_fields = ("user",)
+    list_per_page = 20
+
+    def get_queryset(self, request):
+        course_qs = Cursues.objects.filter(is_archived=False).only("title", "id")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user")
+            .prefetch_related(Prefetch("cursues_set", queryset=course_qs))
+        )
+
+    def get_search_results(self, request, queryset, search_term):
+        if not search_term:
+            return queryset, False
+        q = search_term.strip()
+        text_q = (
+            Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__username__icontains=q)
+            | Q(user__phone_number__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+        if q.isdigit():
+            queryset = queryset.filter(Q(pk=int(q)) | text_q)
+        else:
+            queryset = queryset.filter(text_q)
+        return queryset, False
+
+    def mentor_id_display(self, obj: Mentor):
+        url = reverse(f"{crm_admin_site.name}:settings_mentor_change", args=[obj.pk])
+        return format_html('<a href="{}" class="crm-mentor-table-link">#{}</a>', url, obj.pk)
+
+    mentor_id_display.short_description = "ID"
+
+    def full_name_display(self, obj: Mentor):
+        u = obj.user
+        parts = [u.last_name or "", u.first_name or "", obj.middle_name or ""]
+        name = " ".join(p for p in parts if p).strip() or u.get_full_name() or u.username
+        url = reverse(f"{crm_admin_site.name}:settings_mentor_change", args=[obj.pk])
+        return format_html('<a href="{}" class="crm-mentor-table-link">{}</a>', url, name)
+
+    full_name_display.short_description = "ФИО"
+
+    def course_display(self, obj: Mentor):
+        titles = [c.title for c in obj.cursues_set.all()[:15]]
+        return ", ".join(titles) if titles else "—"
+
+    course_display.short_description = "Курс"
+
+    def status_badge_display(self, obj: Mentor):
+        u = obj.user
+        if u.is_active:
+            return format_html(
+                '<span class="crm-mentor-status crm-mentor-status--active">Активный</span>'
+            )
+        return format_html(
+            '<span class="crm-mentor-status crm-mentor-status--inactive">Неактивен</span>'
+        )
+
+    status_badge_display.short_description = "Статус"
+
+    def account_display(self, obj: Mentor):
+        return "Да" if obj.user.is_active else "Нет"
+
+    account_display.short_description = "Аккаунт"
+
+    def phone_display(self, obj: Mentor):
+        return obj.user.phone_number or "—"
+
+    phone_display.short_description = "Телефон"
+
+    def email_display(self, obj: Mentor):
+        return obj.user.email or "—"
+
+    email_display.short_description = "Почта"
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["mentor_total"] = Mentor.objects.count()
+        extra_context["mentors_export_url"] = reverse(f"{crm_admin_site.name}:mentors_export_xlsx")
+        extra_context["mentors_salary_url"] = reverse(f"{crm_admin_site.name}:mentors_salary")
+        extra_context["mentor_create_url"] = reverse(f"{crm_admin_site.name}:mentor_quick_create")
+        extra_context["mentor_payment_form_choices"] = Mentor.PaymentForm.choices
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(Cursues, site=crm_admin_site)
@@ -784,7 +912,16 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/tuition_payment_changelist.html"
     list_per_page = 20
-    list_display = ("id", "student_name", "created_at", "method", "course", "amount")
+    list_display = (
+        "payment_id_display",
+        "student_name_display",
+        "pay_datetime_display",
+        "method_display",
+        "course_display",
+        "amount_display",
+        "comment_display",
+        "actions_display",
+    )
     list_display_links = None
     search_fields = ("student__user__username", "student__user__first_name", "student__user__last_name", "student__user__phone_number")
     autocomplete_fields = ("student", "course")
@@ -802,11 +939,74 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         except (TypeError, ValueError):
             return None
 
-    def student_name(self, obj: Payment):
-        u = obj.student.user
-        return u.get_full_name() or u.username
+    def payment_id_display(self, obj: Payment):
+        first_id = getattr(obj, "_crm_first_pay_id", None)
+        is_first = first_id is not None and obj.pk == first_id
+        color = "#10b981" if is_first else "#6b7280"
+        return format_html('<span class="crm-pay-id" style="color:{};font-weight:700;">#{}</span>', color, obj.pk)
 
-    student_name.short_description = "ФИО"
+    payment_id_display.short_description = "№"
+
+    def student_name_display(self, obj: Payment):
+        u = obj.student.user
+        name = u.get_full_name() or u.username
+        return format_html('<span class="crm-pay-td-name">{}</span>', name)
+
+    student_name_display.short_description = "ФИО"
+
+    def pay_datetime_display(self, obj: Payment):
+        if not obj.created_at:
+            return "—"
+        dt = timezone.localtime(obj.created_at)
+        return dt.strftime("%d.%m.%Y %H:%M")
+
+    pay_datetime_display.short_description = "Дата и время"
+    pay_datetime_display.admin_order_field = "created_at"
+
+    def method_display(self, obj: Payment):
+        return obj.get_method_display()
+
+    method_display.short_description = "Способ"
+    method_display.admin_order_field = "method"
+
+    def course_display(self, obj: Payment):
+        title = obj.course.title if obj.course_id else "—"
+        return format_html('<span class="crm-pay-td-course">{}</span>', title)
+
+    course_display.short_description = "Курс"
+    course_display.admin_order_field = "course__title"
+
+    def amount_display(self, obj: Payment):
+        return format_html(
+            '<span class="crm-pay-td-amount">+ {} с.</span>',
+            int(obj.amount) if obj.amount == int(obj.amount) else obj.amount,
+        )
+
+    amount_display.short_description = "Сумма"
+    amount_display.admin_order_field = "amount"
+
+    def comment_display(self, obj: Payment):
+        return format_html('<span class="crm-pay-td-comment">—</span>')
+
+    comment_display.short_description = "Коммент"
+
+    def actions_display(self, obj: Payment):
+        return format_html(
+            '<div class="crm-pay-actions-dd">'
+            '<button type="button" class="crm-pay-actions-trigger" data-pay-dd-toggle aria-expanded="false" aria-haspopup="true" aria-label="Действия">⋮</button>'
+            '<div class="crm-pay-actions-menu" role="menu" hidden>'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="edit" role="menuitem">'
+            '<i class="fas fa-edit" aria-hidden="true"></i> Редактировать</button>'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="void" role="menuitem">'
+            '<i class="fas fa-times-circle" aria-hidden="true"></i> Аннулировать</button>'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="receipt" role="menuitem">'
+            '<i class="fas fa-download" aria-hidden="true"></i> Выгрузить чек</button>'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="attach" role="menuitem">'
+            '<i class="fas fa-upload" aria-hidden="true"></i> Прикрепить квитанцию-подтверждение</button>'
+            "</div></div>"
+        )
+
+    actions_display.short_description = "Действия"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related("student__user", "course").prefetch_related("course__mentors")
@@ -850,9 +1050,52 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
             else:
                 qs = qs.exclude(created_at=F("first_created_at"))
 
+        first_id_sub = (
+            Payment.objects.filter(student_id=OuterRef("student_id"))
+            .order_by("created_at", "id")
+            .values("id")[:1]
+        )
+        qs = qs.annotate(_crm_first_pay_id=Subquery(first_id_sub))
+
         if mentor_id is not None:
             return qs.distinct()
         return qs
+
+    def _tuition_export_xlsx(self, request):
+        qs = self.get_queryset(request).order_by("-created_at")[:5000]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Оплата за учебу"
+        headers = ("№", "ФИО", "Дата и время", "Способ", "Курс", "Сумма", "Комментарий")
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+        for p in qs:
+            u = p.student.user
+            name = u.get_full_name() or u.username
+            dt_s = ""
+            if p.created_at:
+                dt_s = timezone.localtime(p.created_at).strftime("%d.%m.%Y %H:%M")
+            ws.append(
+                [
+                    p.pk,
+                    name,
+                    dt_s,
+                    p.get_method_display(),
+                    p.course.title if p.course_id else "",
+                    float(p.amount),
+                    "",
+                ]
+            )
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = 'attachment; filename="tuition-payments.xlsx"'
+        return resp
 
     def changelist_view(self, request, extra_context=None):
         request._crm_pay_params = request.GET.copy()
@@ -862,13 +1105,18 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         request.GET = mutable
         request.META["QUERY_STRING"] = mutable.urlencode()
 
+        if request._crm_pay_params.get("export") == "xlsx":
+            return self._tuition_export_xlsx(request)
+
         if request._crm_pay_params.get("export") == "pdf":
             rows = []
             for p in self.get_queryset(request).order_by("-created_at")[:2000]:
+                u = p.student.user
+                name = u.get_full_name() or u.username
                 rows.append(
                     [
                         str(p.id),
-                        self.student_name(p),
+                        name,
                         p.created_at.strftime("%d.%m.%Y %H:%M") if p.created_at else "",
                         p.get_method_display() if hasattr(p, "get_method_display") else str(p.method),
                         str(p.course) if p.course_id else "",

@@ -6,50 +6,60 @@
 <link rel="stylesheet" href="{% static 'crm_dashboard/payments.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="crm-dashboard">
-  <h1>Платежи</h1>
+{% block search %}
+{# Фильтры только в тулбаре CRM (поиск по № и поля ниже). #}
+{% endblock %}
 
-  <div data-pay-toolbar class="crm-toolbar">
-    <div class="crm-toolbar__filters">
-      <label>Курс
-        <select data-pay="course">
+{% block object-tools-items %}
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-pay-page">
+  <h1 class="crm-pay-title">Оплата за учебу</h1>
+
+  <div data-pay-toolbar class="crm-toolbar crm-pay-toolbar">
+    <div class="crm-toolbar__filters crm-pay-toolbar__filters">
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Курс</span>
+        <select data-pay="course" class="crm-pay-input">
           <option value="">Все</option>
           {% for c in courses %}<option value="{{ c.id }}" {% if filters.course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>{% endfor %}
         </select>
       </label>
-      <label>Ментор
-        <select data-pay="mentor">
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Ментор</span>
+        <select data-pay="mentor" class="crm-pay-input">
           <option value="">Все</option>
           {% for m in mentors %}<option value="{{ m.id }}" {% if filters.mentor == m.id|stringformat:"s" %}selected{% endif %}>{{ m.user.get_full_name|default:m.user.username }}</option>{% endfor %}
         </select>
       </label>
-      <label>Способ
-        <select data-pay="method">
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Способ оплаты</span>
+        <select data-pay="method" class="crm-pay-input">
           <option value="">Все</option>
           {% for key, label in methods %}<option value="{{ key }}" {% if filters.method == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
       </label>
-      <label>Первый?
-        <select data-pay="first">
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Первая оплата</span>
+        <select data-pay="first" class="crm-pay-input">
           <option value="">Все</option>
           <option value="1" {% if filters.first == "1" %}selected{% endif %}>Да</option>
           <option value="0" {% if filters.first == "0" %}selected{% endif %}>Нет</option>
         </select>
       </label>
-      <label>Дата с <input type="date" data-pay="date_from" value="{{ filters.date_from }}"></label>
-      <label>Дата по <input type="date" data-pay="date_to" value="{{ filters.date_to }}"></label>
-      <label>ID <input type="text" data-pay="pay_id" placeholder="ID" value="{{ filters.pay_id }}" style="width:80px"></label>
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Дата начала</span>
+        <input type="date" data-pay="date_from" class="crm-pay-input" value="{{ filters.date_from }}">
+      </label>
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Дата конца</span>
+        <input type="date" data-pay="date_to" class="crm-pay-input" value="{{ filters.date_to }}">
+      </label>
+      <label class="crm-pay-field"><span class="crm-pay-field__label">Поиск по №</span>
+        <input type="text" data-pay="pay_id" class="crm-pay-input" placeholder="Напр. 168302" value="{{ filters.pay_id }}" inputmode="numeric" autocomplete="off">
+      </label>
     </div>
-    <div class="crm-toolbar__actions">
-      <button type="button" data-pay-apply class="crm-btn crm-btn--primary">Применить</button>
-      <button type="button" data-pay-clear class="crm-btn crm-btn--outline">Сбросить</button>
-      <a href="?{{ export_qs }}&export=pdf" class="crm-btn crm-btn--outline">PDF</a>
+    <div class="crm-toolbar__actions crm-pay-toolbar__actions">
+      <button type="button" data-pay-apply class="crm-btn crm-btn--primary">Фильтр</button>
+      <a href="?{% if export_qs %}{{ export_qs }}&{% endif %}export=xlsx" class="crm-btn crm-btn--success crm-pay-export-btn">
+        <i class="far fa-file-excel" aria-hidden="true"></i> Экспорт
+      </a>
     </div>
-  </div>
-
-  <div class="crm-stats-row">
-    <div class="crm-stat crm-stat--green"><span class="crm-stat__value">{{ total_amount|floatformat:"0" }}</span><span class="crm-stat__label">Общая сумма (с.)</span></div>
   </div>
 
   {{ block.super }}

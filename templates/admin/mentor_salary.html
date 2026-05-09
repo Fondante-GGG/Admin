@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/mentors.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-mentor-salary-page">
+  <nav class="crm-mentor-salary-breadcrumbs" aria-label="Навигация">
+    <a href="{{ changelist_url }}">Менторы</a>
+    <span class="crm-mentor-salary-bc-sep">›</span>
+    <span>Расчёт зарплаты менторов</span>
+  </nav>
+
+  <h1 class="crm-mentor-salary-title">Расчёт зарплаты менторов за выбранный период</h1>
+
+  <div class="crm-mentor-salary-card">
+    <div class="crm-mentor-salary-info">
+      <p>
+        В выгрузку попадают занятия из <strong>календаря</strong>, привязанные к <strong>активным (неархивным) курсам</strong>,
+        за выбранные даты. Для каждого занятия учитываются все менторы, назначенные на этот курс.
+      </p>
+      <p>Ставки за занятие в базе не хранятся — в Excel выводится количество занятий; суммы начисляйте вручную.</p>
+      <ol class="crm-mentor-salary-steps">
+        <li>Укажите период расчёта.</li>
+        <li>Нажмите «Расчёт» — файл Excel загрузится автоматически.</li>
+      </ol>
+    </div>
+
+    <h2 class="crm-mentor-salary-h2">Расчёт зарплаты</h2>
+    <form method="post" class="crm-mentor-salary-form">
+      {% csrf_token %}
+      <div class="crm-mentor-salary-dates">
+        <label>
+          <span>Дата начала</span>
+          <input type="date" name="date_from" value="{{ date_from }}" required>
+        </label>
+        <label>
+          <span>Дата конца</span>
+          <input type="date" name="date_to" value="{{ date_to }}" required>
+        </label>
+      </div>
+      <button type="submit" class="crm-btn crm-btn--primary crm-mentor-salary-submit">
+        <i class="far fa-file-excel"></i> Расчёт
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
