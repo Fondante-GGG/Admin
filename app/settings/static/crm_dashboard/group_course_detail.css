@@ -559,3 +559,21 @@
     min-width: 760px;
   }
 }
+
+.crm-group-table tbody tr[data-student-row] {
+  cursor: pointer;
+}
+
+.crm-group-table tbody tr[data-student-row]:hover {
+  background: rgba(109, 99, 255, 0.07);
+}
+
+.crm-group-table .crm-student-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.crm-group-table .crm-student-link:hover {
+  text-decoration: underline;
+  color: #6366f1;
+}

@@ -4,6 +4,7 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'crm_dashboard/students.css' %}">
+<link rel="stylesheet" href="{% static 'crm_dashboard/student_drawer.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,8 +21,8 @@
 
   <div class="crm-toolbar">
     <button type="button" data-st-toggle-pay-filters class="crm-btn crm-btn--outline">Фильтры оплат ▾</button>
-    <a href="{% url 'admin:students_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">CSV</a>
-    <a href="{% url 'admin:students_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">PDF</a>
+    <a href="{% url 'crm_admin:students_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">CSV</a>
+    <a href="{% url 'crm_admin:students_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">PDF</a>
   </div>
 
   <div data-st-pay-filters class="crm-filter-panel is-hidden">
@@ -64,7 +65,7 @@
   {{ block.super }}
 </div>
 
-<div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'admin:student_drawer' 1 %}">
+<div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'crm_admin:student_drawer' 1 %}">
   <div class="crm-drawer__backdrop" data-st-close></div>
   <div class="crm-drawer__panel"></div>
 </div>

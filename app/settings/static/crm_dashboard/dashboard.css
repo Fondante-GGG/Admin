@@ -34,11 +34,58 @@ body {
 }
 
 .crm-dashboard {
-  /* Center on wide screens so cards don't get too large */
   width: 100%;
-  max-width: 1600px;
+  max-width: 1680px;
   margin: 0;
   padding: 18px 16px 8px;
+}
+
+.crm-overview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1200px) {
+  .crm-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .crm-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crm-overview__item {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.04);
+}
+
+.crm-overview__value {
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: rgba(16, 24, 40, 0.92);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.crm-overview__value--accent {
+  color: var(--crm-violet);
+}
+
+.crm-overview__label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--crm-muted);
+  line-height: 1.35;
 }
 
 .crm-alert {
@@ -103,9 +150,46 @@ body {
   margin-bottom: 6px;
 }
 
+.crm-card__title--xl {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.crm-card__title--section {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 .crm-card__subtitle {
   color: var(--crm-muted);
   font-size: 13px;
+}
+
+.crm-card__subtitle--lg {
+  font-size: 15px;
+}
+
+.crm-welcome-meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm-welcome-meta__num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--crm-violet);
+  letter-spacing: -0.03em;
+}
+
+.crm-welcome-meta__txt {
+  font-size: 14px;
+  color: var(--crm-muted);
+  font-weight: 600;
 }
 
 .crm-card--welcome {
@@ -155,9 +239,13 @@ body {
   font-weight: 700;
 }
 
+.crm-server__name--lg {
+  font-size: 18px;
+}
+
 .crm-server__sub {
   color: var(--crm-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .crm-i {
@@ -189,12 +277,13 @@ body {
 .crm-kpi {
   border: 1px solid var(--crm-border);
   border-radius: 12px;
-  padding: 12px 12px;
+  padding: 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   position: relative;
-  padding-left: 54px;
+  padding-left: 58px;
+  min-height: 76px;
 }
 
 .crm-kpi__icon {
@@ -207,6 +296,12 @@ body {
   border-radius: 50%;
   border: 1px solid var(--crm-border);
   box-shadow: 0 12px 22px rgba(16, 24, 40, 0.06);
+}
+
+.crm-kpi__icon--lg {
+  width: 40px;
+  height: 40px;
+  left: 10px;
 }
 
 .crm-kpi__icon--violet {
@@ -235,6 +330,10 @@ body {
   gap: 12px;
 }
 
+.crm-kpis--6 .crm-kpi {
+  padding-left: 64px;
+}
+
 @media (max-width: 900px) {
   .crm-kpis--6 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -242,13 +341,15 @@ body {
 }
 
 .crm-kpi__num {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
 }
 
 .crm-kpi__label {
   color: var(--crm-muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .crm-chart {
@@ -257,10 +358,55 @@ body {
 }
 
 .crm-chart__subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--crm-muted);
-  margin-top: -4px;
-  margin-bottom: 4px;
+  margin-top: -2px;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.crm-chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: rgba(108, 92, 231, 0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(108, 92, 231, 0.12);
+}
+
+.crm-chart-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+}
+
+.crm-chart-summary__val {
+  font-size: clamp(18px, 1.8vw, 22px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.crm-chart-summary__val--in {
+  color: var(--crm-violet);
+}
+
+.crm-chart-summary__val--out {
+  color: var(--crm-orange);
+}
+
+.crm-chart-summary__val--net {
+  color: #00b894;
+}
+
+.crm-chart-summary__cap {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--crm-muted);
 }
 
 .crm-grid--hero {
@@ -278,10 +424,10 @@ body {
   border: 1px solid rgba(255, 0, 0, 0.08);
   color: #d63031;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   margin-bottom: 16px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .crm-card__title--muted {
@@ -316,10 +462,24 @@ body {
   letter-spacing: -0.02em;
 }
 
+.crm-income__value--hero {
+  font-size: clamp(28px, 3.2vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.crm-income__sub {
+  font-size: 13px;
+  color: var(--crm-muted);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
 .crm-income__hint {
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 8px;
   color: rgba(16, 24, 40, 0.55);
+  font-weight: 600;
 }
 
 .crm-income__hint--down {
@@ -332,8 +492,8 @@ body {
 
 .crm-income-ring {
   position: relative;
-  width: 108px;
-  height: 108px;
+  width: 120px;
+  height: 120px;
   flex-shrink: 0;
   border-radius: 50%;
   background:
@@ -359,13 +519,13 @@ body {
 }
 
 .crm-income-ring__pct {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 900;
   color: rgba(16, 24, 40, 0.88);
 }
 
 .crm-income-ring__cap {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: rgba(16, 24, 40, 0.5);
   margin-top: 2px;
@@ -435,6 +595,27 @@ body {
 .crm-money {
   font-weight: 800;
   font-size: 13px;
+}
+
+.crm-money--xl {
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  display: block;
+}
+
+.crm-money-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.crm-money-note {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--crm-muted);
 }
 .crm-money--green {
   color: #00b894;
@@ -570,17 +751,17 @@ body {
 }
 
 .crm-metric-board__top {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--crm-muted);
-  padding: 6px 4px;
+  padding: 8px 4px;
 }
 
 .crm-metric-board__side {
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 13px;
   color: rgba(16, 24, 40, 0.82);
   padding: 6px 6px 6px 0;
   display: flex;
@@ -589,8 +770,8 @@ body {
 }
 
 .crm-metric-board .crm-mini {
-  padding: 12px 48px 12px 12px;
-  min-height: 72px;
+  padding: 14px 52px 14px 14px;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -598,6 +779,15 @@ body {
 
 .crm-metric-board .crm-mini__num {
   margin-bottom: 0;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.crm-mini__num--money {
+  font-size: clamp(17px, 1.5vw, 22px) !important;
+  line-height: 1.2;
 }
 
 .crm-mini__circle {

@@ -1,37 +1,162 @@
 {% load static %}
-<div class="crm-drawer__header">
-  <h2 class="crm-drawer__name">{{ user.get_full_name|default:user.username }}</h2>
-  <button type="button" data-st-close class="crm-drawer__close">&times;</button>
-</div>
-<div class="crm-drawer__body">
-  <div class="crm-drawer__section">
-    <div class="crm-drawer__row"><span class="crm-drawer__label">ID</span><span class="crm-drawer__value">#{{ student.id }}</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Телефон</span><span class="crm-drawer__value">{{ user.phone_number|default:"—" }}</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Статус</span><span class="crm-drawer__value">{{ student.get_status_display }}</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Аккаунт</span><span class="crm-drawer__value">{% if user.is_active %}Да{% else %}Нет{% endif %}</span></div>
-    {% if course %}
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Курс</span><span class="crm-drawer__value">{{ course.title }}</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">К оплате</span><span class="crm-drawer__value">{{ tuition_amount|floatformat:"0" }} с.</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Оплачено</span><span class="crm-drawer__value">{{ paid_total|floatformat:"0" }} с.</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Долг</span><span class="crm-drawer__value" style="color:{% if tuition_amount > paid_total %}#ef4444{% else %}#10b981{% endif %}">{{ tuition_amount|floatformat:"0" }} с.</span></div>
-    <div class="crm-drawer__row"><span class="crm-drawer__label">Месяцы</span><span class="crm-drawer__value">{{ months_paid }} / {{ months_total }}</span></div>
-    {% endif %}
+<div class="crm-student-drawer">
+  <div class="crm-student-drawer__top">
+    <h2 class="crm-student-drawer__title">Информация о студенте</h2>
+    <button type="button" class="crm-student-drawer__close" data-st-close aria-label="Закрыть">&times;</button>
   </div>
-  <div class="crm-drawer__section">
-    <h3>Платежи ({{ payments_total|floatformat:"0" }} с.)</h3>
-    {% if payments_page %}
-    <table class="crm-drawer__table">
-      <thead><tr><th>ID</th><th>Курс</th><th>Сумма</th><th>Дата</th></tr></thead>
-      <tbody>{% for p in payments_page %}<tr><td>#{{ p.id }}</td><td>{{ p.course.title|default:"—" }}</td><td>{{ p.amount }}</td><td>{{ p.created_at|date:"d.m.Y" }}</td></tr>{% endfor %}</tbody>
-    </table>
-    <div class="crm-drawer__pager">
-      {% if payments_page.has_previous %}<a href="?p={{ payments_page.previous_page_number }}" class="crm-pg">&larr;</a>{% endif %}
-      <span>{{ payments_page.number }} / {{ payments_page.paginator.num_pages }}</span>
-      {% if payments_page.has_next %}<a href="?p={{ payments_page.next_page_number }}" class="crm-pg">&rarr;</a>{% endif %}
+
+  <div class="crm-student-drawer__hero">
+    <div class="crm-student-drawer__name">{{ user.get_full_name|default:user.username }}</div>
+    <a href="{% url 'crm_admin:settings_student_change' student.id %}" class="crm-student-drawer__icon-btn" title="Редактировать">&#9998;</a>
+  </div>
+
+  <div class="crm-student-drawer__grid">
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Дата добавления</span>
+      <span class="crm-student-drawer__value">{{ student.created_at|date:"d.m.Y" }}</span>
     </div>
-    {% else %}<p>Нет платежей</p>{% endif %}
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Статус</span>
+      <span class="crm-student-drawer__value">{{ student.get_status_display }}</span>
+    </div>
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Номер телефона</span>
+      <span class="crm-student-drawer__value crm-student-drawer__value--phone">
+        {{ user.phone_number|default:"—" }}
+        {% if whatsapp_href %}
+          <a href="{{ whatsapp_href }}" target="_blank" rel="noopener" class="crm-student-drawer__wa" title="WhatsApp">WA</a>
+        {% endif %}
+      </span>
+    </div>
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Кем добавлен</span>
+      <span class="crm-student-drawer__value">{{ added_by_name }}</span>
+    </div>
   </div>
-  <div class="crm-drawer__section">
-    <a href="{% url 'admin:settings_student_change' student.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Родители</span>
+      <button type="button" class="crm-student-drawer__icon-btn crm-student-drawer__icon-btn--ghost" disabled title="Скоро">&#9998;</button>
+    </div>
+    <p class="crm-student-drawer__muted">В профиле нет полей для родителей — можно расширить модель позже.</p>
+  </section>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Аккаунт</span>
+      <a href="{% url 'crm_admin:settings_student_change' student.id %}" class="crm-student-drawer__btn-outline">Пригласить</a>
+    </div>
+    <p class="crm-student-drawer__muted">{% if user.is_active %}Аккаунт активен{% else %}Аккаунт не активирован{% endif %}</p>
+  </section>
+
+  {% if course %}
+  <section class="crm-student-drawer__card crm-student-drawer__card--course">
+    <div class="crm-student-drawer__card-head">
+      <span>Курс: {{ course.title }}</span>
+      <span class="crm-student-drawer__chevron" aria-hidden="true">&#8250;</span>
+    </div>
+    <div class="crm-student-drawer__course-meta">
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Расписание</span>
+        <span class="crm-student-drawer__value">{{ schedule_note }}</span>
+      </div>
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Пропусков</span>
+        <span class="crm-student-drawer__value">— <span class="crm-student-drawer__hint">(учёт посещаемости не подключён)</span></span>
+      </div>
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Начало</span>
+        <span class="crm-student-drawer__value">{{ course_start_display }}</span>
+      </div>
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Первое посещение</span>
+        <span class="crm-student-drawer__value">{{ first_visit_display }}</span>
+      </div>
+    </div>
+    {% if months_total %}
+    <div class="crm-student-drawer__progress-wrap">
+      <div class="crm-student-drawer__progress" style="--p: {{ progress_pct }}%"></div>
+    </div>
+    <div class="crm-student-drawer__progress-cap">Пройдено {{ months_paid }} из {{ months_total }} месяцев</div>
+    {% endif %}
+  </section>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Оплата</span>
+      <span class="crm-student-drawer__card-actions">
+        <span class="crm-student-drawer__icon-btn crm-student-drawer__icon-btn--ghost" title="Список">&#9776;</span>
+        <a href="{% url 'crm_admin:settings_payment_add' %}" class="crm-student-drawer__icon-btn" title="Добавить платёж">+</a>
+      </span>
+    </div>
+    {% if month_slots %}
+    <div class="crm-student-drawer__dots" aria-hidden="true">
+      {% for slot in month_slots %}
+        <span class="crm-student-drawer__dot {% if slot.paid %}is-paid{% else %}is-unpaid{% endif %}"></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <p class="crm-student-drawer__pay-sum">Оплачено {{ months_paid }} месяцев из {{ months_total }}</p>
+    <p class="crm-student-drawer__pay-sum">Оплачено {{ paid_total|floatformat:2 }} из {{ tuition_amount|floatformat:0 }}</p>
+  </section>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Контракт</span>
+      {% if contract %}
+        <span class="crm-student-drawer__btn-outline crm-student-drawer__btn-outline--static">{{ contract.periods|truncatechars:40 }}</span>
+      {% else %}
+        <span class="crm-student-drawer__muted">Не составлен</span>
+      {% endif %}
+    </div>
+    {% if contract %}<p class="crm-student-drawer__muted">Периоды: {{ contract.periods }}</p>{% endif %}
+  </section>
+
+  {% if instant_pay_url %}
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Моментальная оплата</span>
+    </div>
+    <div class="crm-student-drawer__copy-row">
+      <input type="text" readonly class="crm-student-drawer__input" value="{{ instant_pay_url }}" id="crm-instant-pay-url">
+      <button type="button" class="crm-student-drawer__btn-copy" onclick="var el=document.getElementById('crm-instant-pay-url'); if(el &amp;&amp; navigator.clipboard){ navigator.clipboard.writeText(el.value); this.textContent='Скопировано'; var t=this; setTimeout(function(){t.textContent='Копировать';},1500);}">Копировать</button>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <section class="crm-student-drawer__card">
+    <h3 class="crm-student-drawer__h3">Платежи (всего {{ payments_total|floatformat:0 }} с.)</h3>
+    {% if payments_page %}
+    <table class="crm-student-drawer__table">
+      <thead><tr><th>ID</th><th>Курс</th><th>Сумма</th><th>Дата</th></tr></thead>
+      <tbody>
+        {% for p in payments_page %}
+        <tr>
+          <td>#{{ p.id }}</td>
+          <td>{{ p.course.title|default:"—" }}</td>
+          <td>{{ p.amount }}</td>
+          <td>{{ p.created_at|date:"d.m.Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="crm-student-drawer__pager">
+      {% if payments_page.has_previous %}
+        <a href="?p={{ payments_page.previous_page_number }}{% if course %}&course={{ course.pk }}{% endif %}" class="crm-pg">&larr;</a>
+      {% endif %}
+      <span>{{ payments_page.number }} / {{ payments_page.paginator.num_pages }}</span>
+      {% if payments_page.has_next %}
+        <a href="?p={{ payments_page.next_page_number }}{% if course %}&course={{ course.pk }}{% endif %}" class="crm-pg">&rarr;</a>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="crm-student-drawer__muted">Нет платежей по этому контексту.</p>
+    {% endif %}
+  </section>
+
+  <div class="crm-student-drawer__footer-actions">
+    <a href="{% url 'crm_admin:settings_student_change' student.id %}" class="crm-student-drawer__btn-primary">Редактировать студента</a>
   </div>
 </div>

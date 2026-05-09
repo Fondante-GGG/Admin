@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from django.urls import reverse
@@ -146,9 +147,8 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         "paid_total_display",
         "status_badge",
         "account_display",
-        "details_button",
     )
-    list_display_links = ("student_id", "full_name")
+    list_display_links = None
     search_fields = ("user__username", "user__first_name", "user__last_name", "user__phone_number")
     autocomplete_fields = ("user",)
     list_per_page = 20
@@ -211,12 +211,21 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         return qs
 
     def student_id(self, obj: Student):
-        return f"#{obj.pk}"
+        return format_html(
+            '<a href="#" class="crm-student-link" data-student-id="{}">#{}</a>',
+            obj.pk,
+            obj.pk,
+        )
 
     student_id.short_description = "ID"
 
     def full_name(self, obj: Student):
-        return obj.user.get_full_name() or obj.user.username
+        name = obj.user.get_full_name() or obj.user.username
+        return format_html(
+            '<a href="#" class="crm-student-link" data-student-id="{}">{}</a>',
+            obj.pk,
+            name,
+        )
 
     full_name.short_description = "ФИО"
 
@@ -258,14 +267,6 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         return "Да" if obj.user.is_active else "Нет"
 
     account_display.short_description = "Аккаунт"
-
-    def details_button(self, obj: Student):
-        return format_html(
-            '<a class="crm-btn crm-btn--outline crm-btn--sm" data-st-nodrawer href="{}">Подробнее</a>',
-            f"{obj.pk}/change/",
-        )
-
-    details_button.short_description = ""
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
@@ -854,9 +855,6 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         return qs
 
     def changelist_view(self, request, extra_context=None):
-        # Django admin ChangeList treats unknown GET params as ORM lookups.
-        # Our custom filters (mentor/date/first/pay_id) must be removed from request.GET
-        # before ChangeList is constructed, otherwise it raises IncorrectLookupParameters.
         request._crm_pay_params = request.GET.copy()
         mutable = request.GET.copy()
         for k in ("mentor", "first", "date_from", "date_to", "pay_id"):
@@ -909,7 +907,6 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
-        # Disallow opening the detail/change view; list is read-only.
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -1065,7 +1062,6 @@ class DebtorEnrollmentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related("student__user", "course").prefetch_related("course__mentors")
 
-        # paid_total subquery per enrollment (student+course)
         pay_sub = (
             Payment.objects.filter(student_id=OuterRef("student_id"), course_id=OuterRef("course_id"))
             .values("student_id")
@@ -1116,7 +1112,6 @@ class DebtorEnrollmentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     debt_display.short_description = "Долг (с.)"
 
     def changelist_view(self, request, extra_context=None):
-        # Strip custom params so Django admin doesn't treat them as ORM lookups
         request._crm_debt_params = request.GET.copy()
         mutable = request.GET.copy()
         for k in ("mentor", "q"):
@@ -1159,3 +1154,25 @@ class DebtorEnrollmentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         }
         extra_context["export_qs"] = request._crm_debt_params.urlencode()
         return super().changelist_view(request, extra_context=extra_context)
+
+
+class CRMLogEntryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
+    date_hierarchy = "action_time"
+    ordering = ("-action_time",)
+    list_display = ("action_time", "user", "content_type", "object_repr", "action_flag")
+    list_filter = ("action_flag", "content_type")
+    search_fields = ("object_repr", "change_message", "user__username")
+    list_display_links = None
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+crm_admin_site.register(LogEntry, CRMLogEntryAdmin)

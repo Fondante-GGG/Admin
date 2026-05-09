@@ -27,8 +27,8 @@ function drawAxes(ctx, w, h, pad, maxY, labels) {
   ctx.stroke();
 
   const steps = 4;
-  ctx.fillStyle = "rgba(16,24,40,0.45)";
-  ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+  ctx.fillStyle = "rgba(16,24,40,0.5)";
+  ctx.font = "600 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
   for (let i = 0; i <= steps; i++) {
     const y = pad + ((h - 2 * pad) * i) / steps;
     ctx.beginPath();
@@ -107,8 +107,8 @@ function drawDiverging(ctx, w, h, pad, labels, income, expense) {
   ctx.lineTo(w - pad, midY);
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(16,24,40,0.45)";
-  ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+  ctx.fillStyle = "rgba(16,24,40,0.5)";
+  ctx.font = "600 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
   ctx.fillText(String(Math.round(maxMag)), 6, pad + 10);
   ctx.fillText("0", 6, midY + 4);
   ctx.fillText("-" + String(Math.round(maxMag)), 6, h - pad - 4);
@@ -210,7 +210,7 @@ function render() {
     canvas.style.height = h + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const pad = 34;
+    const pad = 42;
     ctx.clearRect(0, 0, w, h);
 
     if (chartType === "diverging" && s2) {

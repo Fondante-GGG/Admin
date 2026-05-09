@@ -5,7 +5,7 @@ import io
 import json
 import re
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -185,13 +185,44 @@ def _compact_money(amount: float) -> str:
     return f"{n:.0f} c."
 
 
+def _format_int_ru(n: float | int) -> str:
+    v = int(round(float(n)))
+    if v < 0:
+        return "−" + f"{abs(v):,}".replace(",", " ")
+    return f"{v:,}".replace(",", " ")
+
+
+def _format_money_ru(n: float | int) -> str:
+    d = Decimal(str(n or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    neg = d < 0
+    d = abs(d)
+    if d == d.to_integral_value():
+        body = f"{int(d):,}".replace(",", " ")
+    else:
+        t = f"{d:.2f}"
+        ip, fp = t.split(".")
+        body = f"{int(ip):,}".replace(",", " ") + "," + fp
+    return ("−" if neg else "") + body + " с."
+
+
 class CRMAdminSite(AdminSite):
     site_header = "Codify CRM"
     site_title = "Codify CRM"
     index_title = "Дашборд"
     index_template = "admin/crm_index.html"
 
-    SIDEBAR_SKIP_MODELS: frozenset[str] = frozenset({"settings.call", "config.crmbilling", "config.crmabout"})
+    SIDEBAR_SKIP_MODELS: frozenset[str] = frozenset(
+        {
+            "settings.call",
+            "config.crmbilling",
+            "config.crmabout",
+            "settings.accountingaccount",
+            "settings.accountingproject",
+            "settings.accountingcategory",
+            "settings.task",
+            "settings.user",
+        }
+    )
 
     SIDEBAR_PRIMARY_ORDER: tuple[str, ...] = (
         "settings.calendarevent",
@@ -203,11 +234,6 @@ class CRMAdminSite(AdminSite):
         "settings.salary",
         "settings.lead",
         "settings.accountingentry",
-        "settings.accountingaccount",
-        "settings.accountingproject",
-        "settings.accountingcategory",
-        "settings.task",
-        "settings.user",
     )
 
     SIDEBAR_SETTINGS_ONLY_MODELS: frozenset[str] = frozenset({"config.crmsetting"})
@@ -430,7 +456,7 @@ class CRMAdminSite(AdminSite):
         if settings_item:
             menu.append(settings_item)
 
-        history_url = "/admin/admin/logentry/"
+        history_url = reverse(f"{self.name}:admin_logentry_changelist")
         for link in jazzmin_settings.get("custom_links", {}).get("config", []):
             if (link.get("name") or "").strip() == "История действий" and link.get("url"):
                 history_url = link["url"]
@@ -1228,44 +1254,99 @@ class CRMAdminSite(AdminSite):
 
     def student_drawer(self, request, student_id: int):
         student = Student.objects.select_related("user").get(pk=student_id)
-        enrollment = (
-            Enrollment.objects.select_related("course")
-            .filter(student=student, course__is_archived=False)
-            .order_by("-created_at")
-            .first()
-        )
-        paid_total = 0
-        tuition_amount = 0
+        course_pk = request.GET.get("course")
+        course_pk_int = int(course_pk) if course_pk and str(course_pk).isdigit() else None
+
+        enrollment = None
+        if course_pk_int:
+            enrollment = (
+                Enrollment.objects.select_related("course")
+                .filter(student=student, course_id=course_pk_int, course__is_archived=False)
+                .first()
+            )
+        if not enrollment:
+            enrollment = (
+                Enrollment.objects.select_related("course")
+                .filter(student=student, course__is_archived=False)
+                .order_by("-created_at")
+                .first()
+            )
+
+        paid_total = 0.0
+        tuition_amount = 0.0
         course = None
+        contract = None
         if enrollment:
             course = enrollment.course
             tuition_amount = float(enrollment.tuition_amount or 0)
             paid_total = float(enrollment.paid_total or 0)
+            contract = CourseContract.objects.filter(course=course, student=student).first()
 
         months_total = 0
         months_paid = 0
-        if course and course.price:
-            months_total = max(1, int(round(tuition_amount / float(course.price or 1)))) if tuition_amount else 0
-            months_paid = min(months_total, int(round(paid_total / float(course.price or 1)))) if months_total else 0
+        if course:
+            price = float(course.price or 0)
+            if tuition_amount and price > 0:
+                months_total = max(1, int(round(tuition_amount / price)))
+                months_paid = min(months_total, int(round(paid_total / price)))
+            else:
+                months_total = max(1, int(round((course.duration_days or 30) / 30)))
+                months_paid = min(months_total, int(round(paid_total / price))) if price > 0 else 0
 
         payments_qs = Payment.objects.filter(student=student).select_related("course").order_by("-created_at")
+        if course:
+            payments_qs = payments_qs.filter(course=course)
         payments_total = float(payments_qs.aggregate(total=Sum("amount"))["total"] or 0)
         page_size = 10
         paginator = Paginator(payments_qs, page_size)
         page_number = request.GET.get("p") or 1
         payments_page = paginator.get_page(page_number)
 
+        first_payment_qs = payments_qs.order_by("created_at")
+        first_payment = first_payment_qs.first() if course else None
+        first_visit_display = "Неизвестно"
+        if first_payment and first_payment.created_at:
+            first_visit_display = timezone.localdate(first_payment.created_at).strftime("%d.%m.%Y")
+
+        added_by_name = "—"
+        if course:
+            m = course.mentors.select_related("user").first()
+            if m and m.user:
+                added_by_name = m.user.get_full_name() or m.user.username
+
+        month_slots = [{"paid": i < months_paid} for i in range(months_total)] if months_total else []
+        progress_pct = int(round(100 * months_paid / months_total)) if months_total else 0
+
+        phone = (student.user.phone_number or "").strip()
+        wa_digits = re.sub(r"\D+", "", phone)
+        whatsapp_href = f"https://wa.me/{wa_digits}" if wa_digits else ""
+
+        instant_pay_url = ""
+        if course:
+            host_base = request.build_absolute_uri("/").rstrip("/")
+            instant_pay_url = f"{host_base}/instant-pay/?student={student.pk}&course={course.pk}"
+
         context = {
             "student": student,
             "user": student.user,
             "enrollment": enrollment,
             "course": course,
+            "contract": contract,
             "tuition_amount": tuition_amount,
             "paid_total": paid_total,
+            "debt_amount": max(0.0, tuition_amount - paid_total),
             "months_total": months_total,
             "months_paid": months_paid,
+            "month_slots": month_slots,
+            "progress_pct": progress_pct,
             "payments_page": payments_page,
             "payments_total": payments_total,
+            "first_visit_display": first_visit_display,
+            "added_by_name": added_by_name,
+            "whatsapp_href": whatsapp_href,
+            "instant_pay_url": instant_pay_url,
+            "schedule_note": (course.schedule_note if course else "") or "—",
+            "course_start_display": course.start.strftime("%d.%m.%Y") if course and course.start else "—",
             **self.each_context(request),
         }
         return TemplateResponse(request, "admin/student_drawer.html", context)
@@ -1377,25 +1458,57 @@ class CRMAdminSite(AdminSite):
                     "income_compact": _compact_money(income),
                     "salary_compact": _compact_money(salary_total),
                     "profit_compact": _compact_money(profit),
+                    "income_display": _format_money_ru(income),
+                    "salary_display": _format_money_ru(salary_total),
+                    "profit_display": _format_money_ru(profit),
                 }
             )
 
+        income_12m_s = _sum_by_month(payments_qs, months=12, field="amount")
+        expense_12m_s = _sum_by_month(salary_qs, months=12, field="amount")
+        payments_6m_s = _sum_by_month(payments_qs, months=6, field="amount")
+        leads_6m_s = _count_by_month(leads_qs, months=6)
+        students_6m_s = _distinct_paying_students_by_month(payments_qs, 6)
+        visits_30d_s = _calendar_events_by_day(30)
+
+        sum_in_12 = float(sum(income_12m_s.values))
+        sum_ex_12 = float(sum(expense_12m_s.values))
+        sum_pay_6 = float(sum(payments_6m_s.values))
+        sum_leads_6 = int(round(sum(leads_6m_s.values)))
+        sum_stu_6 = int(round(sum(students_6m_s.values)))
+        sum_vis_30 = int(round(sum(visits_30d_s.values)))
+
+        payments_all_time = float(payments_qs.aggregate(t=Sum("amount"))["t"] or 0)
+        salaries_all_time = float(salary_qs.aggregate(t=Sum("amount"))["t"] or 0)
+
         series = {
-            "income": _sum_by_month(payments_qs, months=12, field="amount").__dict__,
-            "expense": _sum_by_month(salary_qs, months=12, field="amount").__dict__,
-            "payments_6m": _sum_by_month(payments_qs, months=6, field="amount").__dict__,
-            "leads_6m": _count_by_month(leads_qs, months=6).__dict__,
-            "students_6m": _distinct_paying_students_by_month(payments_qs, 6).__dict__,
-            "visits_30d": _calendar_events_by_day(30).__dict__,
+            "income": income_12m_s.__dict__,
+            "expense": expense_12m_s.__dict__,
+            "payments_6m": payments_6m_s.__dict__,
+            "leads_6m": leads_6m_s.__dict__,
+            "students_6m": students_6m_s.__dict__,
+            "visits_30d": visits_30d_s.__dict__,
         }
+
+        def _fmt_card(d: dict) -> dict:
+            return {k: _format_int_ru(v) for k, v in d.items()}
 
         context.update(
             {
                 "license_alert": license_alert,
+                "overview": {
+                    "payments_all": _format_money_ru(payments_all_time),
+                    "salaries_all": _format_money_ru(salaries_all_time),
+                    "net_all": _format_money_ru(payments_all_time - salaries_all_time),
+                    "students": _format_int_ru(students_qs.count()),
+                    "leads": _format_int_ru(leads_qs.count()),
+                },
                 "income_block": {
                     "this_month": this_month_tuition,
                     "this_month_compact": _compact_money(this_month_tuition),
+                    "this_month_display": _format_money_ru(this_month_tuition),
                     "prev_month": prev_month_tuition,
+                    "prev_month_display": _format_money_ru(prev_month_tuition),
                     "pct_vs_prev": pct_vs_prev,
                     "ring_pct": ring_pct,
                 },
@@ -1406,6 +1519,14 @@ class CRMAdminSite(AdminSite):
                     "courses": Cursues.objects.filter(is_archived=False).count(),
                     "users": User.objects.count(),
                     "staff": User.objects.filter(is_staff=True).count(),
+                },
+                "kpi_display": {
+                    "students": _format_int_ru(students_qs.count()),
+                    "mentors": _format_int_ru(Mentor.objects.count()),
+                    "leads": _format_int_ru(leads_qs.count()),
+                    "courses": _format_int_ru(Cursues.objects.filter(is_archived=False).count()),
+                    "users": _format_int_ru(User.objects.count()),
+                    "staff": _format_int_ru(User.objects.filter(is_staff=True).count()),
                 },
                 "courses_top": courses_top,
                 "cards": {
@@ -1418,6 +1539,22 @@ class CRMAdminSite(AdminSite):
                     },
                     "drops": {"today": drops_today, "week": drops_week, "month": drops_month, "year": drops_year},
                 },
+                "cards_display": {
+                    "leads": _fmt_card(
+                        {"today": leads_today, "week": leads_week, "month": leads_month, "year": leads_year}
+                    ),
+                    "students": _fmt_card(
+                        {
+                            "today": students_today,
+                            "week": students_week,
+                            "month": students_month,
+                            "year": students_year,
+                        }
+                    ),
+                    "drops": _fmt_card(
+                        {"today": drops_today, "week": drops_week, "month": drops_month, "year": drops_year}
+                    ),
+                },
                 "money": {
                     "paid": {
                         "today": money_paid_today,
@@ -1425,6 +1562,23 @@ class CRMAdminSite(AdminSite):
                         "month": money_paid_month,
                         "year": money_paid_year,
                     }
+                },
+                "money_display": {
+                    "paid": {
+                        "today": _format_money_ru(money_paid_today),
+                        "week": _format_money_ru(money_paid_week),
+                        "month": _format_money_ru(money_paid_month),
+                        "year": _format_money_ru(money_paid_year),
+                    }
+                },
+                "chart_totals": {
+                    "students_6m": _format_int_ru(sum_stu_6),
+                    "visits_30d": _format_int_ru(sum_vis_30),
+                    "payments_6m": _format_money_ru(sum_pay_6),
+                    "leads_6m": _format_int_ru(sum_leads_6),
+                    "income_12m": _format_money_ru(sum_in_12),
+                    "expense_12m": _format_money_ru(sum_ex_12),
+                    "net_12m": _format_money_ru(sum_in_12 - sum_ex_12),
                 },
                 "series": series,
                 "dashboard_month_title": formats.date_format(today, "F Y"),

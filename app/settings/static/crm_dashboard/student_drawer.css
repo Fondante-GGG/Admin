@@ -71,3 +71,287 @@
 }
 .crm-btn--primary { background: #3b82f6; color: #fff; border-color: #3b82f6; }
 .crm-pg { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 4px; text-decoration: none; color: #374151; }
+
+/* Панель студента (как в референсе CRM) */
+.crm-student-drawer {
+  padding: 0 0 24px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+.crm-student-drawer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+.crm-student-drawer__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+.crm-student-drawer__close {
+  border: none;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.crm-student-drawer__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+.crm-student-drawer__name {
+  font-size: 17px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #111827;
+}
+.crm-student-drawer__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6c5ce7;
+  text-decoration: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+.crm-student-drawer__icon-btn--ghost {
+  opacity: 0.45;
+  cursor: default;
+}
+.crm-student-drawer__grid {
+  padding: 0 20px 8px;
+  display: grid;
+  gap: 0;
+}
+.crm-student-drawer__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+}
+.crm-student-drawer__label {
+  color: #6b7280;
+  font-weight: 600;
+}
+.crm-student-drawer__value {
+  color: #111827;
+  font-weight: 700;
+  text-align: right;
+}
+.crm-student-drawer__value--phone {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.crm-student-drawer__wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #25d366;
+  color: #fff !important;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.crm-student-drawer__card {
+  margin: 12px 16px;
+  padding: 14px 16px;
+  background: #fafafa;
+  border: 1px solid #eceef2;
+  border-radius: 14px;
+}
+.crm-student-drawer__card--course {
+  background: #fff;
+  border-color: #e8e6ff;
+}
+.crm-student-drawer__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 8px;
+}
+.crm-student-drawer__card-actions {
+  display: flex;
+  gap: 6px;
+}
+.crm-student-drawer__chevron {
+  color: #6c5ce7;
+  font-size: 18px;
+  font-weight: 700;
+}
+.crm-student-drawer__course-meta .crm-student-drawer__row {
+  font-size: 12px;
+}
+.crm-student-drawer__muted {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+.crm-student-drawer__hint {
+  font-weight: 500;
+  color: #9ca3af;
+  font-size: 11px;
+}
+.crm-student-drawer__progress-wrap {
+  height: 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  overflow: hidden;
+  margin-top: 12px;
+}
+.crm-student-drawer__progress {
+  height: 100%;
+  width: var(--p, 0%);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.25s ease;
+}
+.crm-student-drawer__progress-cap {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+.crm-student-drawer__dots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px;
+}
+.crm-student-drawer__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fecaca;
+  border: 2px solid #f87171;
+}
+.crm-student-drawer__dot.is-paid {
+  background: #6ee7b7;
+  border-color: #10b981;
+}
+.crm-student-drawer__dot.is-unpaid {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+.crm-student-drawer__pay-sum {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+.crm-student-drawer__btn-outline {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #6c5ce7;
+  color: #6c5ce7 !important;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  background: #fff;
+}
+.crm-student-drawer__btn-outline--static {
+  cursor: default;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crm-student-drawer__copy-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.crm-student-drawer__input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #374151;
+}
+.crm-student-drawer__btn-copy {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #6c5ce7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.crm-student-drawer__h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #374151;
+}
+.crm-student-drawer__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.crm-student-drawer__table th,
+.crm-student-drawer__table td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+.crm-student-drawer__table th {
+  color: #6b7280;
+  font-weight: 700;
+}
+.crm-student-drawer__pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.crm-student-drawer__footer-actions {
+  padding: 16px 20px 0;
+}
+.crm-student-drawer__btn-primary {
+  display: block;
+  text-align: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: #6c5ce7;
+  color: #fff !important;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.crm-drawer-open {
+  overflow: hidden;
+}

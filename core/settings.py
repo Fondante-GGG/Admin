@@ -144,6 +144,11 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     "hide_models": [
         "settings.studentpayments",
+        "settings.accountingaccount",
+        "settings.accountingproject",
+        "settings.accountingcategory",
+        "settings.task",
+        "settings.user",
     ],
     "order_with_respect_to": [
         "settings",
@@ -158,11 +163,6 @@ JAZZMIN_SETTINGS = {
         "settings.salary",
         "settings.lead",
         "settings.accountingentry",
-        "settings.accountingaccount",
-        "settings.accountingproject",
-        "settings.accountingcategory",
-        "settings.task",
-        "settings.user",
         "settings.debtorenrollment",
         "config",
         "config.crmsetting",
@@ -176,7 +176,8 @@ JAZZMIN_SETTINGS = {
             },
         ],
         "config": [
-            {"name": "История действий", "url": "/admin/admin/logentry/", "icon": "fas fa-history"},
+            # URL берётся из reverse в CRMAdminSite (см. admin_site.py)
+            {"name": "История действий", "icon": "fas fa-history"},
         ],
     },
     "icons": {

@@ -230,3 +230,13 @@
   background: rgba(108, 92, 231, 0.12);
   border-color: rgba(108, 92, 231, 0.3);
 }
+
+.crm-dashboard #result_list .crm-student-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+.crm-dashboard #result_list .crm-student-link:hover {
+  text-decoration: underline;
+  color: #6366f1;
+}

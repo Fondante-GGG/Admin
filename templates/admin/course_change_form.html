@@ -5,6 +5,7 @@
 {% block extrastyle %}
 {{ block.super }}
 <link href="{% static 'crm_dashboard/courses.css' %}" rel="stylesheet">
+<link href="{% static 'crm_dashboard/student_drawer.css' %}" rel="stylesheet">
 <style>
   /* Stretch admin content full width (like dashboard.css) */
   #content {
@@ -394,9 +395,9 @@
     </thead>
     <tbody>
       {% for e in course_enrollments %}
-      <tr>
+      <tr data-student-row data-student-id="{{ e.student.id }}">
         <td><a href="#" class="crm-student-link" data-student-id="{{ e.student.id }}">#{{ e.student.id }}</a></td>
-        <td>{{ e.student.user.get_full_name|default:e.student.user.username }}</td>
+        <td><a href="#" class="crm-student-link" data-student-id="{{ e.student.id }}">{{ e.student.user.get_full_name|default:e.student.user.username }}</a></td>
         <td>{{ e.student.user.phone_number|default:"—" }}</td>
         <td>{{ e.tuition_amount|floatformat:"0" }}</td>
         <td>{{ e.paid_amount|floatformat:"0" }}</td>
@@ -460,7 +461,7 @@
 </div>
 
 <!-- Student drawer -->
-<div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'admin:student_drawer' 1 %}">
+<div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'crm_admin:student_drawer' 1 %}" data-drawer-course="{{ original.pk }}">
   <div class="crm-drawer__backdrop" data-st-close></div>
   <div class="crm-drawer__panel"></div>
 </div>
@@ -493,8 +494,13 @@
   var panel = drawer ? qs(".crm-drawer__panel", drawer) : null;
   var tpl = drawer ? drawer.getAttribute("data-drawer-url-template") : null;
   if (drawer && panel && tpl) {
+    var courseId = drawer.getAttribute("data-drawer-course");
     function urlForStudentId(id) {
-      return tpl.replace("/1/drawer/", "/" + id + "/drawer/");
+      var url = tpl.replace(/\/\d+\/drawer\/?/, "/" + id + "/drawer/");
+      if (courseId) {
+        url += (url.indexOf("?") >= 0 ? "&" : "?") + "course=" + encodeURIComponent(courseId);
+      }
+      return url;
     }
     function openDrawer() {
       drawer.classList.remove("is-hidden");
@@ -514,15 +520,58 @@
       }
       panel.innerHTML = await res.text();
     }
+    async function loadHref(href) {
+      panel.innerHTML = '<div class="crm-drawer__loading">Загрузка…</div>';
+      openDrawer();
+      var res = await fetch(href, { credentials: "same-origin" });
+      if (!res.ok) {
+        panel.innerHTML = "<div class='crm-drawer__loading'>Ошибка загрузки</div>";
+        return;
+      }
+      panel.innerHTML = await res.text();
+    }
     document.addEventListener("click", function (e) {
-      var closeBtn = e.target.closest("[data-st-close]");
+      var t = e.target;
+      var el = t && t.nodeType === 1 ? t : t && t.parentElement;
+      if (!el) return;
+      var closeBtn = el.closest("[data-st-close]");
       if (closeBtn) { closeDrawer(); return; }
-      var link = e.target.closest("a.crm-student-link");
-      if (!link) return;
-      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var row = el.closest("tr[data-student-row]");
+      if (row && !el.closest("input, button, a, label")) {
+        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+          var rid = row.getAttribute("data-student-id");
+          if (rid) { e.preventDefault(); loadStudent(rid); return; }
+        }
+      }
+      var link = el.closest("a");
+      if (!link || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (link.hasAttribute("data-st-nodrawer")) return;
+      var href = link.getAttribute("href") || "";
+      if (link.classList.contains("crm-pg")) {
+        e.preventDefault();
+        var u = new URL(href, window.location.origin);
+        var currentA = panel.querySelector("a[href*='/admin/settings/student/']");
+        var current = currentA ? currentA.getAttribute("href") || "" : "";
+        var m2 = current.match(/student\/(\d+)\//) || current.match(/\/(\d+)\/change\/?/);
+        if (!m2) return;
+        var drawerUrl = new URL(urlForStudentId(m2[1]), window.location.origin);
+        drawerUrl.search = u.search;
+        if (courseId && !drawerUrl.searchParams.has("course")) {
+          drawerUrl.searchParams.set("course", courseId);
+        }
+        loadHref(drawerUrl.toString());
+        return;
+      }
+      if (link.classList.contains("crm-student-link")) {
+        e.preventDefault();
+        var lid = link.getAttribute("data-student-id");
+        if (lid) loadStudent(lid);
+        return;
+      }
+      var m = href.match(/student\/(\d+)\//) || href.match(/\/(\d+)\/change\/?/);
+      if (!m) return;
       e.preventDefault();
-      var id = link.getAttribute("data-student-id");
-      if (id) loadStudent(id);
+      loadStudent(m[1]);
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !drawer.classList.contains("is-hidden")) closeDrawer();
