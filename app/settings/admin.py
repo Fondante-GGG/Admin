@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 import io
-
+from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from django.urls import reverse
@@ -15,7 +15,7 @@ from openpyxl.styles import Font
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from datetime import date, timedelta
-from django.response import JsonResponse
+from django.http import JsonResponse
 
 from .admin_site import crm_admin_site
 from .admin_site import _simple_pdf_table
