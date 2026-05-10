@@ -3,20 +3,15 @@ from django.conf import settings
 
 
 class ManagerAccessMiddleware(MiddlewareMixin):
-    """
-    Middleware для настройки прав доступа менеджеров.
-    Скрывает бухгалтерские разделы для менеджеров, но оставляет доступ ко всему остальному.
-    """
+
     
     def process_request(self, request):
         if not request.user.is_authenticated:
             return None
             
         if hasattr(request.user, 'role') and request.user.role == 'Менеджер':
-            # Для менеджеров скрываем только бухгалтерские разделы
             jazzmin_settings = getattr(settings, 'JAZZMIN_SETTINGS', {})
             
-            # Обновляем hide_models только для бухгалтерии
             jazzmin_settings['hide_models'] = [
                 'settings.accountingentry',
                 'settings.accountingaccount', 

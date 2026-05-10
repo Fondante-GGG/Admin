@@ -338,6 +338,8 @@ class Payment(models.Model):
         CASH = "cash", "Наличные"
         BANK = "bank", "Банковский перевод"
         CARD = "card", "Карта"
+        AITI_TRANSFER = "aiti_transfer", "Aiti переводы"
+        AITI_CASH = "aiti_cash", "Aiti наличка"
         OTHER = "other", "Другое"
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name="Студент")
@@ -345,12 +347,15 @@ class Payment(models.Model):
         Cursues, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Курс"
     )
     method = models.CharField(
-        max_length=16,
+        max_length=20,
         choices=Method.choices,
         default=Method.CASH,
         verbose_name="Способ оплаты",
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Сумма")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    is_voided = models.BooleanField(default=False, verbose_name="Аннулирован")
+    receipt_file = models.FileField(upload_to="receipts/", blank=True, null=True, verbose_name="Квитанция")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
 
     def __str__(self):

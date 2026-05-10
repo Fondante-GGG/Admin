@@ -63,6 +63,92 @@
   </div>
 
   {{ block.super }}
+
+  <!-- Modal: Редактировать -->
+  <div class="crm-modal-overlay" id="crm-modal-edit" hidden>
+    <div class="crm-modal">
+      <div class="crm-modal__header">
+        <h3 class="crm-modal__title">Изменить оплату</h3>
+        <button type="button" class="crm-modal__close" data-modal-close aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="crm-modal__body">
+        <form id="crm-form-edit" method="post" action="">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="pay_id" id="edit-pay-id" value="">
+          <label class="crm-pay-field">
+            <span class="crm-pay-field__label">Способ оплаты</span>
+            <select name="method" class="crm-pay-input" id="edit-method">
+              {% for key, label in methods %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="crm-pay-field">
+            <span class="crm-pay-field__label">Описание</span>
+            <textarea name="description" class="crm-pay-input" id="edit-description" rows="3"></textarea>
+          </label>
+        </form>
+      </div>
+      <div class="crm-modal__footer">
+        <button type="button" class="crm-btn crm-btn--outline" data-modal-close>Отмена</button>
+        <button type="button" class="crm-btn crm-btn--primary" data-modal-submit="crm-form-edit">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Аннулировать -->
+  <div class="crm-modal-overlay" id="crm-modal-void" hidden>
+    <div class="crm-modal">
+      <div class="crm-modal__header">
+        <h3 class="crm-modal__title">Аннулировать платеж</h3>
+        <button type="button" class="crm-modal__close" data-modal-close aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="crm-modal__body">
+        <p>Вы уверены, что хотите аннулировать этот платеж? Действие необратимо.</p>
+        <form id="crm-form-void" method="post" action="">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="void">
+          <input type="hidden" name="pay_id" id="void-pay-id" value="">
+        </form>
+      </div>
+      <div class="crm-modal__footer">
+        <button type="button" class="crm-btn crm-btn--outline" data-modal-close>Отмена</button>
+        <button type="button" class="crm-btn crm-btn--danger" data-modal-submit="crm-form-void">Аннулировать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Прикрепить квитанцию -->
+  <div class="crm-modal-overlay" id="crm-modal-attach" hidden>
+    <div class="crm-modal">
+      <div class="crm-modal__header">
+        <h3 class="crm-modal__title">Прикрепить квитанцию-подтверждение об оплате</h3>
+        <button type="button" class="crm-modal__close" data-modal-close aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="crm-modal__body">
+        <form id="crm-form-attach" method="post" action="" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="attach">
+          <input type="hidden" name="pay_id" id="attach-pay-id" value="">
+          <label class="crm-pay-field">
+            <span class="crm-pay-field__label">Название</span>
+            <input type="text" class="crm-pay-input" id="attach-filename" readonly>
+          </label>
+          <label class="crm-pay-field">
+            <span class="crm-pay-field__label">Приложение к платежу*</span>
+            <div class="crm-file-input">
+              <input type="file" name="receipt_file" id="attach-file" accept=".pdf,.jpg,.jpeg,.png" required hidden>
+              <button type="button" class="crm-btn crm-btn--outline" onclick="document.getElementById('attach-file').click()">Выберите файл</button>
+              <span class="crm-file-name" id="attach-file-name">Файл не выбран</span>
+            </div>
+            <small class="crm-help-text">Максимальный размер: 10 МБ</small>
+          </label>
+        </form>
+      </div>
+      <div class="crm-modal__footer">
+        <button type="button" class="crm-btn crm-btn--primary" data-modal-submit="crm-form-attach">Сохранить</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script src="{% static 'crm_dashboard/payments.js' %}"></script>
 {% endblock %}

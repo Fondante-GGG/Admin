@@ -15,6 +15,7 @@ from openpyxl.styles import Font
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from datetime import date, timedelta
+from django.response import JsonResponse
 
 from .admin_site import crm_admin_site
 from .admin_site import _simple_pdf_table
@@ -986,7 +987,12 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     amount_display.admin_order_field = "amount"
 
     def comment_display(self, obj: Payment):
-        return format_html('<span class="crm-pay-td-comment">—</span>')
+        if obj.is_voided:
+            return format_html('<span class="crm-pay-td-comment" style="color:#ef4444;">Аннулирован</span>')
+        text = (obj.description or "").strip()
+        if not text:
+            return format_html('<span class="crm-pay-td-comment">—</span>')
+        return format_html('<span class="crm-pay-td-comment" title="{}">{}</span>', text, text[:20] + "..." if len(text) > 20 else text)
 
     comment_display.short_description = "Коммент"
 
@@ -995,15 +1001,16 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
             '<div class="crm-pay-actions-dd">'
             '<button type="button" class="crm-pay-actions-trigger" data-pay-dd-toggle aria-expanded="false" aria-haspopup="true" aria-label="Действия">⋮</button>'
             '<div class="crm-pay-actions-menu" role="menu" hidden>'
-            '<button type="button" class="crm-pay-actions-item" data-pay-action="edit" role="menuitem">'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="edit" data-pay-id="{}" role="menuitem">'
             '<i class="fas fa-edit" aria-hidden="true"></i> Редактировать</button>'
-            '<button type="button" class="crm-pay-actions-item" data-pay-action="void" role="menuitem">'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="void" data-pay-id="{}" role="menuitem">'
             '<i class="fas fa-times-circle" aria-hidden="true"></i> Аннулировать</button>'
-            '<button type="button" class="crm-pay-actions-item" data-pay-action="receipt" role="menuitem">'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="receipt" data-pay-id="{}" role="menuitem">'
             '<i class="fas fa-download" aria-hidden="true"></i> Выгрузить чек</button>'
-            '<button type="button" class="crm-pay-actions-item" data-pay-action="attach" role="menuitem">'
+            '<button type="button" class="crm-pay-actions-item" data-pay-action="attach" data-pay-id="{}" role="menuitem">'
             '<i class="fas fa-upload" aria-hidden="true"></i> Прикрепить квитанцию-подтверждение</button>'
-            "</div></div>"
+            "</div></div>",
+            obj.pk, obj.pk, obj.pk, obj.pk
         )
 
     actions_display.short_description = "Действия"
@@ -1097,7 +1104,113 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         resp["Content-Disposition"] = 'attachment; filename="tuition-payments.xlsx"'
         return resp
 
+    def _receipt_pdf(self, payment: Payment):
+        from reportlab.lib.pagesizes import A6
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import mm
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        import os
+
+        font_path = os.path.join(os.path.dirname(__file__), "static", "crm_dashboard", "fonts", "DejaVuSans.ttf")
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont("DejaVu", font_path))
+            font_name = "DejaVu"
+        else:
+            font_name = "Helvetica"
+
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=A6)
+        width, height = A6
+        margin = 10 * mm
+
+        y = height - margin
+        c.setFont(font_name, 14)
+        c.drawString(margin, y, "American Dream")
+        y -= 8 * mm
+        c.setFont(font_name, 10)
+        c.drawString(margin, y, "American Dream")
+        y -= 12 * mm
+
+        c.setFont(font_name, 16)
+        c.drawString(margin, y, f"Чек #{payment.pk}")
+        dt = timezone.localtime(payment.created_at).strftime("%d.%m.%Y %H:%M") if payment.created_at else ""
+        c.drawRightString(width - margin, y, dt)
+        y -= 8 * mm
+        c.setStrokeColorRGB(0.7, 0.7, 0.7)
+        c.line(margin, y, width - margin, y)
+        y -= 8 * mm
+
+        c.setFont(font_name, 11)
+        c.drawString(margin, y, "Наименование")
+        c.drawRightString(width - margin, y, "Сумма")
+        y -= 6 * mm
+        c.setFont(font_name, 10)
+        course_title = payment.course.title if payment.course_id else "—"
+        c.drawString(margin, y, course_title[:40])
+        c.drawRightString(width - margin, y, f"{float(payment.amount):.2f} KGS")
+        y -= 8 * mm
+        c.line(margin, y, width - margin, y)
+        y -= 8 * mm
+
+        c.setFont(font_name, 10)
+        c.drawString(margin, y, f"Способ оплаты: {payment.get_method_display()}")
+        y -= 6 * mm
+        u = payment.student.user
+        client_name = u.get_full_name() or u.username
+        c.drawString(margin, y, f"Клиент: {client_name}")
+        y -= 12 * mm
+        c.line(margin, y, width - margin, y)
+        y -= 8 * mm
+
+        c.setFont(font_name, 14)
+        c.drawString(margin, y, "Итого:")
+        c.drawRightString(width - margin, y, f"{float(payment.amount):.2f} KGS")
+        y -= 12 * mm
+        c.setFont(font_name, 12)
+        c.drawString(margin, y, "American Dream")
+        y -= 6 * mm
+        c.setFont(font_name, 9)
+        c.drawString(margin, y, "Codify LMS")
+
+        c.showPage()
+        c.save()
+        buf.seek(0)
+        return buf.getvalue()
+
     def changelist_view(self, request, extra_context=None):
+        if request.method == "POST":
+            action = (request.POST.get("action") or "").strip()
+            pay_id = self._get_int_param(request, "pay_id")
+            if pay_id is not None and action:
+                payment = get_object_or_404(Payment, pk=pay_id)
+                if action == "edit":
+                    method = (request.POST.get("method") or "").strip()
+                    description = (request.POST.get("description") or "").strip()
+                    if method in dict(Payment.Method.choices):
+                        payment.method = method
+                    payment.description = description
+                    payment.save(update_fields=["method", "description"])
+                    return JsonResponse({"ok": True})
+                if action == "void":
+                    payment.is_voided = True
+                    payment.save(update_fields=["is_voided"])
+                    return JsonResponse({"ok": True})
+                if action == "attach":
+                    uploaded = request.FILES.get("receipt_file")
+                    if uploaded:
+                        if uploaded.size > 10 * 1024 * 1024:
+                            return JsonResponse({"ok": False, "error": "Файл слишком большой (макс. 10 МБ)"}, status=400)
+                        payment.receipt_file = uploaded
+                        payment.save(update_fields=["receipt_file"])
+                        return JsonResponse({"ok": True})
+                    return JsonResponse({"ok": False, "error": "Файл не выбран"}, status=400)
+                if action == "receipt":
+                    content = self._receipt_pdf(payment)
+                    resp = HttpResponse(content, content_type="application/pdf")
+                    resp["Content-Disposition"] = f'attachment; filename="receipt_{payment.pk}.pdf"'
+                    return resp
+
         request._crm_pay_params = request.GET.copy()
         mutable = request.GET.copy()
         for k in ("mentor", "first", "date_from", "date_to", "pay_id"):
