@@ -392,3 +392,48 @@ body.crm-mentor-modal-open {
 .crm-mentors-page #result_list tbody tr:nth-child(even) th {
   background: rgba(249, 250, 251, 0.9);
 }
+
+/* Mentor drawer */
+.crm-mentor-drawer {
+  padding: 0 0 24px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+.crm-mentor-drawer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+.crm-mentor-drawer__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+.crm-mentor-drawer__close {
+  border: none;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.crm-mentor-drawer__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+.crm-mentor-drawer__name {
+  font-size: 17px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #111827;
+}

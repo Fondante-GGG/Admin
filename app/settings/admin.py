@@ -322,7 +322,7 @@ StudentAdmin.inlines = [StudentEnrollmentInline, StudentPaymentInline, StudentCo
 
 
 @admin.register(Mentor, site=crm_admin_site)
-class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class MentorAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/mentors_changelist.html"
     fieldsets = (
@@ -365,18 +365,24 @@ class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         "user__phone_number",
         "user__email",
     )
-    list_filter = ()
+    list_filter = (ArchiveFilter,)
+    actions = (archive_selected, unarchive_selected)
     autocomplete_fields = ("user",)
     list_per_page = 20
 
     def get_queryset(self, request):
         course_qs = Cursues.objects.filter(is_archived=False).only("title", "id")
-        return (
+        qs = (
             super()
             .get_queryset(request)
             .select_related("user")
             .prefetch_related(Prefetch("cursues_set", queryset=course_qs))
         )
+        if request.GET.get("archived") == "1":
+            return qs
+        if request.GET.get("archived") == "0" or "archived" not in request.GET:
+            return qs.filter(is_archived=False)
+        return qs
 
     def get_search_results(self, request, queryset, search_term):
         if not search_term:
@@ -397,7 +403,7 @@ class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
 
     def mentor_id_display(self, obj: Mentor):
         url = reverse(f"{crm_admin_site.name}:settings_mentor_change", args=[obj.pk])
-        return format_html('<a href="{}" class="crm-mentor-table-link">#{}</a>', url, obj.pk)
+        return format_html('<a href="{}" class="crm-mentor-table-link" data-mentor-id="{}">#{}</a>', url, obj.pk, obj.pk)
 
     mentor_id_display.short_description = "ID"
 
@@ -406,7 +412,7 @@ class MentorAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
         parts = [u.last_name or "", u.first_name or "", obj.middle_name or ""]
         name = " ".join(p for p in parts if p).strip() or u.get_full_name() or u.username
         url = reverse(f"{crm_admin_site.name}:settings_mentor_change", args=[obj.pk])
-        return format_html('<a href="{}" class="crm-mentor-table-link">{}</a>', url, name)
+        return format_html('<a href="{}" class="crm-mentor-table-link" data-mentor-id="{}">{}</a>', url, obj.pk, name)
 
     full_name_display.short_description = "ФИО"
 

@@ -63,6 +63,8 @@ class Mentor(models.Model):
         verbose_name="Пользователь",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+    is_archived = models.BooleanField(default=False, verbose_name="В архиве")
+    archived_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата архивации")
 
     middle_name = models.CharField("Отчество", max_length=150, blank=True, default="")
     birth_date = models.DateField("Дата рождения", null=True, blank=True)

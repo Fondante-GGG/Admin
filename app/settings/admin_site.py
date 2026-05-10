@@ -708,6 +708,7 @@ class CRMAdminSite(AdminSite):
             path("students/<int:student_id>/drawer/", self.admin_view(self.student_drawer), name="student_drawer"),
             path("mentors/export.xlsx", self.admin_view(self.mentors_export_xlsx), name="mentors_export_xlsx"),
             path("mentors/salary/", self.admin_view(self.mentors_salary), name="mentors_salary"),
+            path("mentors/<int:mentor_id>/drawer/", self.admin_view(self.mentor_drawer), name="mentor_drawer"),
             path("mentors/create/", self.admin_view(self.mentor_quick_create), name="mentor_quick_create"),
             path("about/", self.admin_view(self.about_view), name="about"),
             path("accounting/meta/", self.admin_view(self.accounting_meta), name="accounting_meta"),
@@ -1079,16 +1080,40 @@ class CRMAdminSite(AdminSite):
         return resp
 
     def archive_index(self, request):
-        items = [
-            {"title": "Курсы", "url": "/admin/settings/cursues/?archived=1"},
-            {"title": "Лиды", "url": "/admin/settings/lead/?archived=1"},
-            {"title": "Звонки", "url": "/admin/settings/call/?archived=1"},
-            {"title": "Календарь", "url": "/admin/settings/calendarevent/?archived=1"},
-            {"title": "Задачи", "url": "/admin/settings/task/?archived=1"},
+        sections = [
+            {
+                "title": "Люди",
+                "items": [
+                    {"title": "Студенты", "url": "/admin/settings/student/?archived=1"},
+                    {"title": "Менторы", "url": "/admin/settings/mentor/?archived=1"},
+                    {"title": "Лиды", "url": "/admin/settings/lead/?archived=1"},
+                ],
+            },
+            {
+                "title": "Курсы и занятия",
+                "items": [
+                    {"title": "Курсы", "url": "/admin/settings/cursues/?archived=1"},
+                    {"title": "Календарь", "url": "/admin/settings/calendarevent/?archived=1"},
+                ],
+            },
+            {
+                "title": "Коммуникации",
+                "items": [
+                    {"title": "Звонки", "url": "/admin/settings/call/?archived=1"},
+                    {"title": "Задачи", "url": "/admin/settings/task/?archived=1"},
+                ],
+            },
         ]
         if not self._is_manager(request):
-            items.insert(4, {"title": "Бухгалтерия", "url": "/admin/settings/accountingentry/?archived=1"})
-        context = {"title": "Архив", "items": items, **self.each_context(request)}
+            sections.append(
+                {
+                    "title": "Финансы",
+                    "items": [
+                        {"title": "Бухгалтерия", "url": "/admin/settings/accountingentry/?archived=1"},
+                    ],
+                }
+            )
+        context = {"title": "Архив", "sections": sections, **self.each_context(request)}
         return TemplateResponse(request, "admin/archive_index.html", context)
 
     def calendar_view(self, request):
@@ -1217,6 +1242,25 @@ class CRMAdminSite(AdminSite):
         if not request.user.is_authenticated or not request.user.is_staff:
             return False
         return self._role(request.user) in ("Администратор", "Менеджер")
+
+    def mentor_drawer(self, request, mentor_id: int):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        mentor = (
+            Mentor.objects.select_related("user")
+            .prefetch_related("cursues_set")
+            .get(pk=mentor_id)
+        )
+        user = mentor.user
+        courses = list(mentor.cursues_set.filter(is_archived=False).order_by("-created_at")[:20])
+        context = {
+            "mentor": mentor,
+            "user": user,
+            "courses": courses,
+            "title": "Информация о менторе",
+            **self.each_context(request),
+        }
+        return TemplateResponse(request, "admin/mentor_drawer.html", context)
 
     def mentors_export_xlsx(self, request):
         if not self._can_manage_mentors(request):

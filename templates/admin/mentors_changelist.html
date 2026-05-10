@@ -4,6 +4,7 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'crm_dashboard/students.css' %}">
+<link rel="stylesheet" href="{% static 'crm_dashboard/student_drawer.css' %}">
 <link rel="stylesheet" href="{% static 'crm_dashboard/mentors.css' %}">
 {% endblock %}
 
@@ -162,6 +163,11 @@
       </form>
     </div>
   </div>
+</div>
+
+<div data-mt-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'crm_admin:mentor_drawer' 1 %}">
+  <div class="crm-drawer__backdrop" data-mt-close></div>
+  <div class="crm-drawer__panel"></div>
 </div>
 <script src="{% static 'crm_dashboard/mentors.js' %}"></script>
 {% endblock %}

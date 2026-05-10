@@ -4,8 +4,6 @@
   }
 
   var modal = qs("#crm-mentor-modal");
-  if (!modal) return;
-
   var form = qs("#crm-mentor-create-form");
   var openBtn = qs("[data-mentor-open-modal]");
   var closeEls = document.querySelectorAll("[data-mentor-close-modal]");
@@ -14,6 +12,7 @@
   var maxBytes = fileInput ? parseInt(fileInput.getAttribute("data-max-bytes") || "0", 10) : 0;
 
   function openModal() {
+    if (!modal) return;
     modal.hidden = false;
     modal.classList.remove("is-hidden");
     document.body.classList.add("crm-mentor-modal-open");
@@ -26,6 +25,7 @@
   }
 
   function closeModal() {
+    if (!modal) return;
     modal.classList.add("is-hidden");
     modal.hidden = true;
     document.body.classList.remove("crm-mentor-modal-open");
@@ -49,12 +49,6 @@
     el.addEventListener("click", function () {
       closeModal();
     });
-  });
-
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !modal.classList.contains("is-hidden")) {
-      closeModal();
-    }
   });
 
   fileInput?.addEventListener("change", function () {
@@ -90,4 +84,66 @@
       }
     }
   });
+
+  /* Mentor drawer */
+  var drawer = qs("[data-mt-drawer]");
+  var panel = drawer ? qs(".crm-drawer__panel", drawer) : null;
+  var tpl = drawer ? drawer.getAttribute("data-drawer-url-template") : null;
+
+  if (drawer && panel && tpl) {
+    function urlForMentorId(id) {
+      return tpl.replace(/\/\d+\/drawer\/?/, "/" + id + "/drawer/");
+    }
+
+    function openDrawer() {
+      drawer.classList.remove("is-hidden");
+      document.body.classList.add("crm-drawer-open");
+    }
+
+    function closeDrawer() {
+      drawer.classList.add("is-hidden");
+      document.body.classList.remove("crm-drawer-open");
+    }
+
+    async function loadMentor(id) {
+      panel.innerHTML = '<div class="crm-drawer__loading">Загрузка…</div>';
+      openDrawer();
+      var res = await fetch(urlForMentorId(id), { credentials: "same-origin" });
+      if (!res.ok) {
+        panel.innerHTML = "<div class='crm-drawer__loading'>Ошибка загрузки</div>";
+        return;
+      }
+      panel.innerHTML = await res.text();
+    }
+
+    document.addEventListener("click", function (e) {
+      var el = e.target;
+      if (!el) return;
+      if (el.nodeType !== 1) el = el.parentElement;
+      if (!el) return;
+
+      var closeBtn = el.closest("[data-mt-close]");
+      if (closeBtn) {
+        closeDrawer();
+        return;
+      }
+
+      var a = el.closest("a[data-mentor-id]");
+      if (a && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        var mid = a.getAttribute("data-mentor-id");
+        if (mid) loadMentor(mid);
+        return;
+      }
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !drawer.classList.contains("is-hidden")) {
+        closeDrawer();
+      }
+      if (e.key === "Escape" && modal && !modal.classList.contains("is-hidden")) {
+        closeModal();
+      }
+    });
+  }
 })();

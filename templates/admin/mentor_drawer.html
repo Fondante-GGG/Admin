@@ -1,0 +1,108 @@
+{% load static %}
+<div class="crm-student-drawer">
+  <div class="crm-student-drawer__top">
+    <h2 class="crm-student-drawer__title">Информация о менторе</h2>
+    <button type="button" class="crm-student-drawer__close" data-mt-close aria-label="Закрыть">&times;</button>
+  </div>
+
+  <div class="crm-student-drawer__hero">
+    <div class="crm-student-drawer__name">{{ user.get_full_name|default:user.username }}</div>
+    <a href="{% url 'crm_admin:settings_mentor_change' mentor.id %}" class="crm-student-drawer__icon-btn" title="Редактировать">&#9998;</a>
+  </div>
+
+  <div class="crm-student-drawer__grid">
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Дата добавления</span>
+      <span class="crm-student-drawer__value">{{ mentor.created_at|date:"d.m.Y" }}</span>
+    </div>
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Номер телефона</span>
+      <span class="crm-student-drawer__value">{{ user.phone_number|default:"—" }}</span>
+    </div>
+    <div class="crm-student-drawer__row">
+      <span class="crm-student-drawer__label">Навыки</span>
+      <span class="crm-student-drawer__value">{{ mentor.skills|default:"—" }}</span>
+    </div>
+  </div>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Аккаунт</span>
+      {% if user.is_active %}
+        <span class="crm-student-drawer__btn-outline crm-student-drawer__btn-outline--static">Активен</span>
+      {% else %}
+        <span class="crm-student-drawer__btn-outline crm-student-drawer__btn-outline--static">Неактивен</span>
+      {% endif %}
+    </div>
+    <p class="crm-student-drawer__muted">Логин: {{ user.username }}</p>
+    <p class="crm-student-drawer__muted">Email: {{ user.email|default:"—" }}</p>
+  </section>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Курсы</span>
+    </div>
+    {% if courses %}
+      <ul class="crm-student-drawer__muted" style="margin:0;padding-left:16px;line-height:1.6;">
+        {% for c in courses %}<li>{{ c.title }}</li>{% endfor %}
+      </ul>
+    {% else %}
+      <p class="crm-student-drawer__muted">Нет активных курсов</p>
+    {% endif %}
+  </section>
+
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Оплата</span>
+    </div>
+    <div class="crm-student-drawer__course-meta">
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Форма оплаты</span>
+        <span class="crm-student-drawer__value">{{ mentor.get_payment_form_display }}</span>
+      </div>
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Ставка</span>
+        <span class="crm-student-drawer__value">{{ mentor.payment_rate|default:"—" }}</span>
+      </div>
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Фикс. ставка</span>
+        <span class="crm-student-drawer__value">{{ mentor.fixed_rate }}</span>
+      </div>
+    </div>
+  </section>
+
+  {% if mentor.departure_date or mentor.departure_reason %}
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Уход</span>
+    </div>
+    <div class="crm-student-drawer__course-meta">
+      {% if mentor.departure_date %}
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Дата ухода</span>
+        <span class="crm-student-drawer__value">{{ mentor.departure_date|date:"d.m.Y" }}</span>
+      </div>
+      {% endif %}
+      {% if mentor.departure_reason %}
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Причина</span>
+        <span class="crm-student-drawer__value">{{ mentor.departure_reason }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if mentor.note %}
+  <section class="crm-student-drawer__card">
+    <div class="crm-student-drawer__card-head">
+      <span>Примечание</span>
+    </div>
+    <p class="crm-student-drawer__muted">{{ mentor.note }}</p>
+  </section>
+  {% endif %}
+
+  <div class="crm-student-drawer__footer-actions">
+    <a href="{% url 'crm_admin:settings_mentor_change' mentor.id %}" class="crm-student-drawer__btn-primary">Открыть карточку ментора</a>
+  </div>
+</div>

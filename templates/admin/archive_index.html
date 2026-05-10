@@ -8,12 +8,19 @@
 {% block content %}
 <div class="crm-dashboard">
   <h1>{{ title }}</h1>
-  <div class="crm-archive-grid">
-    {% for item in items %}
-    <a href="{{ item.url }}" class="crm-archive-card">
-      <span class="crm-archive-card__title">{{ item.title }}</span>
-      <span class="crm-archive-card__arrow">&rarr;</span>
-    </a>
+  <div class="crm-archive-container">
+    {% for section in sections %}
+    <div class="crm-archive-section">
+      <h2 class="crm-archive-section__title">{{ section.title }}</h2>
+      <div class="crm-archive-grid">
+        {% for item in section.items %}
+        <a href="{{ item.url }}" class="crm-archive-card">
+          <span class="crm-archive-card__title">{{ item.title }}</span>
+          <span class="crm-archive-card__arrow">&rarr;</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
     {% endfor %}
   </div>
 </div>
