@@ -226,6 +226,7 @@ class CRMAdminSite(AdminSite):
             "settings.accountingcategory",
             "settings.task",
             "settings.user",
+            "settings.payment",
         }
     )
 
@@ -324,11 +325,6 @@ class CRMAdminSite(AdminSite):
         handled: set[str] = set()
         course_children_keys = frozenset({"settings.groupcourse", "settings.individualcourse", "settings.cursues"})
 
-        org_items = getattr(django_settings, "CRM_ORGANIZATIONS", None)
-        if not org_items:
-            site_brand = jazzmin_settings.get("site_brand") or self.site_header
-            org_items = [site_brand]
-
         def take_model(model_str: str, *, title: str | None = None, icon: str | None = None, url: str | None = None) -> dict | None:
             item = model_map.get(model_str)
             if not item:
@@ -368,26 +364,32 @@ class CRMAdminSite(AdminSite):
         menu.append({"heading": True, "title": brand_label})
 
         org_children = []
-        for org in org_items:
-            if isinstance(org, dict):
-                org_title = (org.get("title") or org.get("name") or "").strip()
-                org_url = org.get("url") or f"{index_url}?organization={slugify(org_title or 'default')}"
-            else:
-                org_title = str(org).strip()
-                org_url = f"{index_url}?organization={slugify(org_title or 'default')}"
-            if not org_title:
-                continue
+        try:
+            from app.settings.models import Organization
+            orgs = list(Organization.objects.order_by("name").values("id", "name"))
+        except Exception:
+            orgs = []
+
+        if orgs:
             org_children.append(
                 self._sidebar_item(
                     request,
-                    title=org_title,
+                    title="Все организации",
                     icon="fas fa-angle-right",
-                    url=org_url,
+                    url=reverse(f"{self.name}:org_switch", args=[0]),
                     match_url=False,
                 )
             )
-
-        if org_children:
+            for org in orgs:
+                org_children.append(
+                    self._sidebar_item(
+                        request,
+                        title=org["name"],
+                        icon="fas fa-angle-right",
+                        url=reverse(f"{self.name}:org_switch", args=[org["id"]]),
+                        match_url=False,
+                    )
+                )
             menu.append(
                 self._sidebar_item(
                     request,
@@ -457,9 +459,14 @@ class CRMAdminSite(AdminSite):
 
         menu.append({"heading": True, "title": "НАСТРОЙКИ"})
 
-        settings_item = take_model("config.crmsetting")
-        if settings_item:
-            menu.append(settings_item)
+        menu.append(
+            self._sidebar_item(
+                request,
+                title="Настройки",
+                icon="fas fa-cog",
+                url=reverse(f"{self.name}:settings_index"),
+            )
+        )
 
         history_url = reverse(f"{self.name}:admin_logentry_changelist")
         for link in jazzmin_settings.get("custom_links", {}).get("config", []):
@@ -708,14 +715,163 @@ class CRMAdminSite(AdminSite):
             path("students/<int:student_id>/drawer/", self.admin_view(self.student_drawer), name="student_drawer"),
             path("mentors/export.xlsx", self.admin_view(self.mentors_export_xlsx), name="mentors_export_xlsx"),
             path("mentors/salary/", self.admin_view(self.mentors_salary), name="mentors_salary"),
+            path("salary/create/", self.admin_view(self.salary_create), name="salary_create"),
+            path("salary/<int:salary_id>/delete/", self.admin_view(self.salary_delete), name="salary_delete"),
             path("mentors/<int:mentor_id>/drawer/", self.admin_view(self.mentor_drawer), name="mentor_drawer"),
             path("mentors/create/", self.admin_view(self.mentor_quick_create), name="mentor_quick_create"),
             path("about/", self.admin_view(self.about_view), name="about"),
+            path("settings/", self.admin_view(self.settings_index), name="settings_index"),
             path("accounting/meta/", self.admin_view(self.accounting_meta), name="accounting_meta"),
             path("accounting/entry/create/", self.admin_view(self.accounting_entry_create), name="accounting_entry_create"),
             path("accounting/transfer/create/", self.admin_view(self.accounting_transfer_create), name="accounting_transfer_create"),
+            path("org/switch/<int:org_id>/", self.admin_view(self.org_switch), name="org_switch"),
         ]
         return custom + urls
+
+    def settings_index(self, request):
+        role = self._role(request.user)
+        can_edit = role in ("Администратор", "Менеджер") and request.user.is_staff
+
+        def _link(name, url):
+            return {"name": name, "url": url}
+
+        def _admin_url(model_name, action="changelist"):
+            try:
+                return reverse(f"{self.name}:settings_{model_name}_{action}")
+            except Exception:
+                return None
+
+        def _config_url(model_name, action="changelist"):
+            try:
+                return reverse(f"{self.name}:config_{model_name}_{action}")
+            except Exception:
+                return None
+
+        sections = [
+            {
+                "title": "Администрирование системы",
+                "icon": "fas fa-shield-alt",
+                "color": "#8b5cf6",
+                "items": [
+                    _link("Организации", _admin_url("organization")),
+                    _link("Персонал", _admin_url("user")),
+                    _link("Настройки организации", _config_url("crmsetting")),
+                    _link("Домены", None),
+                ],
+            },
+            {
+                "title": "Система обучения",
+                "icon": "fas fa-graduation-cap",
+                "color": "#f59e0b",
+                "items": [
+                    _link("Предметы/направления", _admin_url("cursues")),
+                    _link("Электронная библиотека", None),
+                ],
+            },
+            {
+                "title": "Геймификация",
+                "icon": "fas fa-gem",
+                "color": "#ec4899",
+                "items": [
+                    _link("Валюты", None),
+                ],
+            },
+            {
+                "title": "Другие настройки",
+                "icon": "fas fa-tools",
+                "color": "#6b7280",
+                "items": [
+                    _link("Настройки формы регистрации", None),
+                    _link("Шаблоны документов", None),
+                    _link("Дополнительные поля для клиентов", None),
+                ],
+            },
+            {
+                "title": "Лид менеджмент",
+                "icon": "fas fa-briefcase",
+                "color": "#10b981",
+                "items": [
+                    _link("Воронки продаж", None),
+                    _link("Кошельки", None),
+                    _link("Причины потери лида", None),
+                    _link("Специальные поля для лидов", None),
+                    _link("Дополнительные поля для лидов", None),
+                    _link("Интеграция с другими сайтами", None),
+                    _link("Метки/Тэги", None),
+                ],
+            },
+            {
+                "title": "Платежи",
+                "icon": "fas fa-dollar-sign",
+                "color": "#059669",
+                "items": [
+                    _link("Способы оплаты", _admin_url("payment")),
+                ],
+            },
+            {
+                "title": "Филиальность",
+                "icon": "fas fa-map-marker-alt",
+                "color": "#3b82f6",
+                "items": [
+                    _link("Организации", _admin_url("organization")),
+                ],
+            },
+            {
+                "title": "Интеграции",
+                "icon": "fas fa-puzzle-piece",
+                "color": "#6366f1",
+                "items": [
+                    _link("Мессенджеры", None),
+                    _link("АТС", _admin_url("call")),
+                ],
+            },
+            {
+                "title": "Интерфейс",
+                "icon": "fas fa-desktop",
+                "color": "#8b5cf6",
+                "items": [
+                    _link("Боковое меню", None),
+                ],
+            },
+            {
+                "title": "Уведомления",
+                "icon": "fas fa-bell",
+                "color": "#ef4444",
+                "items": [
+                    _link("Телеграм-бот", None),
+                ],
+            },
+        ]
+
+        for section in sections:
+            section["items"] = [i for i in section["items"] if i["url"] or not can_edit or True]
+
+        context = {
+            "title": "Настройки",
+            "sections": sections,
+            "can_edit": can_edit,
+            "storage_used": "0.0",
+            "storage_total": "5 GB",
+            "accounts_used": 1,
+            "accounts_total": 200,
+            "accounts_percent": 0,
+            **self.each_context(request),
+        }
+        return TemplateResponse(request, "admin/settings_index.html", context)
+
+    def org_switch(self, request, org_id: int):
+        from app.settings.models import Organization
+        if org_id:
+            org = get_object_or_404(Organization, pk=org_id)
+            request.session["current_org_id"] = org.pk
+            request.session["current_org_name"] = org.name
+            messages.success(request, f"Организация изменена на: {org.name}")
+        else:
+            request.session.pop("current_org_id", None)
+            request.session.pop("current_org_name", None)
+            messages.success(request, "Выбраны все организации")
+        referer = request.META.get("HTTP_REFERER") or "/admin/"
+        return redirect(referer)
 
     def about_view(self, request):
         about = CRMAbout.objects.order_by("-updated_at").first()
@@ -1304,26 +1460,86 @@ class CRMAdminSite(AdminSite):
     def mentors_salary(self, request):
         if not self._can_manage_mentors(request):
             return HttpResponseForbidden()
+
+        # Export to Excel (old calculator)
+        if request.GET.get("export") == "1":
+            return self._mentors_salary_export(request)
+
         changelist_url = reverse(f"{self.name}:settings_mentor_changelist")
-        if request.method == "GET":
-            today = timezone.localdate()
-            start_default = today - timedelta(days=6)
-            ctx = {
-                "title": "Расчёт зарплаты менторов",
-                "changelist_url": changelist_url,
-                "date_from": request.GET.get("date_from") or start_default.isoformat(),
-                "date_to": request.GET.get("date_to") or today.isoformat(),
-                **self.each_context(request),
-            }
-            return TemplateResponse(request, "admin/mentor_salary.html", ctx)
-        raw_from = (request.POST.get("date_from") or "").strip()
-        raw_to = (request.POST.get("date_to") or "").strip()
+        today = timezone.localdate()
+        start_default = today - timedelta(days=30)
+
+        date_from = (request.GET.get("date_from") or "").strip()
+        date_to = (request.GET.get("date_to") or "").strip()
+        mentor_id = (request.GET.get("mentor") or "").strip()
+        course_id = (request.GET.get("course") or "").strip()
+        q = (request.GET.get("q") or "").strip()
+
+        qs = Salary.objects.select_related("mentor__user", "course").order_by("-created_at")
+
+        if date_from:
+            try:
+                d0 = date.fromisoformat(date_from)
+                qs = qs.filter(created_at__date__gte=d0)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                d1 = date.fromisoformat(date_to)
+                qs = qs.filter(created_at__date__lte=d1)
+            except ValueError:
+                pass
+        if mentor_id and mentor_id.isdigit():
+            qs = qs.filter(mentor_id=int(mentor_id))
+        if course_id and course_id.isdigit():
+            qs = qs.filter(course_id=int(course_id))
+        if q:
+            qs = qs.filter(
+                Q(mentor__user__first_name__icontains=q)
+                | Q(mentor__user__last_name__icontains=q)
+                | Q(mentor__user__username__icontains=q)
+                | Q(comment__icontains=q)
+            )
+
+        total_amount = float(qs.aggregate(total=Sum("amount"))["total"] or 0)
+
+        mentors_qs = Mentor.objects.select_related("user").filter(user__is_active=True).order_by("user__last_name", "user__first_name")
+        courses_qs = Cursues.objects.filter(is_archived=False).order_by("title")
+
+        page_size = 20
+        paginator = Paginator(qs, page_size)
+        page_number = request.GET.get("p") or 1
+        page_obj = paginator.get_page(page_number)
+
+        ctx = {
+            "title": "Зарплата",
+            "changelist_url": changelist_url,
+            "salary_page": page_obj,
+            "total_amount": total_amount,
+            "mentors": mentors_qs,
+            "courses": courses_qs,
+            "filters": {
+                "date_from": date_from or start_default.isoformat(),
+                "date_to": date_to or today.isoformat(),
+                "mentor": mentor_id,
+                "course": course_id,
+                "q": q,
+            },
+            "tab": request.GET.get("tab") or "payments",
+            **self.each_context(request),
+        }
+        return TemplateResponse(request, "admin/mentor_salary.html", ctx)
+
+    def _mentors_salary_export(self, request):
+        """Export salary data to Excel (old calculator logic preserved)."""
+        raw_from = (request.GET.get("date_from") or "").strip()
+        raw_to = (request.GET.get("date_to") or "").strip()
         try:
-            d0 = date.fromisoformat(raw_from)
-            d1 = date.fromisoformat(raw_to)
+            d0 = date.fromisoformat(raw_from) if raw_from else timezone.localdate() - timedelta(days=30)
+            d1 = date.fromisoformat(raw_to) if raw_to else timezone.localdate()
         except ValueError:
-            messages.error(request, "Укажите корректные даты.")
-            return redirect(reverse(f"{self.name}:mentors_salary"))
+            d0 = timezone.localdate() - timedelta(days=30)
+            d1 = timezone.localdate()
         if d0 > d1:
             d0, d1 = d1, d0
         events = (
@@ -1370,9 +1586,7 @@ class CRMAdminSite(AdminSite):
         ws0.append(("ID ментора", "ФИО", "Количество занятий", "Примечание"))
         for cell in ws0[1]:
             cell.font = Font(bold=True)
-        note = (
-            "В CRM не заданы ставки за занятие — итоговую сумму начисляйте вручную по внутренним правилам."
-        )
+        note = "В CRM не заданы ставки за занятие — итоговую сумму начисляйте вручную по внутренним правилам."
         for mid, data in sorted(summary.items(), key=lambda x: x[1]["name"].lower()):
             ws0.append((mid, data["name"], data["count"], note))
         ws1 = wb.create_sheet("Занятия")
@@ -1391,6 +1605,37 @@ class CRMAdminSite(AdminSite):
         )
         resp["Content-Disposition"] = f'attachment; filename="{fn}"'
         return resp
+
+    def salary_create(self, request):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        if request.method == "POST":
+            mentor_id = (request.POST.get("mentor") or "").strip()
+            course_id = (request.POST.get("course") or "").strip()
+            amount = (request.POST.get("amount") or "").strip()
+            comment = (request.POST.get("comment") or "").strip()
+            try:
+                salary = Salary(
+                    mentor_id=int(mentor_id),
+                    course_id=int(course_id) if course_id else None,
+                    amount=Decimal(amount),
+                    comment=comment,
+                )
+                salary.save()
+                messages.success(request, "Выплата добавлена.")
+            except (ValueError, InvalidOperation):
+                messages.error(request, "Укажите корректную сумму.")
+            except Exception as exc:
+                messages.error(request, f"Ошибка: {exc}")
+        return redirect(reverse(f"{self.name}:mentors_salary"))
+
+    def salary_delete(self, request, salary_id: int):
+        if not self._can_manage_mentors(request):
+            return HttpResponseForbidden()
+        salary = get_object_or_404(Salary, pk=salary_id)
+        salary.delete()
+        messages.success(request, "Выплата удалена.")
+        return redirect(reverse(f"{self.name}:mentors_salary"))
 
     def mentor_quick_create(self, request):
         if not self._can_manage_mentors(request):
@@ -1424,6 +1669,7 @@ class CRMAdminSite(AdminSite):
             messages.error(request, "Укажите корректную фиксированную ставку.")
             return redirect(cl_url)
         payment_rate = _parse_dec(request.POST.get("payment_rate"), None)
+        percentage_rate = _parse_dec(request.POST.get("percentage_rate"), None)
 
         middle_name = (request.POST.get("middle_name") or "").strip()
         skills = (request.POST.get("skills") or "").strip()
@@ -1464,6 +1710,7 @@ class CRMAdminSite(AdminSite):
                     payment_form=payment_form,
                     payment_rate=payment_rate,
                     fixed_rate=fixed_rate,
+                    percentage_rate=percentage_rate,
                     note=note,
                     departure_date=departure_date,
                     departure_reason=departure_reason,

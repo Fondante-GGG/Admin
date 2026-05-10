@@ -6,48 +6,186 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'crm_dashboard/mentors.css' %}">
+<link rel="stylesheet" href="{% static 'crm_dashboard/salary.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="crm-dashboard crm-mentor-salary-page">
-  <nav class="crm-mentor-salary-breadcrumbs" aria-label="Навигация">
-    <a href="{{ changelist_url }}">Менторы</a>
-    <span class="crm-mentor-salary-bc-sep">›</span>
-    <span>Расчёт зарплаты менторов</span>
-  </nav>
+<div class="crm-dashboard crm-salary-page">
+  <h1 class="crm-salary-title">Зарплата</h1>
 
-  <h1 class="crm-mentor-salary-title">Расчёт зарплаты менторов за выбранный период</h1>
-
-  <div class="crm-mentor-salary-card">
-    <div class="crm-mentor-salary-info">
-      <p>
-        В выгрузку попадают занятия из <strong>календаря</strong>, привязанные к <strong>активным (неархивным) курсам</strong>,
-        за выбранные даты. Для каждого занятия учитываются все менторы, назначенные на этот курс.
-      </p>
-      <p>Ставки за занятие в базе не хранятся — в Excel выводится количество занятий; суммы начисляйте вручную.</p>
-      <ol class="crm-mentor-salary-steps">
-        <li>Укажите период расчёта.</li>
-        <li>Нажмите «Расчёт» — файл Excel загрузится автоматически.</li>
-      </ol>
-    </div>
-
-    <h2 class="crm-mentor-salary-h2">Расчёт зарплаты</h2>
-    <form method="post" class="crm-mentor-salary-form">
-      {% csrf_token %}
-      <div class="crm-mentor-salary-dates">
-        <label>
-          <span>Дата начала</span>
-          <input type="date" name="date_from" value="{{ date_from }}" required>
-        </label>
-        <label>
-          <span>Дата конца</span>
-          <input type="date" name="date_to" value="{{ date_to }}" required>
-        </label>
-      </div>
-      <button type="submit" class="crm-btn crm-btn--primary crm-mentor-salary-submit">
-        <i class="far fa-file-excel"></i> Расчёт
-      </button>
-    </form>
+  <div class="crm-salary-tabs">
+    <a href="?tab=payments" class="crm-salary-tab{% if tab == 'payments' or not tab %} crm-salary-tab--active{% endif %}">Выплаты</a>
+    <a href="?tab=rates" class="crm-salary-tab{% if tab == 'rates' %} crm-salary-tab--active{% endif %}">Ставки</a>
   </div>
+
+  {% if tab == 'payments' or not tab %}
+  <form method="get" class="crm-salary-filters">
+    <input type="hidden" name="tab" value="payments">
+    <div class="crm-salary-filters__row">
+      <label class="crm-salary-filters__field">
+        <span class="crm-salary-filters__label">Дата начала</span>
+        <input type="date" name="date_from" value="{{ filters.date_from }}">
+      </label>
+      <label class="crm-salary-filters__field">
+        <span class="crm-salary-filters__label">Дата конца</span>
+        <input type="date" name="date_to" value="{{ filters.date_to }}">
+      </label>
+      <label class="crm-salary-filters__field">
+        <span class="crm-salary-filters__label">Ментор</span>
+        <select name="mentor">
+          <option value="">Все</option>
+          {% for m in mentors %}
+          <option value="{{ m.id }}"{% if filters.mentor == m.id|stringformat:"s" %}selected{% endif %}>{{ m.user.get_full_name|default:m.user.username }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="crm-salary-filters__field">
+        <span class="crm-salary-filters__label">Курс</span>
+        <select name="course">
+          <option value="">Все</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}"{% if filters.course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="crm-salary-filters__field crm-salary-filters__field--search">
+        <span class="crm-salary-filters__label">Поиск</span>
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="ФИО / комментарий">
+      </label>
+      <div class="crm-salary-filters__actions">
+        <button type="submit" class="crm-btn crm-btn--primary" title="Применить фильтры">
+          <i class="fas fa-search"></i>
+        </button>
+        <button type="submit" name="export" value="1" class="crm-btn crm-btn--outline" title="Экспорт в Excel">
+          <i class="fas fa-file-excel"></i> Экспорт
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <div class="crm-salary-toolbar">
+    <button type="button" class="crm-btn crm-btn--primary" data-salary-open-modal>
+      <i class="fas fa-plus"></i> Добавить
+    </button>
+  </div>
+
+  <div class="crm-salary-table-wrap">
+    <table class="crm-salary-table">
+      <thead>
+        <tr>
+          <th>ФИО</th>
+          <th>КУРС</th>
+          <th>КОМментарий</th>
+          <th>СУММА</th>
+          <th>ДАТА</th>
+          <th>ДЕЙСТВИЯ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in salary_page %}
+        <tr>
+          <td>{{ s.mentor.user.get_full_name|default:s.mentor.user.username }}</td>
+          <td>{{ s.course.title|default:"—" }}</td>
+          <td>{{ s.comment|default:"—" }}</td>
+          <td>{{ s.amount|floatformat:2 }}</td>
+          <td>{{ s.created_at|date:"d.m.Y" }}</td>
+          <td>
+            <a href="{% url 'crm_admin:salary_delete' s.id %}" class="crm-salary-delete" onclick="return confirm('Удалить выплату?')" title="Удалить">
+              <i class="fas fa-trash-alt"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="crm-salary-empty">Выплат нет</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if salary_page %}
+      <tfoot>
+        <tr class="crm-salary-total">
+          <td colspan="3"><strong>ВСЕГО</strong></td>
+          <td colspan="3"><strong>{{ total_amount|floatformat:2 }} с.</strong></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  {% if salary_page.has_other_pages %}
+  <div class="crm-salary-pagination">
+    {% if salary_page.has_previous %}
+    <a href="?{% for k,v in filters.items %}{% if v %}{{ k }}={{ v }}&{% endif %}{% endfor %}p={{ salary_page.previous_page_number }}" class="crm-salary-pg">← Назад</a>
+    {% endif %}
+    <span class="crm-salary-pg-info">Страница {{ salary_page.number }} из {{ salary_page.paginator.num_pages }}</span>
+    {% if salary_page.has_next %}
+    <a href="?{% for k,v in filters.items %}{% if v %}{{ k }}={{ v }}&{% endif %}{% endfor %}p={{ salary_page.next_page_number }}" class="crm-salary-pg">Вперёд →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Modal: Add salary -->
+  <div id="crm-salary-modal" class="crm-mentor-modal is-hidden" hidden>
+    <div class="crm-mentor-modal__overlay" data-salary-close-modal></div>
+    <div class="crm-mentor-modal__content">
+      <div class="crm-mentor-modal__header">
+        <h3 class="crm-mentor-modal__title">Добавить выплату</h3>
+        <button type="button" class="crm-mentor-modal__close" data-salary-close-modal>&times;</button>
+      </div>
+      <form method="post" action="{% url 'crm_admin:salary_create' %}">
+        {% csrf_token %}
+        <div class="crm-mentor-modal__body">
+          <div class="crm-mentor-modal__field">
+            <label>Ментор <span class="crm-mentor-modal__required">*</span></label>
+            <select name="mentor" required>
+              <option value="">Выберите ментора</option>
+              {% for m in mentors %}
+              <option value="{{ m.id }}">{{ m.user.get_full_name|default:m.user.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="crm-mentor-modal__field">
+            <label>Курс</label>
+            <select name="course">
+              <option value="">—</option>
+              {% for c in courses %}
+              <option value="{{ c.id }}">{{ c.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="crm-mentor-modal__field">
+            <label>Сумма <span class="crm-mentor-modal__required">*</span></label>
+            <input type="number" name="amount" step="0.01" min="0" required placeholder="0.00">
+          </div>
+          <div class="crm-mentor-modal__field">
+            <label>Комментарий</label>
+            <textarea name="comment" rows="2" placeholder="Примечание..."></textarea>
+          </div>
+        </div>
+        <div class="crm-mentor-modal__footer">
+          <button type="submit" class="crm-btn crm-btn--primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var modal = document.getElementById('crm-salary-modal');
+    var openBtn = document.querySelector('[data-salary-open-modal]');
+    var closeEls = document.querySelectorAll('[data-salary-close-modal]');
+    if (!modal) return;
+    function open() { modal.hidden = false; modal.classList.remove('is-hidden'); document.body.classList.add('crm-mentor-modal-open'); }
+    function close() { modal.classList.add('is-hidden'); modal.hidden = true; document.body.classList.remove('crm-mentor-modal-open'); }
+    openBtn?.addEventListener('click', function(e) { e.preventDefault(); open(); });
+    closeEls.forEach(function(el) { el.addEventListener('click', close); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !modal.classList.contains('is-hidden')) close(); });
+  })();
+  </script>
+  {% else %}
+  <div class="crm-salary-placeholder">
+    <p>Раздел «Ставки» в разработке.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -57,13 +57,20 @@
     </div>
     <div class="crm-student-drawer__course-meta">
       <div class="crm-student-drawer__row">
-        <span class="crm-student-drawer__label">Форма оплаты</span>
+        <span class="crm-student-drawer__label">Форма</span>
         <span class="crm-student-drawer__value">{{ mentor.get_payment_form_display }}</span>
       </div>
+      {% if mentor.payment_form == "percentage" and mentor.percentage_rate %}
+      <div class="crm-student-drawer__row">
+        <span class="crm-student-drawer__label">Процент</span>
+        <span class="crm-student-drawer__value">{{ mentor.percentage_rate }}%</span>
+      </div>
+      {% elif mentor.payment_rate %}
       <div class="crm-student-drawer__row">
         <span class="crm-student-drawer__label">Ставка</span>
-        <span class="crm-student-drawer__value">{{ mentor.payment_rate|default:"—" }}</span>
+        <span class="crm-student-drawer__value">{{ mentor.payment_rate }}</span>
       </div>
+      {% endif %}
       <div class="crm-student-drawer__row">
         <span class="crm-student-drawer__label">Фикс. ставка</span>
         <span class="crm-student-drawer__value">{{ mentor.fixed_rate }}</span>

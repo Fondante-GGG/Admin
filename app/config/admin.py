@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.db import models
+from django.shortcuts import redirect
+from django.urls import reverse
 
 from app.settings.admin_site import crm_admin_site
 
@@ -55,6 +57,9 @@ class CRMSettingAdmin(ConfigRoleRestrictedAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("key", "value", "updated_at")
     search_fields = ("key", "value")
+
+    def changelist_view(self, request, extra_context=None):
+        return redirect(reverse("crm_admin:settings_index"))
 
 
 @admin.register(CRMBilling, site=crm_admin_site)

@@ -50,12 +50,40 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
 
+class Organization(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Название организации")
+    slug = models.SlugField(unique=True, blank=True, verbose_name="Слаг")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Организация"
+        verbose_name_plural = "Организации"
+
+
 class Mentor(models.Model):
     class PaymentForm(models.TextChoices):
         FIXED = "fixed", "Фиксированная"
         PER_LESSON = "per_lesson", "За занятие"
         HOURLY = "hourly", "Почасовая"
+        PERCENTAGE = "percentage", "Процент с ученика"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="mentors",
+    )
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -98,6 +126,14 @@ class Mentor(models.Model):
         decimal_places=2,
         default=0,
     )
+    percentage_rate = models.DecimalField(
+        "Процент с ученика (%)",
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Например, 30 для 30%%",
+    )
 
     contract_file = models.FileField(
         "Контракт (PDF)",
@@ -128,6 +164,14 @@ class Student(models.Model):
         LEFT = "left", "Ушел"
         FROZEN = "frozen", "Замороженный"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="students",
+    )
     user = models.ForeignKey(
         User, 
         on_delete=models.CASCADE,
@@ -159,6 +203,14 @@ class Cursues(ArchiveBase):
         GROUP = "group", "Групповые"
         INDIVIDUAL = "individual", "Индивидуальные"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="courses",
+    )
     title = models.CharField(max_length=155, verbose_name="Название курса")
     course_type = models.CharField(
         max_length=16,
@@ -320,6 +372,14 @@ class Lead(ArchiveBase):
         WON = "won", "Успешно"
         LOST = "lost", "Потерян"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="leads",
+    )
     full_name = models.CharField(max_length=255, verbose_name="ФИО")
     phone_number = models.CharField(max_length=64, verbose_name="Телефон")
     status = models.CharField(
@@ -344,6 +404,14 @@ class Payment(models.Model):
         AITI_CASH = "aiti_cash", "Aiti наличка"
         OTHER = "other", "Другое"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="payments",
+    )
     student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name="Студент")
     course = models.ForeignKey(
         Cursues, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Курс"
@@ -376,8 +444,25 @@ class TuitionPayment(Payment):
 
 
 class Salary(models.Model):
-    mentor = models.ForeignKey(Mentor, on_delete=models.CASCADE, verbose_name="Ментор")
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="salaries",
+    )
+    mentor = models.ForeignKey(Mentor, on_delete=models.CASCADE, verbose_name="Ментор", related_name="salaries")
+    course = models.ForeignKey(
+        Cursues,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Курс",
+        related_name="salaries",
+    )
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Сумма")
+    comment = models.TextField("Комментарий", blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
 
     def __str__(self):
@@ -389,6 +474,14 @@ class Salary(models.Model):
 
 
 class Task(ArchiveBase):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="tasks",
+    )
     title = models.CharField(max_length=255, verbose_name="Задача")
     due_date = models.DateField(null=True, blank=True, verbose_name="Срок")
     is_done = models.BooleanField(default=False, verbose_name="Выполнено")
@@ -403,6 +496,14 @@ class Task(ArchiveBase):
     
 
 class CalendarEvent(ArchiveBase):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="calendar_events",
+    )
     title = models.CharField(max_length=255, verbose_name="Название")
     course = models.ForeignKey(
         "Cursues",
@@ -433,6 +534,14 @@ class Call(ArchiveBase):
         DONE = "done", "Завершен"
         MISSED = "missed", "Пропущен"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="calls",
+    )
     contact_name = models.CharField(max_length=255, verbose_name="Контакт")
     phone_number = models.CharField(max_length=64, verbose_name="Телефон")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.NEW, verbose_name="Статус")
@@ -451,6 +560,14 @@ class AccountingEntry(ArchiveBase):
         INCOME = "income", "Приход"
         EXPENSE = "expense", "Расход"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="accounting_entries",
+    )
     entry_type = models.CharField(max_length=16, choices=Type.choices, verbose_name="Тип")
     title = models.CharField(max_length=255, verbose_name="Описание")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Сумма")
@@ -491,6 +608,14 @@ class AccountingEntry(ArchiveBase):
 
 
 class AccountingAccount(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="accounts",
+    )
     title = models.CharField(max_length=120, verbose_name="Название")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
 
@@ -503,6 +628,14 @@ class AccountingAccount(models.Model):
 
 
 class AccountingProject(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="projects",
+    )
     title = models.CharField(max_length=120, verbose_name="Название")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
 
@@ -515,6 +648,14 @@ class AccountingProject(models.Model):
 
 
 class AccountingCategory(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="categories",
+    )
     title = models.CharField(max_length=120, verbose_name="Название")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
 
@@ -527,6 +668,14 @@ class AccountingCategory(models.Model):
 
 
 class AppSetting(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="settings",
+    )
     key = models.CharField(max_length=128, unique=True, verbose_name="Ключ")
     value = models.CharField(max_length=255, blank=True, verbose_name="Значение")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
@@ -544,6 +693,14 @@ class BillingRecord(models.Model):
         ACTIVE = "active", "Активно"
         EXPIRED = "expired", "Истекло"
 
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="billing_records",
+    )
     name = models.CharField(max_length=255, verbose_name="Название")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE, verbose_name="Статус")
     expires_at = models.DateField(null=True, blank=True, verbose_name="Дата окончания")
@@ -558,6 +715,14 @@ class BillingRecord(models.Model):
 
 
 class AboutPage(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="about_pages",
+    )
     title = models.CharField(max_length=255, default="О нас", verbose_name="Заголовок")
     body = models.TextField(blank=True, verbose_name="Текст")
     feedback_phone = models.CharField(max_length=64, blank=True, verbose_name="Телефон для отзыва")

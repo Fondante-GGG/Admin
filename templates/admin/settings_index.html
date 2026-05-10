@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard crm-settings-page">
+  <h1 class="crm-settings-title">Настройки</h1>
+
+  <div class="crm-settings-grid">
+    {% for section in sections %}
+    <div class="crm-settings-card">
+      <div class="crm-settings-card__header">
+        <div class="crm-settings-card__icon" style="color:{{ section.color }}">
+          <i class="{{ section.icon }}"></i>
+        </div>
+        <h2 class="crm-settings-card__title">{{ section.title }}</h2>
+      </div>
+      <ul class="crm-settings-card__items">
+        {% for item in section.items %}
+        <li>
+          {% if item.url %}
+          <a href="{{ item.url }}" class="crm-settings-card__link">{{ item.name }}</a>
+          {% else %}
+          <span class="crm-settings-card__muted">{{ item.name }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

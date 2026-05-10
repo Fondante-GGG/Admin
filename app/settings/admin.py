@@ -35,6 +35,7 @@ from .models import (
     Lead,
     IndividualCourse,
     Mentor,
+    Organization,
     Payment,
     TuitionPayment,
     Salary,
@@ -131,6 +132,37 @@ class ArchiveAdminMixin:
         if request.GET.get("archived") == "0" or "archived" not in request.GET:
             return qs.filter(is_archived=False)
         return qs
+
+
+class OrganizationFilterMixin:
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        org_id = request.session.get("current_org_id")
+        if org_id and hasattr(self.model, "organization"):
+            qs = qs.filter(organization_id=org_id)
+        return qs
+
+
+class OrganizationFilter(admin.SimpleListFilter):
+    title = "Организация"
+    parameter_name = "organization"
+
+    def lookups(self, request, model_admin):
+        return ((str(o.pk), o.name) for o in Organization.objects.all().order_by("name"))
+
+    def queryset(self, request, queryset):
+        v = self.value()
+        if v:
+            return queryset.filter(organization_id=v)
+        return queryset
+
+
+@admin.register(Organization, site=crm_admin_site)
+class OrganizationAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор"}
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(User, site=crm_admin_site)
@@ -322,7 +354,7 @@ StudentAdmin.inlines = [StudentEnrollmentInline, StudentPaymentInline, StudentCo
 
 
 @admin.register(Mentor, site=crm_admin_site)
-class MentorAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class MentorAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/mentors_changelist.html"
     fieldsets = (
@@ -341,7 +373,7 @@ class MentorAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin)
         ),
         (
             "Оплата",
-            {"fields": ("payment_form", "payment_rate", "fixed_rate")},
+            {"fields": ("payment_form", "payment_rate", "percentage_rate", "fixed_rate")},
         ),
         ("Контракт и примечания", {"fields": ("contract_file", "note")}),
         ("Уход", {"fields": ("departure_date", "departure_reason")}),
@@ -460,7 +492,7 @@ class MentorAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin)
 
 
 @admin.register(Cursues, site=crm_admin_site)
-class CursuesAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "course_type", "subject", "start", "status", "price", "students_badge")
     list_filter = ("course_type", "status", "subject", ArchiveFilter)
@@ -797,7 +829,7 @@ class IndividualCourseAdmin(CursuesAdmin):
 
 
 @admin.register(Lead, site=crm_admin_site)
-class LeadAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("full_name", "phone_number", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
@@ -806,7 +838,7 @@ class LeadAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Payment, site=crm_admin_site)
-class PaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class PaymentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("student", "course", "amount", "created_at")
     list_filter = ("course",)
@@ -815,14 +847,22 @@ class PaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Salary, site=crm_admin_site)
-class SalaryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class SalaryAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     denied_roles = {"Менеджер", "Ментор"}
-    list_display = ("mentor", "amount", "created_at")
-    autocomplete_fields = ("mentor",)
+    list_display = ("mentor", "course", "amount", "comment_short", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("mentor__user__first_name", "mentor__user__last_name", "mentor__user__username", "comment")
+    autocomplete_fields = ("mentor", "course")
+    fields = ("mentor", "course", "amount", "comment", "created_at")
+    readonly_fields = ("created_at",)
+
+    def comment_short(self, obj: Salary):
+        return obj.comment[:50] + "…" if len(obj.comment) > 50 else obj.comment
+    comment_short.short_description = "Комментарий"
 
 
 @admin.register(Task, site=crm_admin_site)
-class TaskAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class TaskAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "due_date", "is_done", "created_at")
     list_filter = ("is_done", ArchiveFilter)
@@ -915,7 +955,7 @@ class StudentPaymentsAdmin(RoleRestrictedAdminMixin, EnrollmentBaseAdmin):
 
 
 @admin.register(TuitionPayment, site=crm_admin_site)
-class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class TuitionPaymentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     change_list_template = "admin/tuition_payment_changelist.html"
     list_per_page = 20
@@ -1281,7 +1321,7 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(CalendarEvent, site=crm_admin_site)
-class CalendarEventAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class CalendarEventAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     list_display = ("title", "start_at", "end_at", "created_at")
     search_fields = ("title", "note")
@@ -1293,7 +1333,7 @@ class CalendarEventAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.Mode
 
 
 @admin.register(Call, site=crm_admin_site)
-class CallAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class CallAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
     list_display = ("contact_name", "phone_number", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
@@ -1302,7 +1342,7 @@ class CallAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(AccountingEntry, site=crm_admin_site)
-class AccountingEntryAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+class AccountingEntryAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     denied_roles = {"Менеджер", "Ментор"}
     change_list_template = "admin/accountingentry_changelist.html"
     list_display = ("entry_type", "title", "amount", "created_at")
@@ -1380,21 +1420,21 @@ class AccountingEntryAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.Mo
 
 
 @admin.register(AccountingAccount, site=crm_admin_site)
-class AccountingAccountAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class AccountingAccountAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     denied_roles = {"Менеджер", "Ментор"}
     list_display = ("id", "title", "created_at")
     search_fields = ("title",)
 
 
 @admin.register(AccountingProject, site=crm_admin_site)
-class AccountingProjectAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class AccountingProjectAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     denied_roles = {"Менеджер", "Ментор"}
     list_display = ("id", "title", "created_at")
     search_fields = ("title",)
 
 
 @admin.register(AccountingCategory, site=crm_admin_site)
-class AccountingCategoryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class AccountingCategoryAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
     denied_roles = {"Менеджер", "Ментор"}
     list_display = ("id", "title", "created_at")
     search_fields = ("title",)

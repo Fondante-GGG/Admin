@@ -4,6 +4,7 @@
   max-width: none !important;
   width: 100% !important;
   box-sizing: border-box;
+  overflow-x: visible !important;
 }
 
 /* Jazzmin/AdminLTE often wraps main content in a fixed-width `.container`.
@@ -27,6 +28,51 @@
   --crm-card: #ffffff;
   --crm-border: rgba(16, 24, 40, 0.08);
   --crm-muted: rgba(16, 24, 40, 0.58);
+}
+
+html, body {
+  overflow-x: hidden !important;
+}
+
+#changelist,
+#changelist .results,
+#changelist table,
+#result_list {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#changelist .results {
+  overflow-x: auto;
+}
+
+.object-tools {
+  display: flex !important;
+  gap: 8px;
+  margin: 0 0 12px 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+  float: none !important;
+}
+
+.object-tools a {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  background: #2563eb !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+}
+
+.object-tools a:hover {
+  background: #1d4ed8 !important;
 }
 
 body {
