@@ -1,54 +1,29 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Кабинет ментора</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fb; min-height: 100vh; }
-    .portal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
-    .portal-header h1 { font-size: 20px; font-weight: 800; }
-    .portal-header a { color: #fff; text-decoration: none; font-size: 14px; opacity: 0.9; }
-    .portal-header a:hover { opacity: 1; }
-    .portal-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .portal-card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .portal-card h2 { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
-    .portal-card p { color: #6b7280; font-size: 14px; }
-    .portal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-    .portal-stat { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 14px; padding: 20px; }
-    .portal-stat .value { font-size: 28px; font-weight: 800; }
-    .portal-stat .label { font-size: 13px; opacity: 0.9; margin-top: 4px; }
-  </style>
-</head>
-<body>
-  <div class="portal-header">
-    <h1>Кабинет ментора</h1>
-    <a href="/admin/logout/">Выйти</a>
+{% extends "portal/mentor_base.html" %}
+
+{% block title %}Главная — Кабинет ментора{% endblock %}
+{% block page_title %}Главная{% endblock %}
+
+{% block content %}
+<div class="portal-grid">
+  <div class="portal-stat">
+    <div class="value">—</div>
+    <div class="label">Моих курсов</div>
   </div>
-  <div class="portal-container">
-    <div class="portal-grid">
-      <div class="portal-stat">
-        <div class="value">—</div>
-        <div class="label">Моих курсов</div>
-      </div>
-      <div class="portal-stat">
-        <div class="value">—</div>
-        <div class="label">Моих студентов</div>
-      </div>
-      <div class="portal-stat">
-        <div class="value">—</div>
-        <div class="label">Занятий сегодня</div>
-      </div>
-    </div>
-    <div class="portal-card" style="margin-top: 20px;">
-      <h2>Мои курсы</h2>
-      <p>Список курсов и студентов будет здесь.</p>
-    </div>
-    <div class="portal-card">
-      <h2>Расписание</h2>
-      <p>Календарь занятий будет здесь.</p>
-    </div>
+  <div class="portal-stat">
+    <div class="value">—</div>
+    <div class="label">Моих студентов</div>
   </div>
-</body>
-</html>
+  <div class="portal-stat">
+    <div class="value">—</div>
+    <div class="label">Занятий сегодня</div>
+  </div>
+</div>
+<div class="portal-card">
+  <h2>Мои курсы</h2>
+  <p>Список курсов и студентов будет здесь.</p>
+</div>
+<div class="portal-card">
+  <h2>Расписание</h2>
+  <p>Календарь занятий будет здесь.</p>
+</div>
+{% endblock %}

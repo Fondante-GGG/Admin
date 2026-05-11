@@ -20,6 +20,14 @@ def portal_login(request):
                 auth_login(request, user)
                 return _redirect_by_role(user)
             else:
+                # --- временная отладка ---
+                from app.settings.models import User
+                try:
+                    u = User.objects.get(username=username)
+                    print(f"[DEBUG] user found: {u.username}, is_active={u.is_active}, check_pass={u.check_password(password)}")
+                except User.DoesNotExist:
+                    print(f"[DEBUG] user not found: {username}")
+                # ------------------------
                 error = "Неверное имя пользователя или пароль"
         except Exception:
             error = "Ошибка сервера при входе. Попробуйте позже."
@@ -47,7 +55,67 @@ def mentor_dashboard(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_dashboard.html")
+        return render(request, "portal/mentor_dashboard.html", {"active": "home"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_lessons(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_lessons.html", {"active": "lessons"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_homework(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_homework.html", {"active": "homework"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_schedule(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_schedule.html", {"active": "schedule"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_gradebook(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_gradebook.html", {"active": "gradebook"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_students(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_students.html", {"active": "students"})
+    except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_curriculum(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        return render(request, "portal/mentor_curriculum.html", {"active": "curriculum"})
     except Exception:
         return render(request, "errors/500.html", status=500)
 
