@@ -6,6 +6,180 @@
 {% block content %}
 <div class="portal-card">
   <h2>Домашние задания</h2>
-  <p>Список домашних заданий будет здесь.</p>
+  
+  {% if homeworks %}
+    <div class="homework-list">
+      {% for homework in homeworks %}
+        <div class="homework-item">
+          <div class="homework-header">
+            <div class="homework-student">
+              <strong>{{ homework.student.user.get_full_name|default:homework.student.user.username }}</strong>
+              {% if homework.lesson.course %}
+                <span class="homework-course">{{ homework.lesson.course.title }}</span>
+              {% endif %}
+            </div>
+            <div class="homework-date">
+              {{ homework.created_at|date:"d.m.Y H:i" }}
+            </div>
+          </div>
+          
+          {% if homework.lesson %}
+            <div class="homework-lesson">
+              <span class="label">Урок:</span>
+              {{ homework.lesson.title }}
+            </div>
+          {% endif %}
+          
+          {% if homework.description %}
+            <div class="homework-description">
+              {{ homework.description|linebreaks }}
+            </div>
+          {% endif %}
+          
+          {% if homework.file %}
+            <div class="homework-file">
+              <a href="{{ homework.file.url }}" class="file-link" target="_blank">
+                📎 {{ homework.file.name|slice:"30" }}{% if homework.file.name|length > 30 %}...{% endif %}
+              </a>
+            </div>
+          {% endif %}
+          
+          <div class="homework-status">
+            <span class="status-badge {% if homework.is_graded %}graded{% else %}pending{% endif %}">
+              {% if homework.is_graded %}✓ Оценено{% else %}⏳ Ожидает проверки{% endif %}
+            </span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>Нет домашних заданий{% if request.GET.group_id %} для выбранной группы{% endif %}.</p>
+    </div>
+  {% endif %}
 </div>
+
+<style>
+.homework-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.homework-item {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.15s;
+}
+
+.homework-item:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.homework-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.homework-student {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.homework-student strong {
+  color: #fff;
+  font-size: 16px;
+}
+
+.homework-course {
+  color: #9ca3af;
+  font-size: 13px;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.homework-date {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.homework-lesson {
+  margin-bottom: 12px;
+}
+
+.homework-lesson .label {
+  color: #9ca3af;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.homework-lesson {
+  color: #f3f4f6;
+  font-size: 14px;
+}
+
+.homework-description {
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.homework-file {
+  margin-bottom: 12px;
+}
+
+.file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.file-link:hover {
+  background: rgba(102, 126, 234, 0.2);
+  color: #818cf8;
+}
+
+.homework-status {
+  text-align: right;
+}
+
+.status-badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-badge.graded {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.status-badge.pending {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+</style>
 {% endblock %}

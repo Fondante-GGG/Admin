@@ -121,6 +121,48 @@
       font-size: 14px;
     }
     .topbar .logout:hover { color: #f87171; }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+    }
+    .group-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 12px;
+      min-width: 200px;
+    }
+    .group-filter label {
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .group-filter select {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+      flex: 1;
+      padding: 2px 4px;
+    }
+    .group-filter select option {
+      background: #1f2937;
+      color: #fff;
+    }
 
     .content {
       padding: 24px 32px;
@@ -223,32 +265,111 @@
     .dash-card.lesson::before   { background: #818cf8; }
     .dash-card.exam     { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
     .dash-card.exam::before     { background: #fbbf24; }
-    .topbar-actions {
+    .topbar-icons {
       display: flex;
+      gap: 12px;
       align-items: center;
-      gap: 16px;
     }
-    .topbar-icon {
-      width: 40px;
-      height: 40px;
+    .icon-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
       border-radius: 8px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      text-decoration: none;
-      transition: all 0.15s;
+      transition: background 0.15s;
+      position: relative;
     }
-    .topbar-icon:hover {
+    .icon-btn:hover {
       background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.2);
-      color: #fff;
     }
-    .topbar-icon svg {
-      width: 20px;
-      height: 20px;
+    .notification-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .notifications-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #1f2937;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      width: 320px;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1000;
+      margin-top: 8px;
+    }
+    .notifications-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .notifications-header h4 {
+      margin: 0;
+      color: white;
+      font-size: 14px;
+    }
+    .mark-all-read {
+      background: none;
+      border: none;
+      color: #667eea;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .mark-all-read:hover {
+      background: rgba(102, 126, 234, 0.1);
+    }
+    .notifications-list {
+      padding: 8px 0;
+    }
+    .notification-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .notification-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    .notification-item.unread {
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 3px solid #667eea;
+    }
+    .notification-title {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .notification-message {
+      color: #9ca3af;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .notification-time {
+      color: #6b7280;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .no-notifications {
+      color: #6b7280;
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
     }
     .logout {
       color: #fff !important;
@@ -326,12 +447,49 @@
     <div class="topbar">
       <h1>{% block page_title %}Кабинет ментора{% endblock %}</h1>
       <div class="topbar-actions">
-        <a href="#" class="topbar-icon" title="Уведомления">
-          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-        </a>
-        <a href="{% url 'mentor_profile' %}" class="topbar-icon" title="Профиль">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        </a>
+        <div class="topbar-left">
+          <!-- Group Filter -->
+          <div class="group-filter">
+            <label for="group-select">Группа:</label>
+            <select id="group-select" onchange="filterByGroup(this.value)">
+              <option value="">Все группы</option>
+              {% for group in groups %}
+                <option value="{{ group.id }}" {% if request.GET.group_id == group.id|stringformat:"s" %}selected{% endif %}>
+                  {{ group.title }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Notifications Dropdown -->
+          <div id="notifications-dropdown" class="notifications-dropdown" style="display: none;">
+            <div class="notifications-header">
+              <h4>Уведомления</h4>
+              <button onclick="markAllRead()" class="mark-all-read">Отметить все прочитанными</button>
+            </div>
+            <div id="notifications-list" class="notifications-list">
+              <p class="no-notifications">Нет уведомлений</p>
+            </div>
+          </div>
+          
+          <div class="topbar-icons">
+            <button class="icon-btn notification-btn" style="position: relative;" onclick="toggleNotifications()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span id="notification-badge" class="notification-badge" style="display: none;">0</span>
+            </button>
+            
+            <a href="{% url 'mentor_profile' %}" class="icon-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        
         <a href="{% url 'portal_login' %}" class="logout">Выйти</a>
       </div>
     </div>
@@ -340,6 +498,152 @@
     </div>
   </div>
 
-  {% block extra_js %}{% endblock %}
+  <script>
+  // WebSocket connection for notifications
+  let notificationSocket = null;
+  let notificationsList = [];
+  
+  function connectNotifications() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+    
+    notificationSocket = new WebSocket(wsUrl);
+    
+    notificationSocket.onopen = function(e) {
+      console.log('Notifications WebSocket connected');
+    };
+    
+    notificationSocket.onmessage = function(e) {
+      const data = JSON.parse(e.data);
+      
+      if (data.type === 'unread_count') {
+        updateNotificationBadge(data.count);
+      } else if (data.type === 'new_notification') {
+        addNotificationToList(data.notification);
+        updateNotificationBadge(parseInt(document.getElementById('notification-badge').textContent) + 1);
+      }
+    };
+    
+    notificationSocket.onclose = function(e) {
+      console.log('Notifications WebSocket disconnected');
+      // Try to reconnect after 3 seconds
+      setTimeout(connectNotifications, 3000);
+    };
+    
+    notificationSocket.onerror = function(e) {
+      console.error('Notifications WebSocket error:', e);
+    };
+  }
+  
+  function updateNotificationBadge(count) {
+    const badge = document.getElementById('notification-badge');
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  
+  function addNotificationToList(notification) {
+    notificationsList.unshift(notification);
+    renderNotifications();
+  }
+  
+  function renderNotifications() {
+    const listContainer = document.getElementById('notifications-list');
+    
+    if (notificationsList.length === 0) {
+      listContainer.innerHTML = '<p class="no-notifications">Нет уведомлений</p>';
+      return;
+    }
+    
+    let html = '';
+    notificationsList.forEach(notification => {
+      const timeAgo = getTimeAgo(notification.created_at);
+      html += `
+        <div class="notification-item ${!notification.is_read ? 'unread' : ''}" onclick="markAsRead(${notification.id})">
+          <div class="notification-title">${notification.title}</div>
+          <div class="notification-message">${notification.message}</div>
+          <div class="notification-time">${timeAgo}</div>
+        </div>
+      `;
+    });
+    
+    listContainer.innerHTML = html;
+  }
+  
+  function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'только что';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} мин. назад`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} ч. назад`;
+    return `${Math.floor(seconds / 86400)} д. назад`;
+  }
+  
+  function toggleNotifications() {
+    const dropdown = document.getElementById('notifications-dropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  }
+  
+  function markAsRead(notificationId) {
+    if (notificationSocket && notificationSocket.readyState === WebSocket.OPEN) {
+      notificationSocket.send(JSON.stringify({
+        'type': 'mark_read',
+        'notification_id': notificationId
+      }));
+      
+      // Update UI immediately
+      const notification = notificationsList.find(n => n.id === notificationId);
+      if (notification) {
+        notification.is_read = true;
+        renderNotifications();
+        updateNotificationBadge(Math.max(0, parseInt(document.getElementById('notification-badge').textContent) - 1));
+      }
+    }
+  }
+  
+  function markAllRead() {
+    const unreadNotifications = notificationsList.filter(n => !n.is_read);
+    unreadNotifications.forEach(notification => {
+      markAsRead(notification.id);
+    });
+  }
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('notifications-dropdown');
+    const button = document.querySelector('.notification-btn');
+    
+    if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+  
+  function filterByGroup(groupId) {
+    const currentUrl = new URL(window.location);
+    
+    if (groupId) {
+      currentUrl.searchParams.set('group_id', groupId);
+    } else {
+      currentUrl.searchParams.delete('group_id');
+    }
+    
+    // Keep other query parameters
+    currentUrl.searchParams.delete('page'); // Reset to first page when filtering
+    
+    window.location.href = currentUrl.toString();
+  }
+  
+  // Connect WebSocket when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    connectNotifications();
+  });
+</script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

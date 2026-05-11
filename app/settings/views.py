@@ -3,7 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
-from app.settings.models import User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor
+from app.settings.models import (
+    User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor, 
+    LessonLink, Homework, StudentGrade, Student, TimeSlot, Schedule
+)
 
 
 def portal_login(request):
@@ -52,8 +55,20 @@ def mentor_dashboard(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_dashboard.html", {"active": "home"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        return render(request, "portal/mentor_dashboard.html", {
+            "active": "home",
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_dashboard: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -73,6 +88,7 @@ def mentor_lessons(request):
                 "group_courses": [],
                 "individual_courses": [],
                 "exams": [],
+                "groups": [],
             })
         
         group_courses = GroupCourse.objects.filter(mentors=mentor_profile).active().order_by('title')
@@ -82,15 +98,35 @@ def mentor_lessons(request):
         
         print(f"[DEBUG] Found {group_courses.count()} group courses, {individual_courses.count()} individual courses and {exams.count()} exams")
         
-        # Объединяем все курсы
         all_courses = list(group_courses) + list(individual_courses)
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            all_courses = [c for c in all_courses if str(c.id) == group_id]
+        
+        all_lessons = Lesson.objects.filter(mentor=mentor_profile).select_related('course').order_by('course__title', 'order')
+        
+        # Фильтрация уроков по группе
+        if group_id:
+            all_lessons = all_lessons.filter(course_id=group_id)
+        
+        lessons_by_course = {}
+        lessons_with_links = {}
+        for lesson in all_lessons:
+            if lesson.course:
+                if lesson.course not in lessons_by_course:
+                    lessons_by_course[lesson.course] = []
+                lessons_by_course[lesson.course].append(lesson)
         
         return render(request, "portal/mentor_lessons.html", {
             "active": "lessons",
             "group_courses": group_courses,
             "individual_courses": individual_courses,
             "all_courses": all_courses,
+            "lessons_by_course": lessons_by_course,
             "exams": exams,
+            "groups": all_courses,
         })
     except Exception as e:
         print(f"[DEBUG] Error in mentor_lessons: {e}")
@@ -104,8 +140,32 @@ def mentor_homework(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_homework.html", {"active": "homework"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        # Получаем домашние задания ментора
+        from app.settings.models import Homework, Lesson
+        homeworks = Homework.objects.filter(
+            lesson__course__mentors=mentor_profile
+        ).select_related('lesson', 'student', 'lesson__course').order_by('-created_at')
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            homeworks = homeworks.filter(lesson__course_id=group_id)
+        
+        return render(request, "portal/mentor_homework.html", {
+            "active": "homework",
+            "homeworks": homeworks,
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_homework: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -114,8 +174,95 @@ def mentor_schedule(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_schedule.html", {"active": "schedule"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        from datetime import date
+        import calendar
+        
+        today = date.today()
+        year = today.year
+        month = today.month
+        
+        if request.GET.get('month'):
+            try:
+                month = int(request.GET.get('month'))
+                year = int(request.GET.get('year', year))
+            except (ValueError, TypeError):
+                month = today.month
+                year = today.year
+        
+        cal = calendar.monthcalendar(year, month)
+        month_name = calendar.month_name[month]
+        
+        schedules = Schedule.objects.filter(
+            mentor=mentor_profile,
+            is_active=True
+        ).select_related('course', 'time_slot').order_by('time_slot__day_of_week', 'time_slot__start_time')
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            schedules = schedules.filter(course_id=group_id)
+        
+        schedule_by_date = {}
+        
+        for schedule in schedules:
+            day_of_week = schedule.time_slot.day_of_week
+            day_map = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                'friday': 4, 'saturday': 5, 'sunday': 6
+            }
+            
+            target_weekday = day_map.get(day_of_week)
+            if target_weekday is None:
+                continue
+            
+            for week_num, week_days in enumerate(cal):
+                for day_num, day_date in enumerate(week_days):
+                    if day_date == 0:
+                        continue
+                    if day_num == target_weekday:
+                        date_key = date(year, month, day_date)
+                        if date_key not in schedule_by_date:
+                            schedule_by_date[date_key] = []
+                        schedule_by_date[date_key].append(schedule)
+        
+        if month == 1:
+            prev_month = 12
+            prev_year = year - 1
+        else:
+            prev_month = month - 1
+            prev_year = year
+        
+        if month == 12:
+            next_month = 1
+            next_year = year + 1
+        else:
+            next_month = month + 1
+            next_year = year
+        
+        return render(request, "portal/mentor_schedule.html", {
+            "active": "schedule",
+            "calendar": cal,
+            "month_name": month_name,
+            "year": year,
+            "month": month,
+            "schedule_by_date": schedule_by_date,
+            "prev_month": prev_month,
+            "prev_year": prev_year,
+            "next_month": next_month,
+            "next_year": next_year,
+            "today": today,
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_schedule: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -124,8 +271,32 @@ def mentor_gradebook(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_gradebook.html", {"active": "gradebook"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        # Получаем оценки студентов ментора
+        from app.settings.models import StudentGrade
+        grades = StudentGrade.objects.filter(
+            lesson__course__mentors=mentor_profile
+        ).select_related('student', 'lesson', 'student__user').order_by('-created_at')
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            grades = grades.filter(student__enrollment__course_id=group_id)
+        
+        return render(request, "portal/mentor_gradebook.html", {
+            "active": "gradebook",
+            "grades": grades,
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_gradebook: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -134,8 +305,36 @@ def mentor_students(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_students.html", {"active": "students"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        # Получаем всех студентов ментора через Enrollment (связь Student-Cursues)
+        from django.db.models import Q
+        students = Student.objects.filter(
+            Q(enrollment__course__mentors=mentor_profile) |
+            Q(payment__course__mentors=mentor_profile)
+        ).distinct().select_related('user')
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            students = students.filter(
+                Q(enrollment__course_id=group_id) |
+                Q(payment__course_id=group_id)
+            ).distinct()
+        
+        return render(request, "portal/mentor_students.html", {
+            "active": "students",
+            "students": students,
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_students: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -144,8 +343,32 @@ def mentor_curriculum(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_curriculum.html", {"active": "curriculum"})
-    except Exception:
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все курсы ментора
+        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
+        
+        # Получаем учебные планы ментора
+        from app.settings.models import Curriculum
+        curricula = Curriculum.objects.filter(
+            course__mentors=mentor_profile
+        ).select_related('course').order_by('course__title', 'order')
+        
+        # Фильтрация по группе
+        group_id = request.GET.get('group_id')
+        if group_id:
+            curricula = curricula.filter(course_id=group_id)
+        
+        return render(request, "portal/mentor_curriculum.html", {
+            "active": "curriculum",
+            "curricula": curricula,
+            "groups": mentor_courses,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_curriculum: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -194,6 +417,122 @@ def mentor_profile(request):
         })
     except Exception as e:
         print(f"[DEBUG] Error in mentor_profile: {e}")
+        import traceback
+        traceback.print_exc()
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def lesson_detail(request, lesson_id):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        
+        # Получаем профиль ментора
+        try:
+            mentor_profile = request.user.mentor_profile
+        except AttributeError:
+            return render(request, "errors/500.html", status=500)
+        
+        # Получаем урок
+        try:
+            lesson = Lesson.objects.get(id=lesson_id, mentor=mentor_profile)
+        except Lesson.DoesNotExist:
+            return render(request, "errors/404.html", status=404)
+        
+        # Получаем студентов курса, если урок привязан к курсу
+        students = []
+        if lesson.course:
+            students = lesson.course.students.all()
+        
+        # Получаем связанные данные
+        links = lesson.links.all().order_by('order')
+        homeworks = lesson.homeworks.all().order_by('-created_at')
+        grades = StudentGrade.objects.filter(lesson=lesson).select_related('student')
+        
+        if request.method == "POST":
+            # Обновляем урок
+            lesson.title = request.POST.get("title", "")
+            lesson.description = request.POST.get("description", "")
+            lesson.date = request.POST.get("date") or None
+            lesson.deadline = request.POST.get("deadline") or None
+            lesson.save()
+            
+            # Обновляем ссылки
+            lesson.links.all().delete()
+            link_titles = request.POST.getlist("link_title")
+            link_urls = request.POST.getlist("link_url")
+            for i, (title, url) in enumerate(zip(link_titles, link_urls)):
+                if title and url:
+                    LessonLink.objects.create(
+                        lesson=lesson,
+                        title=title,
+                        url=url,
+                        order=i
+                    )
+            
+            # Обрабатываем домашние задания
+            homework_title = request.POST.get("homework_title", "")
+            homework_description = request.POST.get("homework_description", "")
+            homework_file = request.FILES.get("homework_file")
+            
+            print(f"[DEBUG] Homework data: title='{homework_title}', description='{homework_description}', file={homework_file}")
+            
+            if homework_title and (homework_description or homework_file):
+                print(f"[DEBUG] Creating homework...")
+                homework = Homework.objects.create(
+                    lesson=lesson,
+                    title=homework_title,
+                    description=homework_description,
+                    file=homework_file
+                )
+                print(f"[DEBUG] Homework created: {homework.id}")
+            else:
+                print(f"[DEBUG] Homework not created - missing data")
+            
+            # Обновляем оценки студентов
+            for student in students:
+                grade_key = f"grade_{student.id}"
+                comment_key = f"comment_{student.id}"
+                grade_value = request.POST.get(grade_key)
+                comment_value = request.POST.get(comment_key, "")
+                
+                if grade_value in ['0', '1']:
+                    StudentGrade.objects.update_or_create(
+                        lesson=lesson,
+                        student=student,
+                        defaults={
+                            'grade': int(grade_value),
+                            'comment': comment_value
+                        }
+                    )
+                elif grade_value == '' or grade_value is None:
+                    # Удаляем оценку, если она была сброшена
+                    StudentGrade.objects.filter(lesson=lesson, student=student).delete()
+            
+            # Обновляем данные оценок после сохранения
+            updated_grades = StudentGrade.objects.filter(lesson=lesson).select_related('student')
+            
+            return render(request, "portal/lesson_detail.html", {
+                "active": "lessons",
+                "lesson": lesson,
+                "students": students,
+                "links": links,
+                "homeworks": homeworks,
+                "grades": updated_grades,
+                "success": True,
+            })
+        
+        return render(request, "portal/lesson_detail.html", {
+            "active": "lessons",
+            "lesson": lesson,
+            "students": students,
+            "links": links,
+            "homeworks": homeworks,
+            "grades": grades,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in lesson_detail: {e}")
         import traceback
         traceback.print_exc()
         return render(request, "errors/500.html", status=500)

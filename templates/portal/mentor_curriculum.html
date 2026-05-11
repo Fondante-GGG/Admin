@@ -6,6 +6,240 @@
 {% block content %}
 <div class="portal-card">
   <h2>Учебный план</h2>
-  <p>Содержание учебного плана будет здесь.</p>
+  
+  {% if curricula %}
+    <div class="curriculum-list">
+      {% regroup curricula by course as course_list %}
+      {% for course in course_list %}
+        <div class="course-section">
+          <h3 class="course-title">
+            {{ course.grouper.title }}
+          </h3>
+          
+          <div class="curriculum-items">
+            {% for item in course.list %}
+              <div class="curriculum-item">
+                <div class="item-header">
+                  <span class="item-order">{{ item.order }}</span>
+                  <h4 class="item-title">{{ item.title }}</h4>
+                  {% if item.duration %}
+                    <span class="item-duration">{{ item.duration }} мин.</span>
+                  {% endif %}
+                </div>
+                
+                {% if item.description %}
+                  <div class="item-description">
+                    {{ item.description|linebreaks }}
+                  </div>
+                {% endif %}
+                
+                {% if item.topics %}
+                  <div class="item-topics">
+                    <strong>Темы:</strong>
+                    <ul>
+                      {% for topic in item.topics %}
+                        <li>{{ topic }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
+                
+                {% if item.materials %}
+                  <div class="item-materials">
+                    <strong>Материалы:</strong>
+                    <div class="materials-list">
+                      {% for material in item.materials %}
+                        <div class="material-item">
+                          {% if material.file %}
+                            <a href="{{ material.file.url }}" class="material-link" target="_blank">
+                              📄 {{ material.file.name|slice:"30" }}{% if material.file.name|length > 30 %}...{% endif %}
+                            </a>
+                          {% elif material.link %}
+                            <a href="{{ material.link }}" class="material-link" target="_blank">
+                              🔗 {{ material.title|default:"Ссылка" }}
+                            </a>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>Нет учебных планов{% if request.GET.group_id %} для выбранной группы{% endif %}.</p>
+    </div>
+  {% endif %}
 </div>
+
+<style>
+.curriculum-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.course-section {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.course-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.curriculum-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.curriculum-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.15s;
+}
+
+.curriculum-item:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.item-order {
+  background: #667eea;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.item-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  flex: 1;
+  margin: 0;
+}
+
+.item-duration {
+  color: #9ca3af;
+  font-size: 13px;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.item-description {
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.item-topics {
+  margin-bottom: 12px;
+}
+
+.item-topics strong {
+  color: #9ca3af;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.item-topics ul {
+  list-style: none;
+  padding: 0;
+}
+
+.item-topics li {
+  color: #d1d5db;
+  font-size: 14px;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.item-topics li:before {
+  content: "•";
+  color: #667eea;
+  position: absolute;
+  left: 0;
+  top: 4px;
+}
+
+.item-materials {
+  margin-top: 12px;
+}
+
+.item-materials strong {
+  color: #9ca3af;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-item {
+  display: flex;
+  align-items: center;
+}
+
+.material-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.material-link:hover {
+  background: rgba(102, 126, 234, 0.2);
+  color: #818cf8;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+</style>
 {% endblock %}

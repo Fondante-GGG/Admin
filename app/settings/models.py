@@ -764,12 +764,22 @@ class Lesson(ArchiveBase):
         verbose_name="Ментор",
         related_name="lessons"
     )
-    title = models.CharField(max_length=255, verbose_name="Название урока")
-    description = models.TextField(blank=True, verbose_name="Описание")
+    course = models.ForeignKey(
+        Cursues,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Курс",
+        related_name="lessons"
+    )
+    title = models.CharField(max_length=255, verbose_name="Тема урока")
+    description = models.TextField(blank=True, verbose_name="Описание урока")
     order = models.PositiveIntegerField(verbose_name="Порядок")
     is_additional = models.BooleanField(default=False, verbose_name="Дополнительный урок")
     date = models.DateField(null=True, blank=True, verbose_name="Дата урока")
+    deadline = models.DateTimeField(null=True, blank=True, verbose_name="Дедлайн домашнего задания")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
 
     def __str__(self):
         return f"{self.title} ({self.mentor.user.username})"
@@ -799,6 +809,198 @@ class Exam(ArchiveBase):
         verbose_name = "Контрольная работа"
         verbose_name_plural = "Контрольные работы"
         ordering = ["-created_at"]
+
+
+class LessonLink(models.Model):
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        verbose_name="Урок",
+        related_name="links"
+    )
+    title = models.CharField(max_length=255, verbose_name="Название ссылки")
+    url = models.URLField(verbose_name="URL ссылки")
+    order = models.PositiveIntegerField(default=0, verbose_name="Порядок")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    def __str__(self):
+        return f"{self.title} ({self.lesson.title})"
+
+    class Meta:
+        verbose_name = "Ссылка урока"
+        verbose_name_plural = "Ссылки уроков"
+        ordering = ["order"]
+
+
+class Homework(models.Model):
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        verbose_name="Урок",
+        related_name="homeworks"
+    )
+    title = models.CharField(max_length=255, verbose_name="Название задания")
+    description = models.TextField(verbose_name="Описание задания")
+    file = models.FileField(
+        upload_to='homeworks/',
+        null=True,
+        blank=True,
+        verbose_name="Файл задания"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
+
+    def __str__(self):
+        return f"{self.title} ({self.lesson.title})"
+
+    class Meta:
+        verbose_name = "Домашнее задание"
+        verbose_name_plural = "Домашние задания"
+        ordering = ["-created_at"]
+
+
+class StudentGrade(models.Model):
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        verbose_name="Урок",
+        related_name="grades"
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        verbose_name="Студент",
+        related_name="lesson_grades"
+    )
+    grade = models.IntegerField(
+        choices=[(0, '0'), (1, '1')],
+        verbose_name="Оценка"
+    )
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
+
+    class Meta:
+        verbose_name = "Оценка студента"
+        verbose_name_plural = "Оценки студентов"
+        unique_together = ['lesson', 'student']
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('homework', 'Домашнее задание'),
+        ('grade', 'Оценка'),
+        ('message', 'Сообщение'),
+        ('system', 'Системное'),
+    ]
+    
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Получатель",
+        related_name="notifications"
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Отправитель",
+        related_name="sent_notifications"
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=NOTIFICATION_TYPES,
+        default='system',
+        verbose_name="Тип уведомления"
+    )
+    title = models.CharField(max_length=255, verbose_name="Заголовок")
+    message = models.TextField(verbose_name="Сообщение")
+    related_lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Связанный урок",
+        related_name="notifications"
+    )
+    is_read = models.BooleanField(default=False, verbose_name="Прочитано")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    def __str__(self):
+        return f"{self.title} → {self.recipient.username}"
+
+    class Meta:
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
+        ordering = ["-created_at"]
+
+
+class TimeSlot(models.Model):
+    DAYS_OF_WEEK = [
+        ('monday', 'Понедельник'),
+        ('tuesday', 'Вторник'),
+        ('wednesday', 'Среда'),
+        ('thursday', 'Четверг'),
+        ('friday', 'Пятница'),
+        ('saturday', 'Суббота'),
+        ('sunday', 'Воскресенье'),
+    ]
+    
+    day_of_week = models.CharField(
+        max_length=10,
+        choices=DAYS_OF_WEEK,
+        verbose_name="День недели"
+    )
+    start_time = models.TimeField(verbose_name="Время начала")
+    end_time = models.TimeField(verbose_name="Время окончания")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    
+    def __str__(self):
+        return f"{self.get_day_of_week_display()} {self.start_time} - {self.end_time}"
+
+    class Meta:
+        verbose_name = "Временной слот"
+        verbose_name_plural = "Временные слоты"
+        ordering = ['day_of_week', 'start_time']
+
+
+class Schedule(models.Model):
+    mentor = models.ForeignKey(
+        Mentor,
+        on_delete=models.CASCADE,
+        verbose_name="Ментор",
+        related_name="schedules"
+    )
+    course = models.ForeignKey(
+        Cursues,
+        on_delete=models.CASCADE,
+        verbose_name="Курс",
+        related_name="schedules"
+    )
+    time_slot = models.ForeignKey(
+        TimeSlot,
+        on_delete=models.CASCADE,
+        verbose_name="Временной слот",
+        related_name="schedules"
+    )
+    room = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Кабинет/Комната"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Активно")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
+
+    def __str__(self):
+        return f"{self.mentor.user.username} - {self.course.title} - {self.time_slot}"
+
+    class Meta:
+        verbose_name = "Расписание"
+        verbose_name_plural = "Расписания"
+        unique_together = ['mentor', 'course', 'time_slot']
+        ordering = ['time_slot__day_of_week', 'time_slot__start_time']
 
 
 class AboutPage(models.Model):

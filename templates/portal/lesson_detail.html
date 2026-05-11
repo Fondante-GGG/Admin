@@ -1,0 +1,363 @@
+{% extends "portal/mentor_base.html" %}
+
+{% block title %}{{ lesson.title }} — Кабинет ментора{% endblock %}
+{% block page_title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+  {% if success %}
+    <div class="success-message" style="background: #10b981; color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+      ✓ Урок успешно обновлен
+    </div>
+  {% endif %}
+  
+  <form method="post" class="lesson-form" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Блок 1: Информация об уроке -->
+    <div class="portal-card">
+      <div class="card-header">
+        <h3 style="color: #fff; margin: 0;">Информация об уроке</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="title" style="color: #9ca3af; display: block; margin-bottom: 8px;">Тема урока</label>
+          <input type="text" id="title" name="title" value="{{ lesson.title }}" 
+                 class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="description" style="color: #9ca3af; display: block; margin-bottom: 8px;">Описание урока</label>
+          <textarea id="description" name="description" rows="4" 
+                    class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; resize: vertical;">{{ lesson.description }}</textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date" style="color: #9ca3af; display: block; margin-bottom: 8px;">Дата урока</label>
+            <input type="date" id="date" name="date" value="{{ lesson.date|date:'Y-m-d'|default:'' }}" 
+                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
+          </div>
+          
+          <div class="form-group">
+            <label for="deadline" style="color: #9ca3af; display: block; margin-bottom: 8px;">Дедлайн домашнего задания</label>
+            <input type="datetime-local" id="deadline" name="deadline" value="{{ lesson.deadline|date:'Y-m-d\TH:i'|default:'' }}" 
+                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
+          </div>
+        </div>
+        
+        <!-- Ссылки на уроки -->
+        <div class="links-section">
+          <h4 style="color: #fff; margin-bottom: 12px;">
+            Ссылки на уроки 
+            <span style="color: #6b7280; font-size: 14px; font-weight: normal;">(максимум 5)</span>
+          </h4>
+          
+          <div id="links-container">
+            {% for link in links %}
+              <div class="link-row" data-index="{{ forloop.counter0 }}">
+                <input type="text" name="link_title" value="{{ link.title }}" 
+                       placeholder="Название ссылки" class="form-input link-input">
+                <input type="url" name="link_url" value="{{ link.url }}" 
+                       placeholder="https://example.com" class="form-input link-input">
+                <button type="button" class="btn-remove" onclick="removeLink(this)">✕</button>
+              </div>
+            {% endfor %}
+          </div>
+          
+          <div class="link-row" data-index="{{ links|length }}">
+            <input type="text" name="link_title" 
+                   placeholder="Название ссылки" class="form-input link-input">
+            <input type="url" name="link_url" 
+                   placeholder="https://example.com" class="form-input link-input">
+            <button type="button" class="btn-remove" onclick="removeLink(this)">✕</button>
+          </div>
+          
+          <button type="button" class="btn-add" onclick="addLink()" 
+                  style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 12px;">
+            + Добавить ссылку
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Блок 2: Домашние задания -->
+    <div class="portal-card" style="margin-top: 24px;">
+      <div class="card-header">
+        <h3 style="color: #fff; margin: 0;">Домашние задания</h3>
+      </div>
+      <div class="card-body">
+        {% for homework in homeworks %}
+          <div class="homework-item">
+            <div class="homework-header">
+              <strong style="color: #fff;">{{ homework.title }}</strong>
+              <span style="color: #6b7280; font-size: 12px;">{{ homework.created_at|date:'d.m.Y H:i' }}</span>
+            </div>
+            <div class="homework-description" style="color: #d1d5db; margin: 8px 0;">{{ homework.description }}</div>
+            {% if homework.file %}
+              <div class="homework-file">
+                <a href="{{ homework.file.url }}" target="_blank" 
+                   style="color: #667eea; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z"/>
+                    <polyline points="14 2 14 8 22 8"/>
+                  </svg>
+                  {{ homework.file.name|slice:"20:" }}
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p style="color: #6b7280;">Домашние задания не загружены</p>
+        {% endfor %}
+        
+        <div class="homework-upload" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <h4 style="color: #fff; margin-bottom: 12px;">Загрузить новое домашнее задание</h4>
+          <div class="form-group">
+            <input type="file" id="homework_file" name="homework_file" 
+                   class="form-input" style="width: 100%; padding: 8px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
+          </div>
+          <div class="form-group">
+            <input type="text" name="homework_title" placeholder="Название задания" 
+                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
+          </div>
+          <div class="form-group">
+            <textarea name="homework_description" placeholder="Описание задания" rows="3" 
+                      class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; resize: vertical;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Блок 3: Таблица студентов -->
+    {% if students %}
+    <div class="portal-card" style="margin-top: 24px;">
+      <div class="card-header">
+        <h3 style="color: #fff; margin: 0;">Студенты курса</h3>
+      </div>
+      <div class="card-body">
+        <div class="students-table">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: rgba(255,255,255,0.05);">
+                <th style="padding: 12px; text-align: left; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">Студент</th>
+                <th style="padding: 12px; text-align: center; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">Оценка</th>
+                <th style="padding: 12px; text-align: left; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">Комментарий</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in students %}
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 12px; color: #fff;">
+                  {{ student.user.first_name }} {{ student.user.last_name }}
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                  <select name="grade_{{ student.id }}" class="grade-select" 
+                          style="background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; padding: 4px;">
+                    <option value="">—</option>
+                    <option value="0" {% for grade in grades %}{% if grade.student.id == student.id and grade.grade == 0 %}selected{% endif %}{% endfor %}>0</option>
+                    <option value="1" {% for grade in grades %}{% if grade.student.id == student.id and grade.grade == 1 %}selected{% endif %}{% endfor %}>1</option>
+                  </select>
+                </td>
+                <td style="padding: 12px;">
+                  <input type="text" name="comment_{{ student.id }}" 
+                         {% for grade in grades %}{% if grade.student.id == student.id %}value="{{ grade.comment|default:'' }}"{% endif %}{% endfor %}
+                         class="form-input" style="width: 100%; padding: 8px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff;" placeholder="Комментарий...">
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Кнопка сохранения -->
+    <div class="form-actions" style="margin-top: 32px;">
+      <button type="submit" class="btn-save" 
+              style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s;">
+        Сохранить изменения
+      </button>
+    </div>
+  </form>
+  
+  <style>
+    /* Стили для карточек */
+    .card-header {
+      background: rgba(102, 126, 234, 0.1);
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 12px 12px 0 0;
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+    
+    .form-input {
+      transition: all 0.15s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .btn-save:hover {
+      background: #5a67d8;
+    }
+    
+    /* Стили для ссылок */
+    .links-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .link-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    
+    .link-input {
+      flex: 1;
+      padding: 10px !important;
+    }
+    
+    .btn-remove {
+      background: #ef4444;
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .btn-remove:hover {
+      background: #dc2626;
+    }
+    
+    .btn-add:hover {
+      background: #5a67d8;
+    }
+    
+    /* Стили для домашних заданий */
+    .homework-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .homework-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .homework-file a {
+      background: rgba(102, 126, 234, 0.1);
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    
+    .homework-file a:hover {
+      background: rgba(102, 126, 234, 0.2);
+    }
+    
+    .homework-upload {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Стили для таблицы студентов */
+    .students-table {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .grade-select {
+      min-width: 80px;
+    }
+    
+    /* Адаптивность */
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .link-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .students-table {
+        overflow-x: auto;
+      }
+    }
+  </style>
+  
+  <script>
+    let linkCount = {{ links|length }};
+    
+    function addLink() {
+      if (linkCount >= 5) {
+        alert('Максимум 5 ссылок');
+        return;
+      }
+      
+      const container = document.getElementById('links-container');
+      const newLink = document.createElement('div');
+      newLink.className = 'link-row';
+      newLink.dataset.index = linkCount;
+      newLink.innerHTML = `
+        <input type="text" name="link_title" placeholder="Название ссылки" class="form-input link-input">
+        <input type="url" name="link_url" placeholder="https://example.com" class="form-input link-input">
+        <button type="button" class="btn-remove" onclick="removeLink(this)">✕</button>
+      `;
+      container.appendChild(newLink);
+      linkCount++;
+    }
+    
+    function removeLink(button) {
+      button.parentElement.remove();
+      updateLinkIndices();
+    }
+    
+    function updateLinkIndices() {
+      const links = document.querySelectorAll('.link-row');
+      links.forEach((link, index) => {
+        link.dataset.index = index;
+      });
+      linkCount = links.length;
+    }
+  </script>
+{% endblock %}

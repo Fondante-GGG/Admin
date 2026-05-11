@@ -6,6 +6,174 @@
 {% block content %}
 <div class="portal-card">
   <h2>Табель успеваемости</h2>
-  <p>Оценки и посещаемость будут здесь.</p>
+  
+  {% if grades %}
+    <div class="grades-table">
+      <table class="grade-table">
+        <thead>
+          <tr>
+            <th>Студент</th>
+            <th>Урок</th>
+            <th>Курс</th>
+            <th>Оценка</th>
+            <th>Дата</th>
+            <th>Комментарий</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grade in grades %}
+            <tr class="grade-row">
+              <td class="student-name">
+                {{ grade.student.user.get_full_name|default:grade.student.user.username }}
+              </td>
+              <td class="lesson-title">
+                {% if grade.lesson %}
+                  {{ grade.lesson.title }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="course-name">
+                {% if grade.lesson.course %}
+                  {{ grade.lesson.course.title }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="grade-value">
+                {% if grade.grade %}
+                  <span class="grade-badge {% if grade.grade >= 4 %}excellent{% elif grade.grade >= 3 %}good{% else %}poor{% endif %}">
+                    {{ grade.grade }}
+                  </span>
+                {% else %}
+                  <span class="no-grade">—</span>
+                {% endif %}
+              </td>
+              <td class="grade-date">
+                {{ grade.created_at|date:"d.m.Y H:i" }}
+              </td>
+              <td class="grade-comment">
+                {% if grade.comment %}
+                  {{ grade.comment|truncatechars:50 }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>Нет оценок{% if request.GET.group_id %} для выбранной группы{% endif %}.</p>
+    </div>
+  {% endif %}
 </div>
+
+<style>
+.grades-table {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.grade-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.grade-table th,
+.grade-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.grade-table th {
+  background: rgba(255,255,255,0.05);
+  color: #f3f4f6;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.grade-table td {
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.grade-row:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.student-name {
+  font-weight: 500;
+  color: #fff;
+  min-width: 150px;
+}
+
+.lesson-title {
+  max-width: 200px;
+}
+
+.course-name {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.grade-value {
+  text-align: center;
+  min-width: 80px;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.grade-badge.excellent {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.grade-badge.good {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.grade-badge.poor {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.no-grade {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.grade-date {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.grade-comment {
+  max-width: 200px;
+  font-size: 13px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+</style>
 {% endblock %}

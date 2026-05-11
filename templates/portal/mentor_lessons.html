@@ -9,7 +9,7 @@
     <select class="course-dropdown" id="courseDropdown">
       <option value="">Выберите курс</option>
       {% for course in all_courses %}
-        <option value="{{ course.id }}" data-lessons="{{ course.lessons_per_month|default:15 }}">
+        <option value="{{ course.id }}">
           {{ course.title }}
         </option>
       {% endfor %}
@@ -26,6 +26,24 @@
       <p style="color: #9ca3af;">Выберите курс для отображения уроков</p>
     </div>
   </div>
+
+  <!-- Данные уроков для JavaScript -->
+  <script type="application/json" id="lessonsData">
+    {
+      {% for course, course_lessons in lessons_by_course.items %}
+        "{{ course.id }}": [
+          {% for lesson in course_lessons %}
+            {
+              "id": {{ lesson.id }},
+              "title": "{{ lesson.title|escapejs }}",
+              "is_additional": {{ lesson.is_additional|yesno:"true,false" }},
+              "has_links": {% if lesson.links.exists %}true{% else %}false{% endif %}
+            }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    }
+  </script>
 
   <!-- Контрольные работы -->
   <div class="section-header">
@@ -90,22 +108,51 @@
       background: #242731 !important;
       border: 1px solid rgba(255,255,255,0.1) !important;
     }
+    .lesson-active {
+      background: #667eea !important;
+      border: 1px solid #667eea !important;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .lesson-active:hover {
+      background: #5a67d8 !important;
+      border-color: #5a67d8 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    .lesson-inactive {
+      background: #1f2937 !important;
+      border: 1px solid rgba(255,255,255,0.05) !important;
+      opacity: 0.6;
+    }
+    .lesson-inactive:hover {
+      background: #374151 !important;
+      opacity: 0.8;
+    }
   </style>
   
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const courseDropdown = document.getElementById('courseDropdown');
       const lessonsContainer = document.getElementById('lessonsContainer');
+      const lessonsDataElement = document.getElementById('lessonsData');
+      
+      // Получаем данные уроков из JSON
+      let lessonsData = {};
+      try {
+        lessonsData = JSON.parse(lessonsDataElement.textContent);
+      } catch (e) {
+        console.error('Error parsing lessons data:', e);
+      }
       
       // Функция для генерации уроков
-      function generateLessons(lessonsCount) {
+      function generateLessons(lessons) {
         let lessonsHTML = '';
-        for (let i = 1; i <= lessonsCount; i++) {
-          const isExtra = i > 5;
-          lessonsHTML += '<div class="dash-card lesson' + (isExtra ? ' lesson-extra' : '') + '"><div><div class="card-title">Урок №' + i + '</div></div></div>';
-        }
-        // Добавляем дополнительный урок
-        lessonsHTML += '<div class="dash-card lesson lesson-extra"><div><div class="card-title">Доп. Урок</div></div></div>';
+        lessons.forEach(lesson => {
+          const isExtra = lesson.is_additional;
+          const hasLinks = lesson.has_links;
+          let cssClass = 'dash-card lesson' + (isExtra ? ' lesson-extra' : '') + (hasLinks ? ' lesson-active' : ' lesson-inactive');
+          lessonsHTML += '<a href="/portal/mentor/lesson/' + lesson.id + '/" class="' + cssClass + '" style="text-decoration: none; display: block;"><div><div class="card-title">' + lesson.title + '</div></div></a>';
+        });
         return lessonsHTML;
       }
       
@@ -116,10 +163,14 @@
           return;
         }
         
-        const selectedOption = courseDropdown.options[courseDropdown.selectedIndex];
-        const lessonsCount = parseInt(selectedOption.dataset.lessons) || 15;
+        const lessons = lessonsData[courseId] || [];
         
-        lessonsContainer.innerHTML = generateLessons(lessonsCount);
+        if (lessons.length === 0) {
+          lessonsContainer.innerHTML = '<div class="portal-card" style="min-width: 300px;"><p style="color: #9ca3af;">Уроки для этого курса не найдены</p></div>';
+          return;
+        }
+        
+        lessonsContainer.innerHTML = generateLessons(lessons);
         
         // Сохраняем выбранный курс в localStorage
         localStorage.setItem('selectedCourseId', courseId);

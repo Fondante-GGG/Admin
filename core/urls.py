@@ -7,6 +7,7 @@ from app.settings.views import (
     portal_login,
     mentor_dashboard, mentor_lessons, mentor_homework, mentor_schedule,
     mentor_gradebook, mentor_students, mentor_curriculum, mentor_profile,
+    lesson_detail,
     student_dashboard, parent_dashboard,
     error_404, error_500, error_403, error_401,
 )
@@ -16,6 +17,7 @@ urlpatterns = [
     path('login/', portal_login, name='portal_login'),
     path('portal/mentor/', mentor_dashboard, name='mentor_dashboard'),
     path('portal/mentor/lessons/', mentor_lessons, name='mentor_lessons'),
+    path('portal/mentor/lesson/<int:lesson_id>/', lesson_detail, name='lesson_detail'),
     path('portal/mentor/homework/', mentor_homework, name='mentor_homework'),
     path('portal/mentor/schedule/', mentor_schedule, name='mentor_schedule'),
     path('portal/mentor/gradebook/', mentor_gradebook, name='mentor_gradebook'),
