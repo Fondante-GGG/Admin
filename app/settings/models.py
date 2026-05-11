@@ -183,6 +183,14 @@ class Student(models.Model):
         default=Status.ACTIVE,
         verbose_name="Статус",
     )
+    middle_name = models.CharField("Отчество", max_length=150, blank=True, default="")
+    gender = models.CharField("Пол", max_length=10, blank=True, default="", choices=[("", "—"), ("М", "Мужской"), ("Ж", "Женский")])
+    birth_date = models.DateField("Дата рождения", null=True, blank=True)
+    telegram_nick = models.CharField("Ник в Telegram", max_length=100, blank=True, default="")
+    from_where = models.CharField("Откуда", max_length=255, blank=True, default="")
+    documents_folder = models.CharField("Папка с документами", max_length=255, blank=True, default="")
+    parent_phone = models.CharField("Номер родителя", max_length=20, blank=True, default="")
+    note = models.TextField("Примечание", blank=True, default="")
     is_archived = models.BooleanField(default=False, verbose_name="В архиве")
     archived_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата архивации")
     created_at = models.DateTimeField(
@@ -196,6 +204,39 @@ class Student(models.Model):
     class Meta:
         verbose_name = "Студент"
         verbose_name_plural = "Студенты"
+
+
+class Parent(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Организация",
+        related_name="parents",
+    )
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="parent_profile",
+        verbose_name="Пользователь",
+    )
+    students = models.ManyToManyField(
+        Student,
+        blank=True,
+        verbose_name="Студенты",
+        related_name="parents",
+    )
+    phone_number = models.CharField("Телефон", max_length=20, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+    is_archived = models.BooleanField(default=False, verbose_name="В архиве")
+
+    def __str__(self):
+        return f"{self.user.username}"
+
+    class Meta:
+        verbose_name = "Родитель"
+        verbose_name_plural = "Родители"
 
 
 class Cursues(ArchiveBase):
@@ -219,6 +260,8 @@ class Cursues(ArchiveBase):
         verbose_name="Тип курса",
     )
     start = models.DateField(verbose_name="Начало курса")
+    end = models.DateField(verbose_name="Конец курса", null=True, blank=True)
+    lessons_per_month = models.PositiveIntegerField(default=15, verbose_name="Уроков в месяц")
     duration_days = models.PositiveIntegerField(default=0, verbose_name="Длительность (дней)")
     status = models.CharField(choices=STATUS_CURSUES, max_length=155, verbose_name="Статус")
     subject = models.CharField(max_length=155, blank=True, verbose_name="Предмет")

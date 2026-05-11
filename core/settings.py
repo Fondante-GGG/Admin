@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'app.settings.middleware.PortalErrorMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -154,6 +155,7 @@ JAZZMIN_SETTINGS = {
     "order_with_respect_to": [
         "settings",
         "settings.organization",
+        "settings.parent",
         "settings.cursues",
         "settings.groupcourse",
         "settings.individualcourse",
@@ -189,6 +191,7 @@ JAZZMIN_SETTINGS = {
         "settings.mentor": "fas fa-chalkboard-teacher",
         "settings.cursues": "fas fa-book",
         "settings.organization": "fas fa-building",
+        "settings.parent": "fas fa-user-friends",
         "settings.lead": "fas fa-user-plus",
         "settings.payment": "fas fa-coins",
         "settings.salary": "fas fa-dollar-sign",

@@ -23,6 +23,7 @@
     <button type="button" data-st-toggle-pay-filters class="crm-btn crm-btn--outline">Фильтры оплат ▾</button>
     <a href="{% url 'crm_admin:students_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">CSV</a>
     <a href="{% url 'crm_admin:students_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="crm-btn crm-btn--outline">PDF</a>
+    <button type="button" onclick="document.getElementById('student-create-modal').classList.remove('is-hidden')" class="crm-btn crm-btn--primary">+ Создать студента</button>
   </div>
 
   <div data-st-pay-filters class="crm-filter-panel is-hidden">
@@ -63,6 +64,85 @@
   </div>
 
   {{ block.super }}
+</div>
+
+<!-- Модальное окно создания студента -->
+<div id="student-create-modal" class="crm-drawer is-hidden" style="z-index:9999;">
+  <div class="crm-drawer__backdrop" onclick="document.getElementById('student-create-modal').classList.add('is-hidden')"></div>
+  <div class="crm-drawer__panel" style="max-width:560px; padding:28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="font-size:20px; font-weight:800; margin:0;">Новый студент</h2>
+      <button type="button" onclick="document.getElementById('student-create-modal').classList.add('is-hidden')" style="background:none; border:none; font-size:22px; cursor:pointer;">&times;</button>
+    </div>
+    <form method="post" action="{% url 'crm_admin:student_quick_create' %}">
+      {% csrf_token %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Имя*
+          <input type="text" name="first_name" required style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Фамилия*
+          <input type="text" name="last_name" required style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Отчество
+          <input type="text" name="middle_name" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Пол
+          <select name="gender" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+            <option value="">—</option>
+            <option value="М">Мужской</option>
+            <option value="Ж">Женский</option>
+          </select>
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Номер телефона
+          <input type="text" name="phone_number" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Email
+          <input type="email" name="email" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Ник в Telegram
+          <input type="text" name="telegram_nick" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Откуда
+          <input type="text" name="from_where" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Папка с документами
+          <input type="text" name="documents_folder" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Номер родителя
+          <input type="text" name="parent_phone" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Дата рождения
+          <input type="date" name="birth_date" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Статус*
+          <select name="status" required style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+            <option value="active">Активный</option>
+            <option value="inactive">Неактивный</option>
+            <option value="left">Ушел</option>
+            <option value="frozen">Замороженный</option>
+          </select>
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Пароль
+          <input type="text" name="password" placeholder="Оставьте пустым — сгенерируется автоматически" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+      </div>
+      <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151; margin-top:14px;">Примечание
+        <textarea name="note" rows="2" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; resize:vertical;"></textarea>
+      </label>
+      <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151; margin-top:14px;">Курс (зачислить)
+        <select name="course_id" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+          <option value="">— Выберите курс —</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}">{{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+        <button type="button" onclick="document.getElementById('student-create-modal').classList.add('is-hidden')" class="crm-btn crm-btn--outline">Отмена</button>
+        <button type="submit" class="crm-btn crm-btn--primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div data-st-drawer class="crm-drawer is-hidden" data-drawer-url-template="{% url 'crm_admin:student_drawer' 1 %}">

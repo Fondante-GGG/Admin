@@ -1,0 +1,59 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/students.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="crm-dashboard">
+  <h1>Родители</h1>
+
+  <div class="crm-toolbar">
+    <button type="button" onclick="document.getElementById('parent-create-modal').classList.remove('is-hidden')" class="crm-btn crm-btn--primary">+ Создать родителя</button>
+  </div>
+
+  {{ block.super }}
+</div>
+
+<!-- Модальное окно создания родителя -->
+<div id="parent-create-modal" class="crm-drawer is-hidden" style="z-index:9999;">
+  <div class="crm-drawer__backdrop" onclick="document.getElementById('parent-create-modal').classList.add('is-hidden')"></div>
+  <div class="crm-drawer__panel" style="max-width:520px; padding:28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="font-size:20px; font-weight:800; margin:0;">Новый родитель</h2>
+      <button type="button" onclick="document.getElementById('parent-create-modal').classList.add('is-hidden')" style="background:none; border:none; font-size:22px; cursor:pointer;">&times;</button>
+    </div>
+    <form method="post" action="{% url 'crm_admin:parent_quick_create' %}">
+      {% csrf_token %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Имя*
+          <input type="text" name="first_name" required style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Фамилия*
+          <input type="text" name="last_name" required style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Телефон
+          <input type="text" name="phone_number" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151;">Пароль
+          <input type="text" name="password" placeholder="Оставьте пустым — сгенерируется" style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px;">
+        </label>
+      </div>
+      <label style="display:flex; flex-direction:column; gap:6px; font-size:13px; color:#374151; margin-top:14px;">Студенты
+        <select name="students" multiple style="padding:10px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:14px; min-height:100px;">
+          {% for s in cl.result_list %}
+          <option value="{{ s.pk }}">{{ s.user.get_full_name|default:s.user.username }}</option>
+          {% endfor %}
+        </select>
+        <span style="font-size:11px; color:#9ca3af;">Удерживайте Ctrl для выбора нескольких</span>
+      </label>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+        <button type="button" onclick="document.getElementById('parent-create-modal').classList.add('is-hidden')" class="crm-btn crm-btn--outline">Отмена</button>
+        <button type="submit" class="crm-btn crm-btn--primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

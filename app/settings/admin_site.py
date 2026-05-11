@@ -3,7 +3,9 @@ from __future__ import annotations
 import csv
 import io
 import json
+import random
 import re
+import string
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime, timedelta
@@ -43,6 +45,7 @@ from .models import (
     Enrollment,
     Lead,
     Mentor,
+    Parent,
     Payment,
     Salary,
     Student,
@@ -51,6 +54,11 @@ from .models import (
     User,
 )
 from app.config.models import CRMAbout
+
+
+def _generate_password(length: int = 8) -> str:
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choice(chars) for _ in range(length))
 
 
 @dataclass(frozen=True)
@@ -719,6 +727,8 @@ class CRMAdminSite(AdminSite):
             path("salary/<int:salary_id>/delete/", self.admin_view(self.salary_delete), name="salary_delete"),
             path("mentors/<int:mentor_id>/drawer/", self.admin_view(self.mentor_drawer), name="mentor_drawer"),
             path("mentors/create/", self.admin_view(self.mentor_quick_create), name="mentor_quick_create"),
+            path("students/create/", self.admin_view(self.student_quick_create), name="student_quick_create"),
+            path("parents/create/", self.admin_view(self.parent_quick_create), name="parent_quick_create"),
             path("about/", self.admin_view(self.about_view), name="about"),
             path("settings/", self.admin_view(self.settings_index), name="settings_index"),
             path("accounting/meta/", self.admin_view(self.accounting_meta), name="accounting_meta"),
@@ -1698,7 +1708,8 @@ class CRMAdminSite(AdminSite):
                     role="Ментор",
                     is_staff=False,
                 )
-                user.set_unusable_password()
+                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                user.set_password(raw_password)
                 user.save()
                 mentor = Mentor(
                     user=user,
@@ -1732,7 +1743,111 @@ class CRMAdminSite(AdminSite):
         except Exception as exc:
             messages.error(request, f"Не удалось создать ментора: {exc}")
             return redirect(cl_url)
-        messages.success(request, "Ментор создан.")
+        messages.success(request, f"Ментор создан. Логин: {username} | Пароль: {raw_password}")
+        return redirect(cl_url)
+
+    def student_quick_create(self, request):
+        if request.method != "POST":
+            return redirect(reverse(f"{self.name}:settings_student_changelist"))
+        cl_url = reverse(f"{self.name}:settings_student_changelist")
+        first_name = (request.POST.get("first_name") or "").strip()
+        last_name = (request.POST.get("last_name") or "").strip()
+        phone = (request.POST.get("phone_number") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        middle_name = (request.POST.get("middle_name") or "").strip()
+        gender = (request.POST.get("gender") or "").strip()
+        birth_date = parse_date((request.POST.get("birth_date") or "").strip())
+        telegram_nick = (request.POST.get("telegram_nick") or "").strip()
+        from_where = (request.POST.get("from_where") or "").strip()
+        documents_folder = (request.POST.get("documents_folder") or "").strip()
+        parent_phone = (request.POST.get("parent_phone") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+        status = (request.POST.get("status") or "active").strip()
+        course_id = (request.POST.get("course_id") or "").strip()
+
+        if not first_name or not last_name:
+            messages.error(request, "Укажите имя и фамилию.")
+            return redirect(cl_url)
+        base_user = slugify(f"{first_name}-{last_name}")[:40] or "student"
+        username = base_user
+        n = 0
+        while User.objects.filter(username=username).exists():
+            n += 1
+            username = f"{base_user}{n}"
+        try:
+            with transaction.atomic():
+                user = User(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone or "",
+                    email=email or "",
+                    role="Студент",
+                    is_staff=False,
+                )
+                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                user.set_password(raw_password)
+                user.save()
+                student = Student.objects.create(
+                    user=user,
+                    status=status if status in {"active", "inactive", "left", "frozen"} else "active",
+                    middle_name=middle_name,
+                    gender=gender,
+                    birth_date=birth_date,
+                    telegram_nick=telegram_nick,
+                    from_where=from_where,
+                    documents_folder=documents_folder,
+                    parent_phone=parent_phone,
+                    note=note,
+                )
+                if course_id and course_id.isdigit():
+                    course = Cursues.objects.filter(pk=int(course_id)).first()
+                    if course:
+                        Enrollment.objects.get_or_create(student=student, course=course)
+                        course.students.add(student)
+        except Exception as exc:
+            messages.error(request, f"Не удалось создать студента: {exc}")
+            return redirect(cl_url)
+        messages.success(request, f"Студент создан. Логин: {username} | Пароль: {raw_password}")
+        return redirect(cl_url)
+
+    def parent_quick_create(self, request):
+        if request.method != "POST":
+            return redirect(reverse(f"{self.name}:settings_parent_changelist"))
+        cl_url = reverse(f"{self.name}:settings_parent_changelist")
+        first_name = (request.POST.get("first_name") or "").strip()
+        last_name = (request.POST.get("last_name") or "").strip()
+        phone = (request.POST.get("phone_number") or "").strip()
+        student_ids = request.POST.getlist("students")
+        if not first_name or not last_name:
+            messages.error(request, "Укажите имя и фамилию.")
+            return redirect(cl_url)
+        base_user = slugify(f"{first_name}-{last_name}")[:40] or "parent"
+        username = base_user
+        n = 0
+        while User.objects.filter(username=username).exists():
+            n += 1
+            username = f"{base_user}{n}"
+        try:
+            with transaction.atomic():
+                user = User(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone or "",
+                    role="Родитель",
+                    is_staff=False,
+                )
+                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                user.set_password(raw_password)
+                user.save()
+                parent = Parent.objects.create(user=user, phone_number=phone or "")
+                if student_ids:
+                    parent.students.set(Student.objects.filter(pk__in=student_ids))
+        except Exception as exc:
+            messages.error(request, f"Не удалось создать родителя: {exc}")
+            return redirect(cl_url)
+        messages.success(request, f"Родитель создан. Логин: {username} | Пароль: {raw_password}")
         return redirect(cl_url)
 
     def students_csv(self, request):

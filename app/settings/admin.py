@@ -36,6 +36,7 @@ from .models import (
     IndividualCourse,
     Mentor,
     Organization,
+    Parent,
     Payment,
     TuitionPayment,
     Salary,
@@ -163,6 +164,21 @@ class OrganizationAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Parent, site=crm_admin_site)
+class ParentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
+    change_list_template = "admin/parents_changelist.html"
+    list_display = ("user", "phone_number", "students_list", "created_at")
+    list_filter = ("is_archived", OrganizationFilter)
+    search_fields = ("user__username", "user__first_name", "user__last_name", "phone_number")
+    autocomplete_fields = ("user", "students")
+    filter_horizontal = ("students",)
+
+    def students_list(self, obj: Parent):
+        return ", ".join(str(s.user.get_full_name() or s.user.username) for s in obj.students.all()[:5]) or "—"
+    students_list.short_description = "Студенты"
 
 
 @admin.register(User, site=crm_admin_site)
@@ -494,13 +510,20 @@ class MentorAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdmi
 @admin.register(Cursues, site=crm_admin_site)
 class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
-    list_display = ("title", "course_type", "subject", "start", "status", "price", "students_badge")
+    list_display = ("title", "course_type", "subject", "start", "end", "lessons_per_month", "status", "price", "students_badge")
     list_filter = ("course_type", "status", "subject", ArchiveFilter)
     search_fields = ("title",)
     filter_horizontal = ("students", "mentors")
     change_form_template = "admin/course_change_form.html"
     actions = (archive_selected, unarchive_selected)
     list_per_page = 20
+    fieldsets = (
+        (None, {"fields": ("title", "course_type", "subject", "status")}),
+        ("Сроки", {"fields": ("start", "end", "duration_days", "lessons_per_month")}),
+        ("Детали", {"fields": ("price", "capacity", "room", "schedule_note")}),
+        ("Участники", {"fields": ("mentors", "students")}),
+        ("Организация", {"fields": ("organization",)}),
+    )
 
     def students_badge(self, obj: Cursues):
         count = obj.students.count()
