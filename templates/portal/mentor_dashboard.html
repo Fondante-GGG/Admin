@@ -4,26 +4,63 @@
 {% block page_title %}Главная{% endblock %}
 
 {% block content %}
-<div class="portal-grid">
-  <div class="portal-stat">
-    <div class="value">—</div>
-    <div class="label">Моих курсов</div>
+  <div class="section-header">
+    <span class="section-title">Домашние задания</span>
+    <a href="{% url 'mentor_homework' %}" class="view-all">Смотреть все</a>
   </div>
-  <div class="portal-stat">
-    <div class="value">—</div>
-    <div class="label">Моих студентов</div>
+  <div class="card-row">
+    <div class="dash-card homework">
+      <div>
+        <div class="card-title">Урок №3</div>
+        <div class="card-subtitle">Асылбеков Нурдаулет</div>
+      </div>
+    </div>
+    <div class="dash-card homework">
+      <div>
+        <div class="card-title">Урок №2</div>
+        <div class="card-subtitle">Асылбеков Нурдаулет</div>
+      </div>
+    </div>
+    <div class="dash-card homework">
+      <div>
+        <div class="card-title">Урок №1</div>
+        <div class="card-subtitle">Асылбеков Нурдаулет</div>
+      </div>
+    </div>
   </div>
-  <div class="portal-stat">
-    <div class="value">—</div>
-    <div class="label">Занятий сегодня</div>
+
+  <div class="section-header">
+    <span class="section-title">Уроки</span>
+    <a href="{% url 'mentor_lessons' %}" class="view-all">Смотреть все</a>
   </div>
-</div>
-<div class="portal-card">
-  <h2>Мои курсы</h2>
-  <p>Список курсов и студентов будет здесь.</p>
-</div>
-<div class="portal-card">
-  <h2>Расписание</h2>
-  <p>Календарь занятий будет здесь.</p>
-</div>
+  <div class="card-row">
+    <div class="dash-card lesson">
+      <div>
+        <div class="card-title">Урок №1</div>
+      </div>
+    </div>
+    <div class="dash-card lesson">
+      <div>
+        <div class="card-title">Урок №2</div>
+      </div>
+    </div>
+    <div class="dash-card lesson">
+      <div>
+        <div class="card-title">Урок №3</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Контрольные работы</span>
+    <a href="{% url 'mentor_gradebook' %}" class="view-all">Смотреть все</a>
+  </div>
+  <div class="card-row">
+    <div class="dash-card exam">
+      <div>
+        <div class="card-title">Контрольная работа №1</div>
+      </div>
+      <div class="card-deadline">Дедлайн: 07.05.2026 &nbsp; 23:59</div>
+    </div>
+  </div>
 {% endblock %}

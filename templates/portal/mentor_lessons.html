@@ -4,8 +4,165 @@
 {% block page_title %}Уроки{% endblock %}
 
 {% block content %}
-<div class="portal-card">
-  <h2>Мои уроки</h2>
-  <p>Список уроков будет здесь.</p>
-</div>
+  <!-- Dropdown для выбора курса -->
+  <div class="course-selector">
+    <select class="course-dropdown" id="courseDropdown">
+      <option value="">Выберите курс</option>
+      {% for course in all_courses %}
+        <option value="{{ course.id }}" data-lessons="{{ course.lessons_per_month|default:15 }}">
+          {{ course.title }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Уроки выбранного курса -->
+  <div class="section-header">
+    <span class="section-title">Уроки</span>
+  </div>
+  <div class="card-row" id="lessonsContainer">
+    <!-- Уроки будут загружены через JavaScript -->
+    <div class="portal-card" style="min-width: 300px;">
+      <p style="color: #9ca3af;">Выберите курс для отображения уроков</p>
+    </div>
+  </div>
+
+  <!-- Контрольные работы -->
+  <div class="section-header">
+    <span class="section-title">Контрольные работы</span>
+    <button class="btn-create" data-url="{% url 'mentor_gradebook' %}">Создать контрольную работу</button>
+  </div>
+  <div class="card-row">
+    {% for exam in exams %}
+      <div class="dash-card exam">
+        <div>
+          <div class="card-title">{{ exam.title }}</div>
+        </div>
+        <div class="card-deadline">Дедлайн: {{ exam.deadline|date:"d.m.Y H:i" }}</div>
+      </div>
+    {% empty %}
+      <div class="portal-card" style="min-width: 300px;">
+        <p style="color: #9ca3af;">Контрольные работы не найдены</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <style>
+    .course-selector {
+      margin-bottom: 24px;
+    }
+    .course-dropdown {
+      width: 100%;
+      max-width: 400px;
+      padding: 12px 16px;
+      background: #242731;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .course-dropdown:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .course-dropdown option {
+      background: #242731;
+      color: #fff;
+    }
+    .btn-create {
+      background: #667eea;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-create:hover {
+      background: #5a67d8;
+    }
+    .lesson-extra {
+      background: #242731 !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+  </style>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const courseDropdown = document.getElementById('courseDropdown');
+      const lessonsContainer = document.getElementById('lessonsContainer');
+      
+      // Функция для генерации уроков
+      function generateLessons(lessonsCount) {
+        let lessonsHTML = '';
+        for (let i = 1; i <= lessonsCount; i++) {
+          const isExtra = i > 5;
+          lessonsHTML += '<div class="dash-card lesson' + (isExtra ? ' lesson-extra' : '') + '"><div><div class="card-title">Урок №' + i + '</div></div></div>';
+        }
+        // Добавляем дополнительный урок
+        lessonsHTML += '<div class="dash-card lesson lesson-extra"><div><div class="card-title">Доп. Урок</div></div></div>';
+        return lessonsHTML;
+      }
+      
+      // Функция для загрузки уроков
+      function loadLessons(courseId) {
+        if (!courseId) {
+          lessonsContainer.innerHTML = '<div class="portal-card" style="min-width: 300px;"><p style="color: #9ca3af;">Выберите курс для отображения уроков</p></div>';
+          return;
+        }
+        
+        const selectedOption = courseDropdown.options[courseDropdown.selectedIndex];
+        const lessonsCount = parseInt(selectedOption.dataset.lessons) || 15;
+        
+        lessonsContainer.innerHTML = generateLessons(lessonsCount);
+        
+        // Сохраняем выбранный курс в localStorage
+        localStorage.setItem('selectedCourseId', courseId);
+      }
+      
+      // Обработчик изменения dropdown
+      courseDropdown.addEventListener('change', function() {
+        loadLessons(this.value);
+      });
+      
+      // Автоматический выбор курса при загрузке страницы
+      function autoSelectCourse() {
+        const savedCourseId = localStorage.getItem('selectedCourseId');
+        
+        // Сначала пробуем восстановить сохраненный курс
+        if (savedCourseId) {
+          // Проверяем, есть ли сохраненный курс в списке
+          for (let i = 0; i < courseDropdown.options.length; i++) {
+            if (courseDropdown.options[i].value === savedCourseId) {
+              courseDropdown.value = savedCourseId;
+              loadLessons(savedCourseId);
+              return;
+            }
+          }
+        }
+        
+        // Если сохраненный курс не найден, выбираем первый доступный курс
+        if (courseDropdown.options.length > 1) {
+          courseDropdown.selectedIndex = 1; // Пропускаем первый option (пустой)
+          loadLessons(courseDropdown.value);
+        }
+      }
+      
+      // Запускаем автоматический выбор
+      autoSelectCourse();
+      
+      // Обработчик для кнопки создания контрольной работы
+      const createBtn = document.querySelector('.btn-create');
+      if (createBtn) {
+        createBtn.addEventListener('click', function() {
+          window.location.href = this.dataset.url;
+        });
+      }
+    });
+  </script>
 {% endblock %}

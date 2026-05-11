@@ -3,11 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
-from app.settings.models import User
+from app.settings.models import User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor
 
 
 def portal_login(request):
-    """Единая страница входа для студентов, менторов, родителей, менеджеров и админов."""
     error = None
     logged_in_user = request.user if request.user.is_authenticated else None
 
@@ -20,14 +19,12 @@ def portal_login(request):
                 auth_login(request, user)
                 return _redirect_by_role(user)
             else:
-                # --- временная отладка ---
                 from app.settings.models import User
                 try:
                     u = User.objects.get(username=username)
                     print(f"[DEBUG] user found: {u.username}, is_active={u.is_active}, check_pass={u.check_password(password)}")
                 except User.DoesNotExist:
                     print(f"[DEBUG] user not found: {username}")
-                # ------------------------
                 error = "Неверное имя пользователя или пароль"
         except Exception:
             error = "Ошибка сервера при входе. Попробуйте позже."
@@ -65,8 +62,40 @@ def mentor_lessons(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/mentor_lessons.html", {"active": "lessons"})
-    except Exception:
+        
+        try:
+            mentor_profile = request.user.mentor_profile
+            print(f"[DEBUG] Mentor profile found: {mentor_profile}")
+        except AttributeError:
+            print(f"[DEBUG] No mentor profile for user: {request.user.username}")
+            return render(request, "portal/mentor_lessons.html", {
+                "active": "lessons",
+                "group_courses": [],
+                "individual_courses": [],
+                "exams": [],
+            })
+        
+        group_courses = GroupCourse.objects.filter(mentors=mentor_profile).active().order_by('title')
+        individual_courses = IndividualCourse.objects.filter(mentors=mentor_profile).active().order_by('title')
+        
+        exams = Exam.objects.filter(mentor=mentor_profile).active().order_by('-created_at')
+        
+        print(f"[DEBUG] Found {group_courses.count()} group courses, {individual_courses.count()} individual courses and {exams.count()} exams")
+        
+        # Объединяем все курсы
+        all_courses = list(group_courses) + list(individual_courses)
+        
+        return render(request, "portal/mentor_lessons.html", {
+            "active": "lessons",
+            "group_courses": group_courses,
+            "individual_courses": individual_courses,
+            "all_courses": all_courses,
+            "exams": exams,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_lessons: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 
@@ -117,6 +146,56 @@ def mentor_curriculum(request):
             return render(request, "errors/403.html", status=403)
         return render(request, "portal/mentor_curriculum.html", {"active": "curriculum"})
     except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def mentor_profile(request):
+    try:
+        if getattr(request.user, "role", "") != "Ментор":
+            return render(request, "errors/403.html", status=403)
+        
+        # Получаем профиль ментора
+        try:
+            mentor_profile = request.user.mentor_profile
+        except AttributeError:
+            return render(request, "errors/500.html", status=500)
+        
+        if request.method == "POST":
+            # Обновляем данные профиля
+            mentor_profile.middle_name = request.POST.get("middle_name", "")
+            mentor_profile.birth_date = request.POST.get("birth_date") or None
+            mentor_profile.skills = request.POST.get("skills", "")
+            mentor_profile.workplace = request.POST.get("workplace", "")
+            mentor_profile.documents_folder = request.POST.get("documents_folder", "")
+            mentor_profile.payment_form = request.POST.get("payment_form", Mentor.PaymentForm.FIXED)
+            mentor_profile.payment_rate = request.POST.get("payment_rate") or None
+            mentor_profile.fixed_rate = request.POST.get("fixed_rate") or 0
+            mentor_profile.percentage_rate = request.POST.get("percentage_rate") or None
+            mentor_profile.note = request.POST.get("note", "")
+            
+            # Обновляем данные пользователя
+            request.user.first_name = request.POST.get("first_name", "")
+            request.user.last_name = request.POST.get("last_name", "")
+            request.user.phone_number = request.POST.get("phone_number", "")
+            
+            mentor_profile.save()
+            request.user.save()
+            
+            return render(request, "portal/mentor_profile.html", {
+                "active": "profile",
+                "mentor": mentor_profile,
+                "success": True,
+            })
+        
+        return render(request, "portal/mentor_profile.html", {
+            "active": "profile",
+            "mentor": mentor_profile,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in mentor_profile: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
 
 

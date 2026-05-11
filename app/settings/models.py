@@ -757,6 +757,50 @@ class BillingRecord(models.Model):
         verbose_name_plural = "Биллинг"
 
 
+class Lesson(ArchiveBase):
+    mentor = models.ForeignKey(
+        Mentor,
+        on_delete=models.CASCADE,
+        verbose_name="Ментор",
+        related_name="lessons"
+    )
+    title = models.CharField(max_length=255, verbose_name="Название урока")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    order = models.PositiveIntegerField(verbose_name="Порядок")
+    is_additional = models.BooleanField(default=False, verbose_name="Дополнительный урок")
+    date = models.DateField(null=True, blank=True, verbose_name="Дата урока")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    def __str__(self):
+        return f"{self.title} ({self.mentor.user.username})"
+
+    class Meta:
+        verbose_name = "Урок"
+        verbose_name_plural = "Уроки"
+        ordering = ["order"]
+
+
+class Exam(ArchiveBase):
+    mentor = models.ForeignKey(
+        Mentor,
+        on_delete=models.CASCADE,
+        verbose_name="Ментор",
+        related_name="exams"
+    )
+    title = models.CharField(max_length=255, verbose_name="Название контрольной работы")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    deadline = models.DateTimeField(verbose_name="Дедлайн")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    def __str__(self):
+        return f"{self.title} ({self.mentor.user.username})"
+
+    class Meta:
+        verbose_name = "Контрольная работа"
+        verbose_name_plural = "Контрольные работы"
+        ordering = ["-created_at"]
+
+
 class AboutPage(models.Model):
     organization = models.ForeignKey(
         Organization,

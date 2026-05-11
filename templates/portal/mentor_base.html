@@ -7,7 +7,7 @@
   <title>{% block title %}Кабинет ментора{% endblock %}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fb; min-height: 100vh; display: flex; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #2c2f36; min-height: 100vh; display: flex; }
 
     .sidebar {
       width: 260px;
@@ -100,26 +100,27 @@
       flex: 1;
       min-width: 0;
       overflow-y: auto;
+      background: #2c2f36;
     }
     .topbar {
-      background: #fff;
+      background: #242731;
       padding: 16px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .topbar h1 {
       font-size: 20px;
       font-weight: 700;
-      color: #1f2937;
+      color: #fff;
     }
     .topbar .logout {
-      color: #6b7280;
+      color: #9ca3af;
       text-decoration: none;
       font-size: 14px;
     }
-    .topbar .logout:hover { color: #dc2626; }
+    .topbar .logout:hover { color: #f87171; }
 
     .content {
       padding: 24px 32px;
@@ -129,9 +130,140 @@
     .portal-stat { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 14px; padding: 20px; }
     .portal-stat .value { font-size: 28px; font-weight: 800; }
     .portal-stat .label { font-size: 13px; opacity: 0.9; margin-top: 4px; }
-    .portal-card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .portal-card h2 { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
-    .portal-card p { color: #6b7280; font-size: 14px; }
+    .portal-card { background: #242731; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.04); }
+    .portal-card h2 { font-size: 18px; font-weight: 700; color: #f3f4f6; margin-bottom: 12px; }
+    .portal-card p { color: #9ca3af; font-size: 14px; }
+
+    /* Dashboard sections */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      margin-top: 32px;
+    }
+    .section-header:first-of-type { margin-top: 0; }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f3f4f6;
+    }
+    .view-all {
+      font-size: 13px;
+      color: #9ca3af;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .view-all:hover { color: #667eea; }
+
+    .card-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 8px;
+    }
+    .card-row .dash-card:nth-child(n+7) {
+      width: calc(25% - 12px);
+      min-width: 200px;
+    }
+    @media (max-width: 1200px) {
+      .card-row .dash-card:nth-child(n+7) {
+        width: calc(33.33% - 11px);
+      }
+    }
+    @media (max-width: 768px) {
+      .card-row .dash-card:nth-child(n+7) {
+        width: calc(50% - 8px);
+      }
+    }
+    .dash-card {
+      min-width: 220px;
+      max-width: 260px;
+      flex: 1;
+      border-radius: 12px;
+      padding: 20px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 130px;
+    }
+    .dash-card .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .dash-card .card-subtitle {
+      font-size: 13px;
+      opacity: 0.85;
+      position: relative;
+      z-index: 1;
+    }
+    .dash-card .card-deadline {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .dash-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: 12px 12px 0 0;
+    }
+    .dash-card.homework { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .dash-card.homework::before { background: #a78bfa; }
+    .dash-card.lesson   { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); }
+    .dash-card.lesson::before   { background: #818cf8; }
+    .dash-card.exam     { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .dash-card.exam::before     { background: #fbbf24; }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .topbar-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .topbar-icon:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+    .topbar-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .logout {
+      color: #fff !important;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.15s;
+    }
+    .logout:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+      color: #fff !important;
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -183,7 +315,7 @@
       </li>
     </ul>
     <div class="sidebar-footer">
-      <a href="/admin/logout/">
+      <a href="{% url 'portal_login' %}">
         <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"></path><path d="M4 9h16"></path></svg>
         Закрыть
       </a>
@@ -193,7 +325,15 @@
   <div class="main">
     <div class="topbar">
       <h1>{% block page_title %}Кабинет ментора{% endblock %}</h1>
-      <a href="/admin/logout/" class="logout">Выйти</a>
+      <div class="topbar-actions">
+        <a href="#" class="topbar-icon" title="Уведомления">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        </a>
+        <a href="{% url 'mentor_profile' %}" class="topbar-icon" title="Профиль">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </a>
+        <a href="{% url 'portal_login' %}" class="logout">Выйти</a>
+      </div>
     </div>
     <div class="content">
       {% block content %}{% endblock %}
