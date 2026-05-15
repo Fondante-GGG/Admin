@@ -10,6 +10,7 @@ from app.settings.views import (
     lesson_detail,
     student_dashboard, parent_dashboard,
     error_404, error_500, error_403, error_401,
+    tabel_view,
 )
 
 urlpatterns = [
@@ -24,6 +25,7 @@ urlpatterns = [
     path('portal/mentor/students/', mentor_students, name='mentor_students'),
     path('portal/mentor/curriculum/', mentor_curriculum, name='mentor_curriculum'),
     path('portal/mentor/profile/', mentor_profile, name='mentor_profile'),
+    path('tabel/', tabel_view, name='tabel_view'),
     path('portal/student/', student_dashboard, name='student_dashboard'),
     path('portal/parent/', parent_dashboard, name='parent_dashboard'),
 ]

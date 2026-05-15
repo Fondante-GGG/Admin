@@ -12,8 +12,8 @@
       {% for homework in homeworks %}
         <div class="homework-item">
           <div class="homework-header">
-            <div class="homework-student">
-              <strong>{{ homework.student.user.get_full_name|default:homework.student.user.username }}</strong>
+            <div class="homework-info">
+              <strong>{{ homework.title }}</strong>
               {% if homework.lesson.course %}
                 <span class="homework-course">{{ homework.lesson.course.title }}</span>
               {% endif %}
@@ -44,11 +44,6 @@
             </div>
           {% endif %}
           
-          <div class="homework-status">
-            <span class="status-badge {% if homework.is_graded %}graded{% else %}pending{% endif %}">
-              {% if homework.is_graded %}✓ Оценено{% else %}⏳ Ожидает проверки{% endif %}
-            </span>
-          </div>
         </div>
       {% endfor %}
     </div>
@@ -86,13 +81,13 @@
   margin-bottom: 12px;
 }
 
-.homework-student {
+.homework-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.homework-student strong {
+.homework-info strong {
   color: #fff;
   font-size: 16px;
 }
@@ -154,26 +149,6 @@
   color: #818cf8;
 }
 
-.homework-status {
-  text-align: right;
-}
-
-.status-badge {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.status-badge.graded {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-.status-badge.pending {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-}
 
 .empty-state {
   text-align: center;

@@ -4,8 +4,9 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from app.settings.models import (
-    User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor, 
-    LessonLink, Homework, StudentGrade, Student, TimeSlot, Schedule
+    User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor,
+    LessonLink, Homework, StudentGrade, Student, TimeSlot, Schedule,
+    CurriculumModule,
 )
 
 
@@ -150,7 +151,7 @@ def mentor_homework(request):
         from app.settings.models import Homework, Lesson
         homeworks = Homework.objects.filter(
             lesson__course__mentors=mentor_profile
-        ).select_related('lesson', 'student', 'lesson__course').order_by('-created_at')
+        ).select_related('lesson', 'lesson__course').order_by('-created_at')
         
         # Фильтрация по группе
         group_id = request.GET.get('group_id')
@@ -283,15 +284,77 @@ def mentor_gradebook(request):
             lesson__course__mentors=mentor_profile
         ).select_related('student', 'lesson', 'student__user').order_by('-created_at')
         
-        # Фильтрация по группе
         group_id = request.GET.get('group_id')
         if group_id:
             grades = grades.filter(student__enrollment__course_id=group_id)
+        
+        attendance_data = {}
+        homework_data = {}
+        selected_group = None
+        
+        group_id = request.GET.get('group_id')
+        if group_id:
+            selected_group = mentor_courses.filter(id=group_id).first()
+            if selected_group:
+                from app.settings.models import Student, Lesson
+                students_in_group = Student.objects.filter(
+                    enrollment__course=selected_group
+                ).select_related('user')
+                print(f"Found {students_in_group.count()} students in group {selected_group.title}")
+                lessons_in_course = Lesson.objects.filter(
+                    course=selected_group
+                ).order_by('order')
+                
+                for student in students_in_group:
+                    student_name = f"{student.user.last_name} {student.user.first_name}"
+                    
+                    # Данные посещаемости (на основе оценок 0/1)
+                    attendance_data[student.id] = {
+                        'student_name': student_name,
+                        'lessons': {},
+                        'total': 0
+                    }
+                    
+                    # Данные домашних заданий (на основе оценок)
+                    homework_data[student.id] = {
+                        'student_name': student_name,
+                        'lessons': {},
+                        'total': 0,
+                        'standup': 0
+                    }
+                    
+                    for lesson in lessons_in_course:
+                        # Получаем оценку для урока
+                        grade = StudentGrade.objects.filter(
+                            student=student, 
+                            lesson=lesson
+                        ).first()
+                        
+                        if grade:
+                            # Посещаемость (1 - присутствовал, 0 - отсутствовал)
+                            attendance_data[student.id]['lessons'][lesson.id] = grade.grade
+                            attendance_data[student.id]['total'] += grade.grade
+                            
+                            # ДЗ (оценка от 1 до 10)
+                            # Для примера используем случайные оценки, т.к. в модели только 0/1
+                            hw_score = (grade.grade * 10) if grade.grade > 0 else 0
+                            homework_data[student.id]['lessons'][lesson.id] = hw_score
+                            homework_data[student.id]['total'] += hw_score
+                        else:
+                            attendance_data[student.id]['lessons'][lesson.id] = 0
+                            homework_data[student.id]['lessons'][lesson.id] = 0
+                    
+                    # StandUp оценка (для примера)
+                    homework_data[student.id]['standup'] = 85
         
         return render(request, "portal/mentor_gradebook.html", {
             "active": "gradebook",
             "grades": grades,
             "groups": mentor_courses,
+            "selected_group": selected_group,
+            "attendance_data": attendance_data,
+            "homework_data": homework_data,
+            "lessons_in_course": lessons_in_course if group_id else [],
         })
     except Exception as e:
         print(f"[DEBUG] Error in mentor_gradebook: {e}")
@@ -338,33 +401,118 @@ def mentor_students(request):
         return render(request, "errors/500.html", status=500)
 
 
+def _curriculum_sections_for_course(course, lessons_sorted):
+    """Секции аккордеона по месяцам (модулям). Модули показываются даже без уроков."""
+    modules = list(
+        CurriculumModule.objects.filter(course=course).order_by("order")
+    )
+    if modules:
+        by_module_id = {m.id: [] for m in modules}
+        unassigned = []
+        for les in lessons_sorted:
+            mid = les.curriculum_module_id
+            if mid and mid in by_module_id:
+                by_module_id[mid].append(les)
+            else:
+                unassigned.append(les)
+        sections = []
+        for i, m in enumerate(modules, start=1):
+            title_part = m.title.strip() if m.title else ""
+            heading = f"Месяц {i}. {title_part}" if title_part else f"Месяц {i}"
+            sections.append(
+                {
+                    "month_index": i,
+                    "heading": heading,
+                    "lessons": by_module_id[m.id],
+                }
+            )
+        if unassigned:
+            sections.append(
+                {
+                    "month_index": len(modules) + 1,
+                    "heading": "Без раздела",
+                    "lessons": unassigned,
+                }
+            )
+        return sections
+    if lessons_sorted:
+        return [
+            {
+                "month_index": 1,
+                "heading": "Учебный план",
+                "lessons": lessons_sorted,
+            }
+        ]
+    return []
+
+
 @login_required
 def mentor_curriculum(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
             return render(request, "errors/403.html", status=403)
-        
-        mentor_profile = Mentor.objects.get(user=request.user)
-        
-        # Получаем все курсы ментора
-        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
-        
-        # Получаем учебные планы ментора
-        from app.settings.models import Curriculum
-        curricula = Curriculum.objects.filter(
-            course__mentors=mentor_profile
-        ).select_related('course').order_by('course__title', 'order')
-        
-        # Фильтрация по группе
-        group_id = request.GET.get('group_id')
+
+        try:
+            mentor_profile = Mentor.objects.get(user=request.user)
+        except Mentor.DoesNotExist:
+            return render(
+                request,
+                "portal/mentor_curriculum.html",
+                {
+                    "active": "curriculum",
+                    "selected_course": None,
+                    "curriculum_sections": [],
+                    "invalid_group": False,
+                    "needs_group_choice": False,
+                    "groups": [],
+                    "mentor_profile_missing": True,
+                },
+            )
+
+        mentor_courses = (
+            Cursues.objects.filter(mentors=mentor_profile)
+            .order_by("title")
+        )
+
+        group_id = (request.GET.get("group_id") or "").strip()
+
+        if not group_id and mentor_courses.count() == 1:
+            only = mentor_courses.first()
+            return redirect(f"{reverse('mentor_curriculum')}?group_id={only.pk}")
+
+        selected_course = None
+        curriculum_sections = []
+        invalid_group = False
+
         if group_id:
-            curricula = curricula.filter(course_id=group_id)
-        
-        return render(request, "portal/mentor_curriculum.html", {
-            "active": "curriculum",
-            "curricula": curricula,
-            "groups": mentor_courses,
-        })
+            selected_course = mentor_courses.filter(pk=group_id).first()
+            if not selected_course:
+                invalid_group = True
+            else:
+                lessons_list = list(
+                    Lesson.objects.filter(
+                        course=selected_course,
+                        is_archived=False,
+                    )
+                    .select_related("curriculum_module")
+                    .order_by("order")
+                )
+                curriculum_sections = _curriculum_sections_for_course(
+                    selected_course, lessons_list
+                )
+
+        return render(
+            request,
+            "portal/mentor_curriculum.html",
+            {
+                "active": "curriculum",
+                "selected_course": selected_course,
+                "curriculum_sections": curriculum_sections,
+                "invalid_group": invalid_group,
+                "needs_group_choice": not group_id and mentor_courses.count() > 1,
+                "groups": mentor_courses,
+            },
+        )
     except Exception as e:
         print(f"[DEBUG] Error in mentor_curriculum: {e}")
         import traceback
@@ -580,4 +728,50 @@ def error_401(request):
     try:
         return render(request, "errors/401.html", status=401)
     except Exception:
+        return render(request, "errors/500.html", status=500)
+
+
+@login_required
+def tabel_view(request):
+    try:
+        if getattr(request.user, "role", "") not in ["Ментор", "Админ"]:
+            return render(request, "errors/403.html", status=403)
+        
+        mentor_profile = Mentor.objects.get(user=request.user)
+        
+        # Получаем все оценки студентов ментора
+        from app.settings.models import StudentGrade
+        grades = StudentGrade.objects.filter(
+            lesson__course__mentors=mentor_profile
+        ).select_related('student', 'lesson', 'lesson__course', 'student__user').order_by('-created_at')
+        
+        # Подготавливаем данные для таблицы
+        records = []
+        for grade in grades:
+            # Определяем класс для оценки
+            grade_class = "satisfactory"  # по умолчанию
+            if grade.grade >= 5:
+                grade_class = "excellent"
+            elif grade.grade >= 4:
+                grade_class = "good"
+            elif grade.grade < 3:
+                grade_class = "poor"
+            
+            records.append({
+                'student_name': f"{grade.student.user.last_name} {grade.student.user.first_name}",
+                'lesson_number': f"Урок {grade.lesson.order or grade.lesson.id}",
+                'course_name': grade.lesson.course.title if grade.lesson.course else "Без курса",
+                'grade': grade.grade,
+                'grade_class': grade_class,
+                'date': grade.created_at,
+                'comment': grade.comment or ""
+            })
+        
+        return render(request, "tabel.html", {
+            "records": records,
+        })
+    except Exception as e:
+        print(f"[DEBUG] Error in tabel_view: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)

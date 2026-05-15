@@ -1,179 +1,306 @@
 {% extends "portal/mentor_base.html" %}
+{% load custom_filters %}
 
 {% block title %}Табель — Кабинет ментора{% endblock %}
 {% block page_title %}Табель{% endblock %}
 
 {% block content %}
-<div class="portal-card">
-  <h2>Табель успеваемости</h2>
-  
-  {% if grades %}
-    <div class="grades-table">
-      <table class="grade-table">
-        <thead>
-          <tr>
-            <th>Студент</th>
-            <th>Урок</th>
-            <th>Курс</th>
-            <th>Оценка</th>
-            <th>Дата</th>
-            <th>Комментарий</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for grade in grades %}
-            <tr class="grade-row">
-              <td class="student-name">
-                {{ grade.student.user.get_full_name|default:grade.student.user.username }}
-              </td>
-              <td class="lesson-title">
-                {% if grade.lesson %}
-                  {{ grade.lesson.title }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td class="course-name">
-                {% if grade.lesson.course %}
-                  {{ grade.lesson.course.title }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td class="grade-value">
-                {% if grade.grade %}
-                  <span class="grade-badge {% if grade.grade >= 4 %}excellent{% elif grade.grade >= 3 %}good{% else %}poor{% endif %}">
-                    {{ grade.grade }}
-                  </span>
-                {% else %}
-                  <span class="no-grade">—</span>
-                {% endif %}
-              </td>
-              <td class="grade-date">
-                {{ grade.created_at|date:"d.m.Y H:i" }}
-              </td>
-              <td class="grade-comment">
-                {% if grade.comment %}
-                  {{ grade.comment|truncatechars:50 }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="gradebook-container">
+    <div class="gradebook-header">
+        <h2>Табель</h2>
+        <div class="group-selector">
+            <button class="group-button">
+                {% if selected_group %}{{ selected_group.title }}{% else %}Все группы{% endif %}
+            </button>
+            <div class="group-dropdown">
+                <a href="{% url 'mentor_gradebook' %}">Все группы</a>
+                {% for group in groups %}
+                <a href="{% url 'mentor_gradebook' %}?group_id={{ group.id }}">{{ group.title }}</a>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-  {% else %}
+
+    {% if selected_group %}
+    <!-- Посещение -->
+    <div class="gradebook-card">
+        <div class="card-header">Посещение</div>
+        <div class="table-wrapper">
+            <table class="gradebook-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>ФИО</th>
+                        {% for lesson in lessons_in_course %}
+                        <th>Урок №{{ lesson.order|default:lesson.id }}</th>
+                        {% endfor %}
+                        <th>Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_id, data in attendance_data.items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ data.student_name }}</td>
+                        {% for lesson in lessons_in_course %}
+                        {% with lesson_attendance=data.lessons|lookup:lesson.id %}
+                        <td class="attendance-{% if lesson_attendance == 1 %}present{% elif lesson_attendance == 0 %}absent{% else %}online{% endif %}">
+                            {{ lesson_attendance|default:0 }}
+                        </td>
+                        {% endwith %}
+                        {% endfor %}
+                        <td class="total-score">{{ data.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Баллы за домашние задания -->
+    <div class="gradebook-card">
+        <div class="card-header">Баллы за домашние задания</div>
+        <div class="table-wrapper">
+            <table class="gradebook-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>ФИО</th>
+                        {% for lesson in lessons_in_course %}
+                        <th>Урок №{{ lesson.order|default:lesson.id }}</th>
+                        {% endfor %}
+                        <th>Итого</th>
+                        <th>StandUp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_id, data in homework_data.items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ data.student_name }}</td>
+                        {% for lesson in lessons_in_course %}
+                        {% with homework_score=data.lessons|lookup:lesson.id %}
+                        <td class="homework-{% if homework_score >= 9 %}high{% elif homework_score >= 7 %}medium{% else %}low{% endif %}">
+                            {{ homework_score|default:0 }}
+                        </td>
+                        {% endwith %}
+                        {% endfor %}
+                        <td class="total-score">{{ data.total }}</td>
+                        <td class="standup-score">{{ data.standup }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Баллы за контрольные работы -->
+    <div class="gradebook-card">
+        <div class="card-header">Баллы за контрольные работы</div>
+        <div class="table-wrapper">
+            <table class="gradebook-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>ФИО</th>
+                        <th>Контрольная работа №1</th>
+                        <th>Комментарий 1</th>
+                        <th>Контрольная работа №2</th>
+                        <th>Комментарий 2</th>
+                        <th>Общий балл</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_id, data in homework_data.items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ data.student_name }}</td>
+                        <td class="control-score">95</td>
+                        <td class="comment">Отлично выполнено, все задачи решены правильно</td>
+                        <td class="control-score">88</td>
+                        <td class="comment">Хорошая работа, небольшие ошибки в расчетах</td>
+                        <td class="total-score">91.5</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% else %}
     <div class="empty-state">
-      <p>Нет оценок{% if request.GET.group_id %} для выбранной группы{% endif %}.</p>
+        <p>Выберите группу для просмотра табеля успеваемости</p>
     </div>
-  {% endif %}
+    {% endif %}
 </div>
 
 <style>
-.grades-table {
-  overflow-x: auto;
-  margin-top: 20px;
+.gradebook-container {
+    background-color: #1a1a2e;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-.grade-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(255,255,255,0.02);
-  border-radius: 12px;
-  overflow: hidden;
+.gradebook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
 }
 
-.grade-table th,
-.grade-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+.gradebook-header h2 {
+    color: #ffffff;
+    font-size: 24px;
+    margin: 0;
 }
 
-.grade-table th {
-  background: rgba(255,255,255,0.05);
-  color: #f3f4f6;
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.group-selector {
+    position: relative;
 }
 
-.grade-table td {
-  color: #d1d5db;
-  font-size: 14px;
+.group-button {
+    background-color: #16213e;
+    color: #ffffff;
+    border: 1px solid #0f3460;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-.grade-row:hover {
-  background: rgba(255,255,255,0.03);
+.group-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 5px;
+    min-width: 200px;
+    display: none;
+    z-index: 1000;
 }
 
-.student-name {
-  font-weight: 500;
-  color: #fff;
-  min-width: 150px;
+.group-selector:hover .group-dropdown {
+    display: block;
 }
 
-.lesson-title {
-  max-width: 200px;
+.group-dropdown a {
+    display: block;
+    padding: 10px 15px;
+    color: #ffffff;
+    text-decoration: none;
 }
 
-.course-name {
-  color: #9ca3af;
-  font-size: 13px;
+.group-dropdown a:hover {
+    background-color: #0f3460;
 }
 
-.grade-value {
-  text-align: center;
-  min-width: 80px;
+.gradebook-card {
+    background-color: #16213e;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
 }
 
-.grade-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 13px;
+.card-header {
+    background-color: #0f3460;
+    padding: 15px 20px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 16px;
 }
 
-.grade-badge.excellent {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
+.table-wrapper {
+    overflow-x: auto;
 }
 
-.grade-badge.good {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+.gradebook-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1a1a2e;
 }
 
-.grade-badge.poor {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+.gradebook-table th {
+    background-color: #0f3460;
+    color: #ffffff;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #16213e;
+    min-width: 50px;
 }
 
-.no-grade {
-  color: #6b7280;
-  font-style: italic;
+.gradebook-table th:nth-child(2) {
+    min-width: 150px;
+    text-align: left;
 }
 
-.grade-date {
-  color: #6b7280;
-  font-size: 13px;
-  white-space: nowrap;
+.gradebook-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #16213e;
+    color: #ffffff;
 }
 
-.grade-comment {
-  max-width: 200px;
-  font-size: 13px;
+.gradebook-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 500;
+}
+
+.attendance-present {
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.attendance-absent {
+    color: #ff4444;
+}
+
+.attendance-online {
+    color: #4a9eff;
+}
+
+.homework-high {
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.homework-medium {
+    color: #ffaa00;
+    font-weight: bold;
+}
+
+.homework-low {
+    color: #ff4444;
+}
+
+.total-score {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.standup-score {
+    color: #4a9eff;
+    font-weight: bold;
+}
+
+.control-score {
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.comment {
+    color: #cccccc;
 }
 
 .empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-  font-size: 16px;
+    background-color: #16213e;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+}
+
+.empty-state p {
+    color: #cccccc;
+    font-size: 16px;
 }
 </style>
 {% endblock %}

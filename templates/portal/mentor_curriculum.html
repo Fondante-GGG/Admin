@@ -1,245 +1,196 @@
 {% extends "portal/mentor_base.html" %}
+{% block mentor_group_placeholder %}Выберите группу{% endblock %}
 
 {% block title %}Учебный план — Кабинет ментора{% endblock %}
 {% block page_title %}Учебный план{% endblock %}
 
 {% block content %}
-<div class="portal-card">
-  <h2>Учебный план</h2>
-  
-  {% if curricula %}
-    <div class="curriculum-list">
-      {% regroup curricula by course as course_list %}
-      {% for course in course_list %}
-        <div class="course-section">
-          <h3 class="course-title">
-            {{ course.grouper.title }}
-          </h3>
-          
-          <div class="curriculum-items">
-            {% for item in course.list %}
-              <div class="curriculum-item">
-                <div class="item-header">
-                  <span class="item-order">{{ item.order }}</span>
-                  <h4 class="item-title">{{ item.title }}</h4>
-                  {% if item.duration %}
-                    <span class="item-duration">{{ item.duration }} мин.</span>
-                  {% endif %}
-                </div>
-                
-                {% if item.description %}
-                  <div class="item-description">
-                    {{ item.description|linebreaks }}
-                  </div>
-                {% endif %}
-                
-                {% if item.topics %}
-                  <div class="item-topics">
-                    <strong>Темы:</strong>
-                    <ul>
-                      {% for topic in item.topics %}
-                        <li>{{ topic }}</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                {% endif %}
-                
-                {% if item.materials %}
-                  <div class="item-materials">
-                    <strong>Материалы:</strong>
-                    <div class="materials-list">
-                      {% for material in item.materials %}
-                        <div class="material-item">
-                          {% if material.file %}
-                            <a href="{{ material.file.url }}" class="material-link" target="_blank">
-                              📄 {{ material.file.name|slice:"30" }}{% if material.file.name|length > 30 %}...{% endif %}
-                            </a>
-                          {% elif material.link %}
-                            <a href="{{ material.link }}" class="material-link" target="_blank">
-                              🔗 {{ material.title|default:"Ссылка" }}
-                            </a>
-                          {% endif %}
-                        </div>
-                      {% endfor %}
+<div class="portal-card curriculum-page">
+  <header class="curriculum-page-header">
+    <h2 class="curriculum-main-title">Учебный план</h2>
+    {% if selected_course %}
+      <p class="curriculum-group-name">{{ selected_course.title }}</p>
+      <p class="curriculum-readonly-hint">Только просмотр. Состав плана задаётся в CRM администратором или менеджером.</p>
+    {% endif %}
+  </header>
+
+  {% if mentor_profile_missing %}
+    <p class="curriculum-empty-state curriculum-empty-state--warn">Для вашей учётной записи не создан профиль ментора в CRM. Обратитесь к администратору.</p>
+  {% elif invalid_group %}
+    <p class="curriculum-empty-state curriculum-empty-state--warn">Такой группы нет или у вас нет к ней доступа. Выберите другую группу в списке выше.</p>
+  {% elif needs_group_choice %}
+    <p class="curriculum-empty-state">Сначала выберите группу в поле «Группа» вверху страницы — отобразится один учебный план этой группы (месяцы и уроки).</p>
+  {% elif selected_course and curriculum_sections %}
+    <div class="curriculum-accordions" role="list">
+      {% for section in curriculum_sections %}
+        <details class="curriculum-panel" {% if forloop.first %}open{% endif %} role="listitem">
+          <summary class="curriculum-panel-summary">
+            <span class="curriculum-panel-title">{{ section.heading }}</span>
+            <span class="curriculum-panel-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="curriculum-panel-body">
+            {% if section.lessons %}
+              <ul class="curriculum-lesson-list">
+                {% for lesson in section.lessons %}
+                  <li class="curriculum-lesson">
+                    <div class="curriculum-lesson-head">
+                      <span class="curriculum-lesson-index">Урок {{ forloop.counter }}</span>
                     </div>
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
+                    <p class="curriculum-lesson-theme"><span class="curriculum-lesson-theme-label">Тема:</span> {{ lesson.title }}</p>
+                    {% if lesson.description %}
+                      <div class="curriculum-lesson-desc">{{ lesson.description|linebreaksbr }}</div>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="curriculum-empty-block">В этом месяце пока нет уроков.</p>
+            {% endif %}
           </div>
-        </div>
+        </details>
       {% endfor %}
     </div>
+  {% elif selected_course %}
+    <p class="curriculum-empty-state">Для выбранной группы учебный план ещё не заполнен в CRM (добавьте модули месяцев и уроки).</p>
   {% else %}
-    <div class="empty-state">
-      <p>Нет учебных планов{% if request.GET.group_id %} для выбранной группы{% endif %}.</p>
-    </div>
+    <p class="curriculum-empty-state">Нет доступных групп или учебный план ещё не настроен.</p>
   {% endif %}
 </div>
 
 <style>
-.curriculum-list {
+.curriculum-page {
+  background: #1e1e26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+.curriculum-page-header {
+  margin-bottom: 20px;
+}
+.curriculum-main-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f9fafb;
+  margin: 0 0 6px 0;
+}
+.curriculum-group-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #d1d5db;
+  margin: 0 0 10px 0;
+}
+.curriculum-readonly-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+.curriculum-empty-state {
+  color: #9ca3af;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.55;
+  max-width: 42rem;
+}
+.curriculum-empty-state--warn {
+  color: #fca5a5;
+}
+.curriculum-accordions {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  margin-top: 20px;
+  gap: 12px;
 }
-
-.course-section {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px;
-  padding: 20px;
+.curriculum-panel {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
-
-.course-title {
-  color: #fff;
-  font-size: 18px;
+.curriculum-panel-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  color: #f3f4f6;
+  font-size: 15px;
   font-weight: 600;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  user-select: none;
 }
-
-.curriculum-items {
+.curriculum-panel-summary::-webkit-details-marker {
+  display: none;
+}
+.curriculum-panel-summary::marker {
+  display: none;
+}
+.curriculum-panel-title {
+  flex: 1;
+  line-height: 1.35;
+}
+.curriculum-panel-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #9ca3af;
+  border-bottom: 2px solid #9ca3af;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+  margin-top: -4px;
+  transition: transform 0.2s ease;
+}
+.curriculum-panel[open] .curriculum-panel-chevron {
+  transform: rotate(-135deg);
+  margin-top: 4px;
+}
+.curriculum-panel-body {
+  padding: 0 18px 18px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.curriculum-lesson-list {
+  list-style: none;
+  margin: 0;
+  padding: 14px 0 0 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-
-.curriculum-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 8px;
-  padding: 16px;
-  transition: all 0.15s;
+.curriculum-lesson {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-
-.curriculum-item:hover {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.1);
+.curriculum-lesson:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
-
-.item-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.item-order {
-  background: #667eea;
-  color: #fff;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.item-title {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 500;
-  flex: 1;
-  margin: 0;
-}
-
-.item-duration {
-  color: #9ca3af;
-  font-size: 13px;
-  background: rgba(255,255,255,0.05);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.item-description {
-  color: #d1d5db;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 12px;
-}
-
-.item-topics {
-  margin-bottom: 12px;
-}
-
-.item-topics strong {
-  color: #9ca3af;
-  font-size: 13px;
-  display: block;
+.curriculum-lesson-head {
   margin-bottom: 6px;
 }
-
-.item-topics ul {
-  list-style: none;
-  padding: 0;
+.curriculum-lesson-index {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
 }
-
-.item-topics li {
+.curriculum-lesson-theme {
+  font-size: 14px;
+  font-weight: 500;
   color: #d1d5db;
-  font-size: 14px;
-  padding: 4px 0;
-  padding-left: 16px;
-  position: relative;
+  margin: 0 0 8px 0;
+  line-height: 1.45;
 }
-
-.item-topics li:before {
-  content: "•";
-  color: #667eea;
-  position: absolute;
-  left: 0;
-  top: 4px;
-}
-
-.item-materials {
-  margin-top: 12px;
-}
-
-.item-materials strong {
+.curriculum-lesson-theme-label {
   color: #9ca3af;
-  font-size: 13px;
-  display: block;
-  margin-bottom: 8px;
+  font-weight: 500;
+  margin-right: 6px;
 }
-
-.materials-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.material-item {
-  display: flex;
-  align-items: center;
-}
-
-.material-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #667eea;
-  text-decoration: none;
+.curriculum-lesson-desc {
   font-size: 14px;
-  padding: 6px 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 6px;
-  transition: all 0.15s;
+  line-height: 1.55;
+  color: #9ca3af;
+  margin: 0;
 }
-
-.material-link:hover {
-  background: rgba(102, 126, 234, 0.2);
-  color: #818cf8;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
+.curriculum-empty-block {
+  margin: 14px 0 0 0;
+  font-size: 14px;
   color: #6b7280;
-  font-size: 16px;
 }
 </style>
 {% endblock %}

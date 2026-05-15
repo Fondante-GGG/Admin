@@ -29,11 +29,13 @@ from .models import (
     CourseContract,
     Cursues,
     CourseDrop,
+    CurriculumModule,
     DebtorEnrollment,
     Enrollment,
     GroupCourse,
     Lead,
     IndividualCourse,
+    Lesson,
     Mentor,
     Organization,
     Parent,
@@ -601,6 +603,34 @@ class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdm
         return super().change_view(request, object_id, form_url, extra_context)
 
 
+@admin.register(CurriculumModule, site=crm_admin_site)
+class CurriculumModuleAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
+    list_display = ("course", "order", "title")
+    search_fields = ("title", "course__title")
+    list_filter = ("course",)
+    ordering = ("course", "order")
+
+
+class CurriculumModuleInline(admin.TabularInline):
+    model = CurriculumModule
+    extra = 0
+    fields = ("order", "title")
+    ordering = ("order",)
+
+    def has_add_permission(self, request, obj=None):
+        role = _role(request.user)
+        if role == "Админ":
+            role = "Администратор"
+        return role in {"Администратор", "Менеджер"}
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_add_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_add_permission(request, obj)
+
+
 class EnrollmentInline(admin.TabularInline):
     model = Enrollment
     extra = 0
@@ -613,7 +643,7 @@ class CourseDropInline(admin.TabularInline):
     autocomplete_fields = ("student",)
 
 
-CursuesAdmin.inlines = [EnrollmentInline, CourseDropInline]
+CursuesAdmin.inlines = [CurriculumModuleInline, EnrollmentInline, CourseDropInline]
 
 
 @admin.register(GroupCourse, site=crm_admin_site)
@@ -1603,6 +1633,31 @@ class CRMLogEntryAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Lesson, site=crm_admin_site)
+class LessonAdmin(RoleRestrictedAdminMixin, ArchiveAdminMixin, admin.ModelAdmin):
+    allowed_roles = {"Администратор", "Менеджер"}
+    list_display = ("title", "course", "mentor", "curriculum_module", "order", "is_archived")
+    list_filter = ("course", "is_archived", "is_additional")
+    search_fields = ("title", "description")
+    autocomplete_fields = ("mentor", "course", "curriculum_module")
+    ordering = ("course", "order")
+    fieldsets = (
+        (None, {"fields": ("course", "mentor", "curriculum_module", "order", "title")}),
+        ("Содержание", {"fields": ("description",)}),
+        ("Дополнительно", {"fields": ("is_additional", "date", "deadline")}),
+        ("Архив", {"fields": ("is_archived", "archived_at")}),
+    )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "curriculum_module":
+            object_id = request.resolver_match.kwargs.get("object_id")
+            if object_id:
+                course_id = Lesson.objects.filter(pk=object_id).values_list("course_id", flat=True).first()
+                if course_id:
+                    kwargs["queryset"] = CurriculumModule.objects.filter(course_id=course_id).order_by("order")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 crm_admin_site.register(LogEntry, CRMLogEntryAdmin)

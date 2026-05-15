@@ -452,7 +452,7 @@
           <div class="group-filter">
             <label for="group-select">Группа:</label>
             <select id="group-select" onchange="filterByGroup(this.value)">
-              <option value="">Все группы</option>
+              <option value="">{% block mentor_group_placeholder %}Все группы{% endblock %}</option>
               {% for group in groups %}
                 <option value="{{ group.id }}" {% if request.GET.group_id == group.id|stringformat:"s" %}selected{% endif %}>
                   {{ group.title }}

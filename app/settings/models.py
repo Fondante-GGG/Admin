@@ -757,6 +757,33 @@ class BillingRecord(models.Model):
         verbose_name_plural = "Биллинг"
 
 
+class CurriculumModule(models.Model):
+    """Блок учебного плана курса (например «Месяц 1 — Основы Python»). Заполняется в CRM; ментор видит только в кабинете."""
+
+    course = models.ForeignKey(
+        Cursues,
+        on_delete=models.CASCADE,
+        related_name="curriculum_modules",
+        verbose_name="Курс",
+    )
+    order = models.PositiveSmallIntegerField(verbose_name="Номер модуля", default=1)
+    title = models.CharField(max_length=255, verbose_name="Название модуля")
+
+    class Meta:
+        verbose_name = "Модуль учебного плана"
+        verbose_name_plural = "Модули учебного плана"
+        ordering = ["course_id", "order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "order"],
+                name="uniq_curriculum_module_course_order",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.course.title}: Месяц {self.order}. {self.title}"
+
+
 class Lesson(ArchiveBase):
     mentor = models.ForeignKey(
         Mentor,
@@ -771,6 +798,14 @@ class Lesson(ArchiveBase):
         blank=True,
         verbose_name="Курс",
         related_name="lessons"
+    )
+    curriculum_module = models.ForeignKey(
+        CurriculumModule,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Модуль учебного плана",
+        related_name="lessons",
     )
     title = models.CharField(max_length=255, verbose_name="Тема урока")
     description = models.TextField(blank=True, verbose_name="Описание урока")
