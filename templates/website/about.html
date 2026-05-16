@@ -1,0 +1,135 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'style/header.css' %}">
+    <link rel="stylesheet" href="{% static 'style/style.css' %}">
+    <link rel="stylesheet" href="{% static 'style/burger.css' %}">
+    <link rel="stylesheet" href="{% static 'style/footer.css' %}">
+    <link rel="stylesheet" href="{% static 'style/about.css' %}">
+</head>
+
+<body>
+    <div class="hero container">
+
+        <header>
+            <a href="{% url 'settings' %}">
+              <img src="{% static 'img/logo.svg' %}" alt="">
+      
+            </a>
+            <nav>
+              <ul>
+                <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'courses' %}">Курсы</a>
+                <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'about' %}">О нас</a>
+                                    <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'student' %}">Студенты</a>
+
+                <li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+              </ul>
+            </nav>
+            <button class="btn header_btn"><a href="{% url 'settings' %}#questions">
+                Записаться
+              </a></button>
+            <div class="burger-menu">
+              <input id="menu__toggle" type="checkbox" />
+              <label class="menu__btn" for="menu__toggle">
+                <span></span>
+              </label>
+      
+              <div class="menu__box">
+                <a href="{% url 'settings' %}">
+                  <img src="./img/logo.svg" alt="">
+      
+                </a>
+                <div class="burger-menu__nav">
+                  <a class="burger-menu__nav_nav" href="{% url 'courses' %}">Курсы</a>
+                  <a class="burger-menu__nav_nav" href="{% url 'about' %}">О нас</a>
+                  <a class="burger-menu__nav_nav" href="{% url 'settings' %}#contact">Контакты</a>
+                  <a class="burger-menu__nav_nav btn" href="{% url 'settings' %}#questions">Записаться</a>
+                </div>
+              </div>
+            </div>
+          </header>
+          <h1 class="title">{{ about_id.title_banner }}</h1>
+          <p style="color: aliceblue;">{{ about_id.description_banner|safe }}</p>
+    </div>
+
+    <section id="about">
+        <div class="container">
+            <div class="about">
+                <h2 class="title_h2">{{ about_id.title }}</h2>
+                <div class="about_textOne">
+                    <h5>{{ about_id.description|safe }}</h5>
+                </div>
+
+                {% for about in about_combined %}
+                    <div class="about_group {% if about.reverse %}reverse{% endif %}">
+                        {% if about.reverse %}
+                            <div class="about_block about_content {{ about.color }}">
+                                <h4>{{ about.item.title }}</h4>
+                                <p>{{ about.item.description|safe }}</p>
+                            </div>
+                            <div class="about_block about_image" style="background-image: url('{{ about.item.image.url }}');"></div>
+                        {% else %}
+                            <div class="about_block about_image" style="background-image: url('{{ about.item.image.url }}');"></div>
+                            <div class="about_block about_content {{ about.color }}">
+                                <h4>{{ about.item.title }}</h4>
+                                <p>{{ about.item.description|safe }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-section-1">
+          <img src="img/logo.svg" alt="logo" class="logo-footer" />
+          <div class="uls">
+            <div class="site-sections ul-con">
+              <h2>Разделы сайтов</h2>
+              <ul>
+                <li><a href="{% url 'courses' %}">Курсы</a></li>
+                <li><a href="{% url 'about' %}">О нас</a></li>
+                <li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+              </ul>
+            </div>
+            <div class="social-madia ul-con">
+              <h2>Соц. сети</h2>
+              <ul>
+                <li> <a href="{{settings.linksinsta}}" target="_blank">Instagram</a></li>
+                <li> <a href="{{settings.linksyoutube}}" target="_blank">Youtube</a></li>
+                <li> <a href="{{settings.linkstiktok}}" target="_blank">Tik-tok</a></li>
+    
+                   
+              
+              </ul>
+            </div>
+            <div class="contacts ul-con">
+              <h2>Контакты</h2>
+              <ul>
+                <li>+996 564 464 676</li>
+                <li>Пн-Пт с 9:00 до 20:00</li>
+                <li>Сб-Вс с 10:00 до 18:00</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <hr />
+        <div class="footer-section-2">
+          <p class="copyright">© 2025 "American dream". Все права защищены.</p>
+          <p class="policy">Политика</p>
+        </div>
+      </footer>
+    
+    <script src="{% static 'js/burger.js' %}"></script>
+
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -14,7 +14,7 @@ from app.settings.views import (
 )
 
 urlpatterns = [
-    path('admin/', crm_admin_site.urls),
+    path('admin-men/', crm_admin_site.urls),
     path('login/', portal_login, name='portal_login'),
     path('portal/mentor/', mentor_dashboard, name='mentor_dashboard'),
     path('portal/mentor/lessons/', mentor_lessons, name='mentor_lessons'),
@@ -28,6 +28,7 @@ urlpatterns = [
     path('tabel/', tabel_view, name='tabel_view'),
     path('portal/student/', student_dashboard, name='student_dashboard'),
     path('portal/parent/', parent_dashboard, name='parent_dashboard'),
+    path('', include ('app.academy.urls')),
 ]
 
 handler404 = "app.settings.views.error_404"

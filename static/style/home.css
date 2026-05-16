@@ -1,0 +1,616 @@
+.hero {
+    background: #05C17B ;
+}
+
+.title {
+    margin: 100px 0;
+    max-width: 700px;
+}
+
+.description {
+    max-width: 700px;
+
+}
+
+#about {
+    margin: 150px 0 0 0;
+    font-family: "SF Pro Text", sans-serif;
+
+}
+
+.about_group_top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 50px;
+}
+
+.about_group_top_left {
+    width: 50%;
+}
+
+.about_group_top_left_card {
+    border-radius: 30px;
+    background: #9BE6CA99;
+    padding: 60px 40px;
+    height: 350px;
+    margin: 12px 0;
+
+}
+
+.about_group_top_left_description {
+    font-weight: 400;
+    font-size: 24px;
+
+
+}
+
+.about_group_top_left_cardd {
+    border-radius: 30px;
+    background: #F5F5F5;
+    padding: 60px 40px;
+    height: 350px;
+
+    h3 {
+        max-width: 200px;
+        font-weight: 700;
+        font-size: 25.34px;
+
+    }
+
+    p {
+        width: 80%;
+        font-weight: 400;
+        font-size: 17px;
+        margin: 10px 0;
+
+    }
+}
+
+.about_group_top_right {
+    width: 45%;
+    height: 700px;
+    border-radius: 25px;
+
+    padding: 70px 40px;
+
+    h4 {
+        width: 70%;
+        font-weight: 600;
+        font-size: clamp(18px, 1.5vw, 35px);
+        color: #fff;
+
+    }
+
+}
+
+.about_group_bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 50px;
+    background: #05C17B;
+    border-radius: 24px;
+    position: relative;
+    z-index: -2;
+
+}
+
+.about_group_bottom_right {
+    color: #fff;
+
+    h2 {
+        width: 90%;
+        font-weight: 700;
+        font-size: 24px;
+
+    }
+
+    p {
+        width: 90%;
+
+        margin: 10px 0;
+        font-weight: 400;
+        font-size: 17px;
+
+    }
+}
+
+.about_group_bottom_left {
+    position: relative;
+    width: 100%;
+    height: 250px;
+}
+
+.about_group_bottom_left img {
+    position: absolute;
+    z-index: 1;
+}
+
+#B1 {
+    top: 100px;
+    left: 80px;
+    width: 140px;
+}
+
+#B2 {
+    bottom: 20px;
+    left: 50px;
+    width: 160px;
+}
+
+#DUOLINGO {
+    top: 40px;
+    left: 40px;
+    width: 120px;
+}
+
+#IELTS {
+    top: 100px;
+    left: 270px;
+    width: 110px;
+}
+
+#SAT {
+    bottom: 10px;
+    left: 250px;
+    width: 130px;
+}
+
+#V1,
+#V2,
+#V3 {
+    position: absolute;
+    z-index: -1;
+    opacity: 0.6;
+}
+
+#V1 {
+    top: 20px;
+    left: 230px;
+    width: 100px;
+}
+
+#V2 {
+    bottom: 1px;
+    left: 5px;
+    width: 250px;
+}
+
+#V3 {
+    bottom: 10px;
+    left: 200px;
+    width: 300px;
+}
+
+#r_vec1,
+#r_vec2 {
+    position: absolute;
+    z-index: -1;
+    opacity: 0.6;
+}
+
+#r_vec1 {
+    top: 2px;
+    right: 20px;
+    width: 150px;
+}
+
+#r_vec2 {
+    bottom: 20px;
+    right: 70px;
+    width: 100px;
+}
+
+.about_btn {
+    float: right;
+    margin-top: 20px;
+}
+
+
+/* курсы */
+#courses {
+    padding: 150px 0 0 0;
+
+}
+
+.courses_head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    button {
+        width: 85px;
+        height: 85px;
+        border-radius: 50%;
+    }
+
+}
+
+.courses_btn {
+    margin-top: 30px;
+    width: 100%;
+    text-decoration: none;
+}
+
+/* Контакты */
+
+.contact {
+    margin: 150px auto;
+    border-radius: 20px;
+    border: 2px solid #000000;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+}
+
+.contact_text {
+    padding: clamp(30px, 5vw, 58px) clamp(20px, 4vw, 40px);
+    width: 50%;
+
+    h2 {
+        font-family: "Exo 2", sans-serif;
+        font-weight: 700;
+        font-size: clamp(24px, 4vw, 43px);
+        color: #05C17B;
+    }
+
+    h3 {
+        font-family: "Helvetica Neue", sans-serif;
+        font-weight: 500;
+        font-size: clamp(18px, 3vw, 27px);
+        margin: clamp(15px, 2vw, 25px) 0 clamp(8px, 1vw, 10px) 0;
+    }
+
+    a {
+        font-family: "Helvetica Neue", sans-serif;
+        font-weight: 400;
+        font-size: clamp(16px, 3vw, 27px);
+        color: #000000;
+        transition: color 0.3s ease;
+
+        &:hover {
+            color: #05C17B;
+        }
+    }
+}
+
+.contact_nomer {
+    display: flex;
+    flex-direction: column;
+}
+
+.contact_map {
+    width: 50%;
+    min-height: 400px;
+
+    iframe {
+        width: 100%;
+        height: 100%;
+        border-radius: 0 18px 18px 0;
+        border: none;
+    }
+}
+
+@media (max-width: 1024px) {
+    .title {
+        margin: 70px 0;
+        font-size: 32px;
+        max-width: 600px;
+    }
+
+    .description {
+        max-width: 600px;
+    }
+
+    .about_group_top {
+        gap: 40px;
+    }
+
+    .about_group_top_left {
+        width: 55%;
+    }
+
+    .about_group_top_left_description {
+        font-size: 20px;
+        line-height: 1.4;
+    }
+
+    .about_group_top_right {
+        width: 42%;
+        min-height: 730px;
+        background-position: center;
+        background-size: cover;
+        padding: 40px 30px;
+
+        h4 {
+            width: 90%;
+            font-size: 24px;
+            line-height: 1.4;
+        }
+    }
+
+    .about_group_bottom {
+        padding: 40px 30px;
+        gap: 30px;
+
+        &_right {
+            padding: 0;
+            width: 45%;
+
+            h2 {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+
+            p {
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+        }
+
+        &_left {
+            width: 50%;
+        }
+    }
+
+    .about_group_bottom_right {
+        padding: 20px;
+
+        h2 {
+            width: 100%;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            width: 100%;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+    }
+
+    .about_group_bottom_left {
+        height: 250px;
+        display: flex;
+        justify-content: space-around;
+    }
+
+    #B1 {
+        width: 110px;
+        left: 40px;
+    }
+
+    #B2 {
+        width: 120px;
+        left: 30px;
+    }
+
+    #DUOLINGO {
+        width: 90px;
+        left: 20px;
+    }
+
+    #IELTS {
+        width: 85px;
+        left: 200px;
+    }
+
+    #SAT {
+        width: 100px;
+        left: 180px;
+    }
+}
+
+@media (max-width: 768px) {
+    .title {
+        margin: 50px 0;
+        font-size: 28px;
+        max-width: 100%;
+    }
+
+    .description {
+        font-size: 16px;
+        max-width: 100%;
+    }
+
+    #about {
+        margin: 60px 0 0 0;
+    }
+
+    .about_group_top {
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .about_group_top_left {
+        width: 100%;
+    }
+
+    .about_group_top_left_card {
+        padding: 30px 20px;
+        height: auto;
+    }
+
+    .about_group_top_left_description {
+        font-size: 18px;
+    }
+
+    .about_group_top_left_cardd {
+        padding: 30px 20px;
+        height: auto;
+
+        h3 {
+            font-size: 20px;
+        }
+
+        p {
+            font-size: 14px;
+        }
+    }
+
+    .about_group_top_right {
+        width: 100%;
+        min-height: auto;
+        height: 400px;
+        padding: 30px 20px;
+
+        h4 {
+            width: 100%;
+            font-size: 20px;
+        }
+    }
+
+    .about_group_bottom {
+        flex-direction: column;
+        padding: 30px 20px;
+        gap: 20px;
+
+        &_right {
+            width: 100%;
+            text-align: center;
+            padding: 20px 15px;
+
+            h2,
+            p {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        &_left {
+            width: 100%;
+            height: 220px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+    }
+
+    .about_group_bottom_right {
+        h2 {
+            font-size: 20px;
+            width: 100%;
+        }
+
+        p {
+            font-size: 14px;
+        }
+    }
+
+    .about_group_bottom_left {
+        height: 200px;
+    }
+
+
+}
+
+@media (max-width: 576px) {
+    .title {
+        font-size: 24px;
+        margin: 30px 0;
+    }
+
+    .about_group_top_left_card,
+    .about_group_top_left_cardd {
+        padding: 20px;
+        margin: 8px 0;
+    }
+
+    .about_group_top_left_description {
+        font-size: 16px;
+    }
+
+    .about_group_top_right {
+        height: 300px;
+        padding: 20px 15px;
+
+        h4 {
+            font-size: 24px;
+        }
+    }
+
+    .about_group_bottom {
+        padding: 20px 15px;
+
+        &_right {
+            h2 {
+                font-size: 18px;
+            }
+
+            p {
+                font-size: 14px;
+            }
+        }
+
+        &_left {
+            height: 180px;
+            gap: 15px;
+        }
+    }
+
+    .about_group_bottom_left {
+        height: 180px;
+    }
+
+    #IELTS {
+        top: 20px;
+        left: 150px;
+    }
+    #SAT {
+        bottom:5px;
+        left: 130px;
+    }
+
+    #B1,
+    #B2,
+    #DUOLINGO,
+    #IELTS,
+    #SAT {
+        width: 120px;
+        ;
+    }
+
+    #V1,
+    #V2,
+    #V3 {
+        width: 40px;
+    }
+
+    .about_btn {
+        width: 100%;
+        text-align: center;
+        float: none;
+    }
+
+    /* контакт */
+    .contact {
+        flex-direction: column;
+        padding: 0;
+        border-width: 1px;
+    }
+
+    .contact_text {
+        width: 100%;
+        padding: 20px 15px;
+    }
+
+
+    .contact_nomer {
+        gap: 10px;
+    }
+
+
+    .contact_map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .contact_map iframe {
+        width: 100%;
+        height: 100%;
+        border-radius: 20px;
+        border: none;
+    }
+}

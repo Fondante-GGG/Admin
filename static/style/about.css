@@ -1,0 +1,477 @@
+/* .hero {
+    background: #006257;
+}
+
+.title {
+    margin: 100px 0 50px 0;
+    max-width: 850px;
+}
+
+.description {
+    max-width: 60%;
+
+}
+
+.about {
+    padding-top: 150px;
+
+    h5 {
+        font-weight: 400;
+        max-width: 947px;
+        color: #000;
+        font-family: 'Gotham Pro';
+        font-size: 34px;
+        line-height: 33px;
+
+        span {
+            font-weight: 700;
+        }
+    }
+}
+
+.about_textOne {
+    border-radius: 20px;
+    background: #B4EDD8;
+    padding: 40px;
+    min-height: 450px;
+    display: flex;
+    align-items: center;
+
+}
+
+.about_group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.about_block {
+    margin: 20px;
+    width: 50%;
+    min-height: 360px;
+    border-radius: 20px;
+    background: #F5F5F5;
+    padding: 0 30px;
+    background-size: contain;
+
+    h4 {
+        font-family: "Gotham Pro" sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        max-width: 200px;
+
+    }
+
+    p {
+        width: 80%;
+        margin-top: 10px;
+        font-family: "SF Pro Text";
+        font-weight: 400;
+        font-size: 18px;
+    }
+
+}
+
+.about_block:not([style]) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+}
+
+.about_block[style] {
+    padding: 0;
+    background-size: cover !important;
+}
+
+
+.green {
+    background: #B4EDD8;
+
+}
+
+@media (max-width: 1024px) {
+    .about h5 {
+        font-size: 28px;
+        line-height: 30px;
+    }
+
+    .about_block h4 {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .about_group {
+        flex-direction: column;
+    }
+
+    .about_block {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .title {
+        margin: 60px 0 30px 0;
+    }
+
+    .about {
+        padding-top: 100px;
+    }
+
+    .about_textOne {
+        min-height: 350px;
+        padding: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about h5 {
+        font-size: 24px;
+        line-height: 28px;
+    }
+
+    .about_block {
+        min-height: 300px;
+        padding: 0 20px;
+    }
+
+    .about_block h4 {
+        font-size: 24px;
+    }
+
+    .about_block p {
+        font-size: 16px;
+    }
+
+    .description {
+        max-width: 95%;
+    }
+} */
+
+
+.hero {
+    background: #006257;
+}
+
+.hero_description {
+    width: 60%;
+}
+
+.title {
+    margin: 100px 0 50px 0;
+    max-width: 850px;
+}
+
+.description {
+    max-width: 100%;
+}
+
+#student {
+    width: 100%;
+}
+
+.student {
+    padding-top: 150px;
+    width: 100%;
+}
+
+.student h5 {
+    font-weight: 400;
+    max-width: 947px;
+    color: #000;
+    font-family: 'Gotham Pro';
+    font-size: 34px;
+    line-height: 33px;
+}
+
+.student h5 span {
+    font-weight: 700;
+}
+
+.pagination .page.active {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.student_textOne {
+    border-radius: 20px;
+    background: #B4EDD8;
+    padding: 40px;
+    min-height: 450px;
+    display: flex;
+    align-items: center;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+}
+
+#student_card {
+    padding-top: 135px;
+}
+
+/* Карточки */
+.student_cards {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+}
+
+.student_card {
+    max-width: 310px;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    text-align: center;
+    padding: 20px 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    background-color: #fff;
+    transition: transform 0.3s ease;
+}
+
+.student_card:hover {
+    transform: translateY(-5px);
+}
+
+.avatar {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    margin-top: 10px;
+    object-fit: cover;
+}
+
+.name {
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 700;
+    max-width: 300px;
+    font-size: 30px;
+    margin: 15px auto 0;
+    text-align: center;
+}
+
+.projects {
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-top: 30px;
+    color: #00000099;
+    text-align: center;
+}
+
+/* Пагинация */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    padding: 0 10px;
+}
+
+.page,
+.dots {
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: black;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.3s;
+    user-select: none;
+    border: 1px solid transparent;
+}
+
+.page:hover {
+    background-color: #eee;
+    border-color: #aaa;
+}
+
+.page.active {
+    font-weight: bold;
+    background-color: #ddd;
+    border-color: #888;
+    cursor: default;
+}
+
+.dots {
+    margin-left: -10px;
+    cursor: default;
+    border: none;
+}
+
+.page.next,
+.page.prev {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background-color: transparent;
+    cursor: pointer;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.page.next:hover,
+.page.prev:hover {
+    background-color: #eee;
+    border-color: #aaa;
+}
+
+.page.next img,
+.page.prev img {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+/* Адаптивность для карточек */
+@media (max-width: 1024px) {
+    .student_card {
+        max-width: 45%;
+    }
+
+    .name {
+        font-size: 26px;
+    }
+
+    .projects {
+        font-size: 20px;
+    }
+    
+    .student h5 {
+        font-size: 28px;
+        line-height: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    #student_card {
+        padding-top: 100px;
+    }
+
+    .student_cards {
+        gap: 12px;
+    }
+
+    .student_card {
+        max-width: 48%;
+    }
+
+    .avatar {
+        width: 150px;
+        height: 150px;
+    }
+
+    .name {
+        font-size: 22px;
+    }
+
+    .projects {
+        font-size: 18px;
+    }
+
+    .pagination {
+        gap: 6px;
+    }
+
+    .page,
+    .dots {
+        padding: 5px 10px;
+        font-size: 13px;
+    }
+
+    .page.next,
+    .page.prev {
+        width: 32px;
+        height: 32px;
+    }
+
+    .page.next img,
+    .page.prev img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .title {
+        margin: 60px 0 30px 0;
+    }
+
+    .student {
+        padding-top: 100px;
+    }
+
+    .student_textOne {
+        min-height: 350px;
+        padding: 30px;
+    }
+}
+
+@media (max-width: 550px) {
+    #student_card {
+        padding-top: 80px;
+    }
+
+    .student_cards {
+        gap: 10px;
+    }
+
+    .student_card {
+        max-width: 90%;
+    }
+
+    .name {
+        font-size: 20px;
+    }
+
+    .projects {
+        font-size: 16px;
+    }
+
+    .pagination {
+        gap: 5px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 0 5px;
+    }
+
+    .page,
+    .dots {
+        padding: 4px 8px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .page.next,
+    .page.prev {
+        width: 28px;
+        height: 28px;
+    }
+
+    .page.next img,
+    .page.prev img {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .student h5 {
+        font-size: 24px;
+        line-height: 28px;
+    }
+}

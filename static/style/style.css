@@ -1,0 +1,290 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Montserrat:ital@0;1&display=swap');
+
+@font-face {
+    font-family: "Exo 2";
+    src: url(./fonts/Exo_2/static/Exo2-Bold.ttf);
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: "Exo 2";
+    src: url(./fonts/Exo_2/static/Exo2-Medium.ttf);
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "Helvetica Neue";
+    src: url(./fonts/helvetica-neue-5/HelveticaNeueRoman.otf);
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "Helvetica Neue";
+    src: url(./fonts/helvetica-neue-5/HelveticaNeueBold.otf);
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: "Gotham Pro";
+    src: url(./fonts/Gotham_Pro/gothampro_light.ttf);
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "Gotham Pro";
+    src: url(./fonts/Gotham_Pro/gothampro_bold.ttf);
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./fonts/SanFranciscoProText/SFProText-Regular.ttf);
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./fonts/SanFranciscoProText/SFProText-Light.ttf);
+    font-weight: 300;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+button {
+    cursor: pointer;
+}
+
+a {
+    text-decoration: none;
+}
+
+.container {
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+.hero {
+    margin-top: 30px;
+    padding: 50px 30px 100px 30px;
+    border-radius: 50px;
+}
+
+.title {
+    font-family: " Exo 2", sans-serif;
+    font-weight: 700;
+    font-size: 50px;
+    color: #fff;
+}
+
+.title_h2 {
+    font-family: " Exo 2", sans-serif;
+    font-weight: 700;
+    font-size: 60px;
+    color: #05C17B;
+}
+
+.btn {
+    border: none;
+    font-family: " Exo 2", sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #fff;
+    border-radius: 30px;
+    padding: 15px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #05C17B;
+    transition: 0.3s;
+
+
+}
+
+
+.detailed {
+    background: #00008B;
+    width: 48%;
+    font-family: "Exo 2", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: #fff;
+    border: none;
+
+}
+
+.signup {
+    background: #0D47A1;
+    width: 48%;
+    font-family: "Exo 2", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: #fff;
+    border: none;
+}
+
+.description {
+    font-weight: 400;
+    font-size: clamp(18px, 3.5vw, 25px);
+    font-family: " Exo 2", sans-serif;
+    color: #fff;
+    line-height: 33px;
+}
+
+
+@media screen and (max-width: 1400px) {
+    .container {
+        max-width: 1140px;
+    }
+
+    .title_h2 {
+        font-size: 50px;
+    }
+
+    .btn {
+        font-size: 20px;
+        padding: 12px 25px;
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .container {
+        max-width: 960px;
+    }
+
+    .title {
+        font-size: 45px;
+    }
+
+    .title_h2 {
+        font-size: 45px;
+    }
+
+    .description {
+        font-size: 20px;
+        line-height: 28px;
+    }
+}
+
+@media screen and (max-width: 992px) {
+    .container {
+        max-width: 720px;
+    }
+
+    .col-6 {
+        width: 100%;
+        padding: 0;
+    }
+
+    .title {
+        font-size: 40px;
+    }
+
+    .title_h2 {
+        font-size: 40px;
+    }
+
+    .btn {
+        font-size: 18px;
+        padding: 10px 20px;
+    }
+
+    .detailed,
+    .signup {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .container {
+        max-width: 540px;
+    }
+
+    .hero {
+        padding: 40px 20px 80px 20px;
+    }
+
+    .title {
+        font-size: 35px;
+        margin: 50px 0 30px 0;
+    }
+
+    .title_h2 {
+        font-size: 35px;
+    }
+
+    .description {
+        font-size: 18px;
+        line-height: 26px;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .container {
+        max-width: 100%;
+        padding: 0 15px;
+    }
+
+    .hero {
+        padding-top: 60px;
+        height: auto !important;
+        padding-bottom: 20px;
+        border-radius: 0;
+        margin-top: 0;
+    }
+
+    .hero {
+        margin-top: 20px;
+        padding: 30px 15px 60px 15px;
+        border-radius: 30px;
+    }
+
+    .title {
+        font-size: 30px;
+        margin: 40px 0 25px 0;
+    }
+
+    .title_h2 {
+        font-size: 30px;
+    }
+
+    .btn {
+        font-size: 16px;
+        padding: 8px 16px;
+    }
+
+    .detailed,
+    .signup {
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+
+    .description {
+        font-size: 16px;
+        line-height: 24px;
+    }
+
+    .hero {
+        padding-top: 60px;
+        height: 600px;
+        border-radius: 0;
+        margin-top: 0;
+    }
+
+    .title {
+        margin: 100px 0 50px 0;
+    }
+
+
+}
+

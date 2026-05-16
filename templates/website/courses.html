@@ -1,0 +1,335 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="{% static 'style/header.css' %}">
+  <link rel="stylesheet" href="{% static 'style/style.css' %}">
+  <link rel="stylesheet" href="{% static 'style/burger.css' %}">
+  <link rel="stylesheet" href="{% static 'style/footer.css' %}">
+  <link rel="stylesheet" href="{% static 'style/card.css' %}">
+  <link rel="stylesheet" href="{% static 'style/courses.css' %}">
+  <link rel="stylesheet" href="{% static 'style/modal.css' %}">
+  <link rel="stylesheet" href="{% static 'style/modalSign.css' %}">
+</head>
+
+<body>
+  <div class="hero courses container">
+
+    <header>
+      <a href="{% url 'settings' %}">
+        <img src="{% static 'img/logo.svg' %}" alt="">
+
+      </a>
+      <nav>
+        <ul>
+          <li><a href="{% url 'courses' %}">Курсы</a></li>
+          <li><a href="{% url 'about' %}">О нас</a></li>
+                              <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'student' %}">Студенты</a>
+
+<li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+        </ul>
+      </nav>
+      <button class="btn header_btn"><a href="{% url 'settings' %}#questions">
+          Записатся
+        </a></button>
+      <div class="burger-menu">
+        <input id="menu__toggle" type="checkbox" />
+        <label class="menu__btn" for="menu__toggle">
+          <span></span>
+        </label>
+
+        <div class="menu__box">
+          <div class="burger-menu__nav">
+            <a class="burger-menu__nav_nav" href="./courses.html">Курсы</a>
+            <a class="burger-menu__nav_nav" href="./about.html">О нас</a>
+            <a class="burger-menu__nav_nav" href="{% url 'settings' %}#contact">Контакты</a>
+            <a class="burger-menu__nav_nav btn" href="{% url 'settings' %}#questions">Записаться</a>
+          </div>
+        </div>
+      </div>
+    </header>
+    <h1 class="title">{{ courses.title }} 🎓</h1>
+    <p class="description">{{ courses.description|safe }}
+    </p>
+  </div>
+
+  <div class="anim_box container ">
+    <div class="anim_box_it">
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+      <h1 class="anim_box_it_text">КУРСЫ IT</h1>
+    </div>
+
+    <div class="anim_box_ort">
+      <h1 class="anim_box_ort_text">Подготовка к ОРТ</h1>
+      <h1 class="anim_box_ort_text">Подготовка к ОРТ</h1>
+      <h1 class="anim_box_ort_text">Подготовка к ОРТ</h1>
+    </div>
+
+    <div class="anim_box_lang">
+      <h1 class="anim_box_lang_text">Курсы арабского языка и</h1>
+      <h1 class="anim_box_lang_text">Курсы английского языка</h1>
+    </div>
+  </div>
+
+  <section id="data">
+    <div class="container">
+      <div class="data">
+        <!-- Кнопки -->
+        <div class="data_btns">
+          {% for direction in directions %}
+            <button data-category="{{ direction.id }}" class="{% if forloop.first %}active{% endif %}">
+              {{ direction.title }}
+            </button>
+          {% endfor %}
+        </div>
+
+        <!-- Контент -->
+        <div class="data_info">
+          {% for direction in directions %}
+            <div id="{{ direction.id }}" class="data_info_content {% if not forloop.first %}hidden{% endif %}">
+              {% for course in courses_all %}
+                {% if course.direction.id == direction.id %}
+                  <div class="card {{ course.color_theme }}">
+                    <div class="card_img">
+                      <div>
+                        <p>{{ course.direction }}</p>
+                        <h5>{{ course.title }}</h5>
+                      </div>
+                      <img src="{{ course.photo.url }}" style="width: 100px; height: 100px;" alt="{{ course.title }}">
+                    </div>
+                    <ul class="card_list">
+                      {% for program in course.programs.all %}
+                        <li>{{ program.title }}</li>
+                      {% empty %}
+                        <li>Нет программ</li>
+                      {% endfor %}
+                    </ul>
+                    <div class="card_discount">
+                      <div class="card_discount_head">
+                        <div>
+                          <p class="card_discount_title line-through">{{ course.price }} сом</p>
+                          <p class="card_discount_title">{{ course.discounted_price }} сом</p>
+                        </div>
+                        <div class="card_price_minus">{{ course.discount_percent }}%</div>
+                      </div>
+                      <div class="card_price">
+                        <h1 class="card_price_n">{{ course.monthly_price }}</h1>
+                        <p class="card_price_som">сом/мес</p>
+                      </div>
+                    </div>
+                    <div class="card_btn">
+                      <a href="#modal-{{ course.id }}" class="detailed modal-trigger">Подробнее</a>
+                      <a href="#modal-sign-{{ course.id }}" class="signup modal-trigger" data-course-id="{{ course.id }}">Записаться</a>
+                    </div>
+                  </div>
+
+                  <!-- Модалка "Подробнее" -->
+                  <div class="modal  modal_det" id="modal-{{ course.id }}" style="display: none;">
+                    <div class="modal_overlay container">
+                      <div class="modal_box">
+                        <button class="modal_close" data-close="modal-{{ course.id }}">×</button>
+                        <div class="modal_text">
+                          <div class="modal_hero">
+                            <h2 class="modal_title">{{ course.title }}</h2>
+                            <p class="modal_direction">{{ course.direction }}</p>
+                            <img src="{{ course.photo.url }}" alt="{{ course.title }}" class="modal_img">
+                          </div>
+                          <div class="modal_description">
+                            {{ course.title_model|safe }}
+                            {{ course.description_model|safe }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Модалка "Записаться" -->
+                  <div class="modal  modal_sign" id="modal-sign-{{ course.id }}" style="display: none;">
+                    <div class="modal_overlay container">
+                      <div class="modal_box">
+                        <button class="modal_close" data-close="modal-sign-{{ course.id }}">×</button>
+                        <div class="modalSign_hero">
+                          <div class="card">
+                            <div class="card_img">
+                              <div>
+                                <p class="modal_texte">{{ course.direction }}</p>
+                                <h5  class="modal_texte" >{{ course.title }}</h5>
+                              </div>
+                              <img src="{{ course.photo.url }}" style="width: 50px; height: 50px;" alt="{{ course.title }}">
+                            </div>
+                            <div class="card_discount">
+                              <div class="card_discount_head">
+                                <div>
+                                  <p class="card_discount_title">{{ course.discounted_price }} сом</p>
+                                </div>
+                                <div class="card_price_minus">{{ course.discount_percent }}%</div>
+                              </div>
+                              <div class="card_price">
+                                <h1 class="card_price_n">{{ course.monthly_price }}</h1>
+                                <p class="card_price_som">сом/мес</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="modal_text" style="flex: 1;">
+                            <form method="POST" class="modalSign_form" action="/">
+                              {% csrf_token %}
+                              <input type="hidden" name="course_id" value="{{ course.id }}">
+                              <input type="text" name="name_register" placeholder="Ваше имя" required>
+                              <div>
+                                <input type="tel" name="phone_register" placeholder="Телефон" required>
+                                <input type="email" name="email_register" placeholder="Email" required>
+                              </div>
+                              <button type="submit" class="btn">Отправить</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const buttons = document.querySelectorAll('.data_btns button');
+      const contents = document.querySelectorAll('.data_info_content');
+
+      buttons.forEach(button => {
+        button.addEventListener('click', () => {
+          const category = button.dataset.category;
+
+          // Сброс активных кнопок
+          buttons.forEach(btn => btn.classList.remove('active'));
+
+          // Скрыть все блоки
+          contents.forEach(content => content.style.display = 'none');
+
+          // Показать нужный
+          document.getElementById(category).style.display = 'flex';
+
+          // Активировать кнопку
+          button.classList.add('active');
+        });
+      });
+
+      // По умолчанию показать первый блок
+      contents.forEach((content, index) => {
+        content.style.display = index === 0 ? 'flex' : 'none';
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Открытие модалки
+      document.querySelectorAll('.modal-trigger').forEach(link => {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          const modalId = this.getAttribute('href').replace('#', '');
+          const modal = document.getElementById(modalId);
+          if (modal) {
+            modal.style.display = 'block';
+            document.documentElement.style.overflow = 'hidden'; // Отключение скролла для html
+            document.documentElement.style.height = '100%'; // Фиксация высоты
+          }
+        });
+      });
+
+      // Закрытие модалки при клике на фон (исключая modal_box)
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function (e) {
+          if (!e.target.closest('.modal_box')) { // Проверка, что клик не внутри modal_box
+            modal.style.display = 'none';
+            document.documentElement.style.overflow = ''; // Включение скролла для html
+            document.documentElement.style.height = ''; // Сброс высоты
+          }
+        });
+      });
+
+      // Закрытие модалки по кнопке X
+      document.querySelectorAll('.modal_close').forEach(button => {
+        button.addEventListener('click', function (e) {
+          e.stopPropagation(); // Предотвращение всплытия события
+          const modalId = this.getAttribute('data-close');
+          const modal = document.getElementById(modalId);
+          if (modal) {
+            modal.style.display = 'none';
+            document.documentElement.style.overflow = ''; // Включение скролла для html
+            document.documentElement.style.height = ''; // Сброс высоты
+          }
+        });
+      });
+
+      // Закрытие модалки по клавише Esc
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal').forEach(modal => {
+            modal.style.display = 'none';
+          });
+          document.documentElement.style.overflow = ''; // Включение скролла для html
+          document.documentElement.style.height = ''; // Сброс высоты
+        }
+      });
+    });
+  </script>
+
+ 
+  
+  <footer class="footer">
+    <div class="footer-section-1">
+      <img src="{% static 'img/logo.svg' %}" alt="logo" class="logo-footer" />
+      <div class="uls">
+        <div class="site-sections ul-con">
+          <h2>Разделы сайтов</h2>
+          <ul>
+            <li><a href="{% url 'courses' %}">Курсы</a></li>
+            <li><a href="{% url 'about' %}">О нас</a></li>
+            <li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+          </ul>
+        </div>
+        <div class="social-madia ul-con">
+          <h2>Соц. сети</h2>
+          <ul>
+            <li> <a href="{{settings.linksinsta}}" target="_blank">Instagram</a></li>
+            <li> <a href="{{settings.linksyoutube}}" target="_blank">Youtube</a></li>
+            <li> <a href="{{settings.linkstiktok}}" target="_blank">Tik-tok</a></li>
+          </ul>
+        </div>
+        <div class="contacts ul-con">
+          <h2>Контакты</h2>
+          <ul>
+            <li>+996 564 464 676</li>
+            <li>Пн-Пт с 9:00 до 20:00</li>
+            <li>Сб-Вс с 10:00 до 18:00</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <hr />
+    <div class="footer-section-2">
+      <p class="copyright">© 2025 "American dream". Все права защищены.</p>
+      <p class="policy">Политика</p>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/burger.js' %}"></script>
+  <script src="{% static 'js/courses.js' %}"></script>
+</body>
+
+</html>

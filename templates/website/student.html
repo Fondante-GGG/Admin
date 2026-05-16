@@ -1,0 +1,468 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'style/header.css' %}">
+    <link rel="stylesheet" href="{% static 'style/style.css' %}">
+    <link rel="stylesheet" href="{% static 'style/burger.css' %}">
+    <link rel="stylesheet" href="{% static 'style/footer.css' %}">
+    <link rel="stylesheet" href="{% static 'style/about.css' %}">
+    <link rel="stylesheet" href="{% static 'style/student.css' %}">
+</head>
+
+<body>
+   <div class="hero container">
+
+    <header>
+      <a href="{% url 'settings' %}">
+        <img src="{% static 'img/logo.svg' %}" alt="">
+
+      </a>
+      <nav>
+        <ul>
+          <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'courses' %}">Курсы</a>
+          <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'about' %}">О нас</a>
+          <a class="burger-menu__nav_nav" style="color: black;" href="{% url 'student' %}">Студенты</a>
+
+          <li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+        </ul>
+      </nav>
+      <button class="btn header_btn"><a href="{% url 'settings' %}#questions">
+          Записаться
+        </a></button>
+      <div class="burger-menu">
+        <input id="menu__toggle" type="checkbox" />
+        <label class="menu__btn" for="menu__toggle">
+          <span></span>
+        </label>
+
+        <div class="menu__box">
+          <a href="{% url 'settings' %}">
+            <img src="./img/logo.svg" alt="">
+
+          </a>
+          <div class="burger-menu__nav">
+            <a class="burger-menu__nav_nav" href="{% url 'courses' %}">Курсы</a>
+            <a class="burger-menu__nav_nav" href="{% url 'about' %}">О нас</a>
+            <a class="burger-menu__nav_nav" href="{% url 'settings' %}#contact">Контакты</a>
+            <a class="burger-menu__nav_nav btn" href="{% url 'settings' %}#questions">Записаться</a>
+          </div>
+        </div>
+      </div>
+    </header>
+    <h1 class="title">{{title}}</h1>
+    <p class="hero_description" style="color: aliceblue;">{{description}}</p>
+  </div>
+      <section id="student">
+    <div class="container">
+      <div class="student">
+        <h2 class="title_h2">{{title2}}</h2>
+        <div class="student_textOne">
+          <h5>{{description2}}</h5>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="student_card">
+    <div class="container">
+      <!-- Фильтр по годам -->
+      <form method="get" action="" class="year-filter" style="margin-bottom: 20px;">
+        <label for="year">Выберите год:</label>
+        <select name="year" id="year" onchange="this.form.submit()">
+          <option value="">Все годы</option>
+          {% for y in years %}
+            <option value="{{ y }}" {% if y|stringformat:"s" == selected_year|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </form>
+
+      <!-- Карточки студентов -->
+      <div class="student_cards">
+        {% for student in about_student %}
+          {% if selected_year == "" or student.release_year|stringformat:"s" == selected_year|stringformat:"s" %}
+            <div class="student_card">
+              <img src="{{ student.image.url }}" alt="Фото" class="avatar">
+              <h3 class="name">{{ student.title }}</h3>
+              <h5 class="projects">{{ student.description }}</h5>
+            </div>
+          {% endif %}
+        {% empty %}
+          <p>Ничего не найдено для выбранного года.</p>
+        {% endfor %}
+      </div>
+
+      <!-- Пагинация -->
+      <div class="pagination">
+        <span class="dots">...</span>
+        <a href="#" class="page next"><img src="{% static 'img/logo.svg' %}" alt=""></a>
+      </div>
+    </div>
+
+    <!-- Встроенный CSS -->
+    <style>
+
+
+      .year-filter select {
+        padding: 10px 16px;
+        border: 2px solid #4caf50;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 500; 
+        color: #2e7d32;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        appearance: none;
+
+        /* стрелочка */
+        background-image: url("data:image/svg+xml;utf8,<svg fill='green' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 16px;
+      }
+
+      .year-filter select:hover {
+        border-color: #388e3c;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+      }
+
+      .year-filter select:focus {
+        outline: none;
+        border-color: #2e7d32;
+        box-shadow: 0 0 10px rgba(46, 125, 50, 0.6);
+      }
+
+      /* стилизация option */
+      .year-filter select option {
+        background: #e8f5e9;  /* светло-зелёный фон */
+        color: #2e7d32;       /* зелёный текст */
+        padding: 10px;
+        font-size: 15px;
+      }
+
+      .year-filter select option:checked {
+        background: #4caf50;
+        color: #fff;
+      }
+
+
+      .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ==== Карточки студентов ==== */
+    .student_cards {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: flex-start;
+      margin-top: 20px;
+    }
+
+    .student_card {
+      flex: 0 0 220px;
+      max-width: 220px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.12);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      border: 1px solid #e0f2e9;
+    }
+
+    .student_card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.18);
+      border-color: #4caf50;
+    }
+
+    .student_card .avatar {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 12px;
+      border: 3px solid #4caf50;
+    }
+
+    .student_card .name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #2e7d32;
+    }
+
+    .student_card .projects {
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* ==== Фильтр по годам ==== */
+    .year-filter {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 auto 25px;
+      background: #f6fff8;
+      padding: 12px 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(76, 175, 80, 0.1);
+      width: fit-content;
+      border: 1px solid #d7f5e3;
+    }
+
+    .year-filter label {
+      font-size: 16px;
+      font-weight: 500;
+      color: #2e7d32;
+    }
+
+    .year-filter select {
+      padding: 10px 14px;
+      border: 1px solid #a5d6a7;
+      border-radius: 50px;
+      font-size: 15px;
+      color: #2d2d2d;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='green' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+    }
+
+    .year-filter select:hover {
+      border-color: #4caf50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    }
+
+    .year-filter select:focus {
+      outline: none;
+      border-color: #2e7d32;
+      box-shadow: 0 0 10px rgba(46, 125, 50, 0.5);
+    }
+
+    /* ==== Пагинация ==== */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .pagination .page {
+      display: inline-block;
+      padding: 10px 14px;
+      background: #e8f5e9;
+      border-radius: 10px;
+      text-decoration: none;
+      color: #2e7d32;
+      font-weight: 500;
+      transition: all 0.25s ease;
+    }
+
+    .pagination .page:hover {
+      background: #4caf50;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .pagination .dots {
+      font-weight: 600;
+      color: #999;
+    }
+
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        $('#year').on('change', function() {
+          var selected = $(this).val();
+          $('.student_card').each(function() {
+            if(selected === "" || $(this).data('year') == selected){
+              $(this).removeClass('hidden');
+            } else {
+              $(this).addClass('hidden');
+            }
+          });
+        });
+      });
+    </script>
+
+  </section>
+
+    <footer class="footer">
+        <div class="footer-section-1">
+                <img src="{% static 'img/logo.svg' %}" alt="logo" class="logo-footer" />
+          <div class="uls">
+            <div class="site-sections ul-con">
+              <h2>Разделы сайтов</h2>
+              <ul>
+                <li><a href="{% url 'courses' %}">Курсы</a></li>
+                <li><a href="{% url 'about' %}">О нас</a></li>
+                <li><a href="{% url 'settings' %}#contact">Контакты</a></li>
+              </ul>
+            </div>
+            <div class="social-madia ul-con">
+              <h2>Соц. сети</h2>
+              <ul>
+                <li> <a href="{{settings.linksinsta}}" target="_blank">Instagram</a></li>
+                <li> <a href="{{settings.linksyoutube}}" target="_blank">Youtube</a></li>
+                <li> <a href="{{settings.linkstiktok}}" target="_blank">Tik-tok</a></li>
+    
+                   
+              
+              </ul>
+            </div>
+            <div class="contacts ul-con">
+              <h2>Контакты</h2>
+              <ul>
+                <li>+996 564 464 676</li>
+                <li>Пн-Пт с 9:00 до 20:00</li>
+                <li>Сб-Вс с 10:00 до 18:00</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <hr />
+        <div class="footer-section-2">
+          <p class="copyright">© 2025 "American dream". Все права защищены.</p>
+          <p class="policy">Политика</p>
+        </div>
+      </footer>
+    
+    <script src="{% static 'js/burger.js' %}"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.student_card');
+  const pagination = document.querySelector('.pagination');
+  const nextBtnClass = 'page-next';
+  let cardsPerPage;
+  let currentPage = 1;
+  let totalPages;
+
+  function getCardsPerPage() {
+    const width = window.innerWidth;
+    if (width < 500) return 1;
+    if (width < 900) return 4;
+    return 8;
+  }
+
+  function createPageLink(page) {
+    const link = document.createElement('a');
+    link.href = '#';
+    link.textContent = page;
+    link.classList.add('page');
+    if (page === currentPage) {
+      link.classList.add('active');
+    }
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      showPage(page);
+    });
+    return link;
+  }
+
+  function createDots() {
+    const dots = document.createElement('span');
+    dots.textContent = '...';
+    dots.classList.add('dots');
+    return dots;
+  }
+
+  function renderPagination() {
+    pagination.innerHTML = '';
+
+    if (totalPages <= 5) {
+      // Показываем все страницы, если их мало
+      for (let i = 1; i <= totalPages; i++) {
+        pagination.appendChild(createPageLink(i));
+      }
+    } else {
+      // Всегда показываем 1-ю страницу
+      pagination.appendChild(createPageLink(1));
+
+      // Показываем многоточие после первой страницы, если текущая страница далеко
+      if (currentPage > 3) {
+        pagination.appendChild(createDots());
+      }
+
+      // Показываем 3 страницы вокруг текущей
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        pagination.appendChild(createPageLink(i));
+      }
+
+      // Показываем многоточие перед последней страницей, если текущая далеко от конца
+      if (currentPage < totalPages - 2) {
+        pagination.appendChild(createDots());
+      }
+
+      // Всегда показываем последнюю страницу
+      pagination.appendChild(createPageLink(totalPages));
+    }
+
+    // Кнопка "Следующая"
+    const nextLink = document.createElement('a');
+    nextLink.href = '#';
+    nextLink.classList.add(nextBtnClass);
+    nextLink.innerHTML = '<img src="{% static 'img/next.svg' %}" alt="Next">';
+    nextLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (currentPage < totalPages) {
+        showPage(currentPage + 1);
+      }
+    });
+    pagination.appendChild(nextLink);
+  }
+
+  function showPage(page) {
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    currentPage = page;
+
+    cards.forEach(card => (card.style.display = 'none'));
+    const start = (page - 1) * cardsPerPage;
+    const end = start + cardsPerPage;
+    for (let i = start; i < end && i < cards.length; i++) {
+      cards[i].style.display = 'block';
+    }
+
+    renderPagination();
+  }
+
+  function updatePagination() {
+    cardsPerPage = getCardsPerPage();
+    totalPages = Math.ceil(cards.length / cardsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages || 1;
+    showPage(currentPage);
+  }
+
+  updatePagination();
+
+  window.addEventListener('resize', () => {
+    updatePagination();
+  });
+});
+
+  </script>
+</body>
+
+</html>

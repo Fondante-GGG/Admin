@@ -1,0 +1,259 @@
+html,
+body {
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.hero {
+    background: #0D47A1;
+}
+
+.title {
+    margin: 100px 0 40px 0;
+    max-width: 700px;
+}
+
+.description {
+    max-width: 80%;
+
+}
+
+.anim_box {
+    /* max-width: 2000px; */
+    margin: 0 auto;
+    width: 100%;
+    height: 345px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    overflow: hidden;
+}
+
+.anim_box_it,
+.anim_box_ort,
+.anim_box_lang {
+    height: 100px;
+    display: flex;
+    gap: 50px;
+    white-space: nowrap;
+}
+
+.anim_box_it {
+    width: max-content;
+    animation: slide 20s linear infinite;
+}
+
+.anim_box_ort {
+    width: max-content;
+    animation: slide 20s linear infinite reverse;
+}
+
+.anim_box_lang {
+    width: max-content;
+    animation: slide 20s linear infinite;
+}
+
+.anim_box_it_text {
+    font-family: 'Helvetica Neue';
+    font-weight: 400;
+    font-size: 96px;
+    line-height: 100%;
+    letter-spacing: 0%;
+    color: #05C17B4D;
+}
+
+.anim_box_ort_text {
+    font-family: 'Helvetica Neue';
+    font-weight: 400;
+    font-size: 96px;
+    line-height: 100%;
+    letter-spacing: 0%;
+    text-transform: uppercase;
+    color: #05C17B4D;
+}
+
+.anim_box_lang_text {
+    font-family: Helvetica Neue;
+    font-weight: 400;
+    font-size: 96px;
+    line-height: 100%;
+    letter-spacing: 0%;
+    text-transform: uppercase;
+    color: #05C17B4D;
+}
+
+@keyframes slide {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+#data {
+    padding-top: 10px;
+}
+
+.data_btns {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 0;
+    background: #F5F5F5;
+    border-radius: 50px;
+
+}
+
+.data_btns button {
+    background: transparent;
+    border: none;
+    text-align: center;
+    font-family: "Gotham Pro", sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    padding: 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.data_btns button.active {
+    background: #05C17B;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.data_info {
+    padding-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.data_info_content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    transition: all 0.3s ease;
+    gap: 20px;
+}
+
+
+/* Адаптивная верстка для секции data */
+@media (max-width: 1200px) {
+    .data_btns {
+        gap: 15px;
+    }
+
+    .data_btns button {
+        font-size: 16px;
+        padding: 25px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .anim_box {
+        height: 280px;
+        gap: 15px;
+    }
+
+    .anim_box_it_text,
+    .anim_box_ort_text,
+    .anim_box_lang_text {
+        font-size: 52px;
+    }
+
+    .anim_box_it,
+    .anim_box_ort,
+    .anim_box_lang {
+        height: 80px;
+        gap: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .data_btns {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        border-radius: 20px;
+    }
+
+    .data_btns button {
+        padding: 20px;
+        font-size: 14px;
+        width: 100%;
+        border-radius: 20px;
+    }
+
+    .anim_box {
+        height: 240px;
+        gap: 10px;
+    }
+
+    .anim_box_it_text,
+    .anim_box_ort_text,
+    .anim_box_lang_text {
+        font-size: 60px;
+    }
+
+    .anim_box_it,
+    .anim_box_ort,
+    .anim_box_lang {
+        height: 70px;
+        gap: 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .data_btns {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .data_btns button {
+        padding: 15px;
+        font-size: 13px;
+    }
+
+    .title {
+        margin: 50px 0 20px 0;
+        font-size: 24px;
+    }
+
+    .description {
+        max-width: 100%;
+        font-size: 14px;
+    }
+
+    .anim_box {
+        height: 180px;
+        gap: 8px;
+    }
+
+    .anim_box_it_text,
+    .anim_box_ort_text,
+    .anim_box_lang_text {
+        font-size: 36px;
+    }
+
+    .anim_box_it,
+    .anim_box_ort,
+    .anim_box_lang {
+        height: 50px;
+        gap: 20px;
+    }
+
+    .data_info_content {
+        grid-template-columns: 1fr;
+    }
+}

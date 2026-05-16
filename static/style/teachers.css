@@ -1,0 +1,251 @@
+#teachers {
+    margin: 150px 0 0 0;
+
+}
+
+.teachers {
+    margin-top: 35px;
+    border: 2px solid #000;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.teachers_menu {
+    padding: 20px;
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    height: 500px;
+    overflow-y: auto;
+
+    &>div {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 15px;
+    }
+
+    img {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+    }
+
+    h4 {
+        font-weight: 700;
+        font-size: clamp(14px, 3.5vw, 20px);
+        margin-top: 15px;
+        text-align: center;
+    }
+
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #05C17B;
+        border-radius: 10px;
+    }
+}
+
+.teachers_info {
+    flex: 1;
+    background: #F5F5F5;
+    border-radius: 20px;
+    min-height: 500px;
+    padding: 60px;
+}
+
+.teacher_info_block {
+    display: none;
+    padding: 40px;
+}
+
+.teacher_info_block.active {
+    display: block;
+}
+
+.teacher_info_block>div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.teacher_info_block_data {
+    display: flex;
+    align-items: flex-start;
+    gap: 30px;
+}
+
+.teacher_info_block img {
+    max-width: 250px;
+    border-radius: 50%;
+}
+
+.teacher_info_block h6 {
+    color: #666;
+    font-weight: 700;
+    font-size: clamp(14px, 3.5vw, 25px);
+
+    margin-bottom: 15px;
+}
+
+.teacher_info_block h4 {
+    font-size: clamp(18px, 3.5vw, 45px);
+    font-weight: 700;
+    line-height: 100%;
+}
+
+.teacher_info_block p {
+    font-size: clamp(18px, 3.5vw, 25px);
+    font-weight: 700;
+    margin: 0;
+    margin-right: 20px;
+}
+
+.teacher_info_block_achivements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.teacher_info_block_achivements h5 {
+    font-size: clamp(12px, 3.5vw, 19px);
+    font-weight: 700;
+    padding: 10px 15px;
+    border: 2px solid #000;
+    border-radius: 20px;
+    background: #fff;
+    transition: 0.3s;
+}
+
+
+
+@media (max-width: 992px) {
+    .teachers {
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .teachers_menu {
+        max-width: 100%;
+        height: auto;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        &>div {
+            min-width: 150px;
+            width: auto;
+        }
+
+        img {
+            width: 80px;
+            height: 80px;
+        }
+
+        &::-webkit-scrollbar {
+            height: 5px;
+            width: 0;
+        }
+    }
+
+    .teachers_menu>div {
+        min-width: 150px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .teachers_info {
+        width: 100%;
+        padding: 40px;
+        margin-top: 20px;
+    }
+
+    .teacher_info_block>div:first-child {
+        gap: 30px;
+    }
+
+    .teacher_info_block img {
+        width: 200px;
+        height: 200px;
+    }
+    .teacher_info_block_data
+
+
+    .teachers_info {
+        padding: 30px;
+    }
+
+
+}
+
+@media (max-width: 768px) {
+    .teachers_info {
+        padding: 30px 20px;
+    }
+
+    .teacher_info_block>div:first-child {
+        text-align: center;
+        gap: 20px;
+    }
+
+      .teacher_info_block_achivements {
+        justify-content: start;
+    }
+
+
+
+
+.teacher_info_block img {
+    width: 100px;
+    height: 100px;
+}
+
+
+}
+@media (max-width: 768px) {
+    .teacher_info_block_data{
+        flex-direction: column;
+        text-align: start;
+    }
+}
+@media (max-width: 576px) {
+    .teachers_menu {
+        padding: 15px;
+        gap: 10px;
+
+        &>div {
+
+            min-width: 120px;
+        }
+
+        img {
+            width: 70px;
+            height: 70px;
+        }
+
+       
+
+
+    }
+    .teacher_info_block{
+        padding: 0;
+    }
+
+   
+   
+   
+}

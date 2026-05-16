@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ["*"]
 INSTALLED_APPS = [
     'app.settings',
     'app.config',
+    'app.academy',
     "jazzmin",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -127,6 +128,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles' 
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -215,4 +217,25 @@ JAZZMIN_SETTINGS = {
     },
     "custom_css": "crm_dashboard/dashboard.css",
     "custom_js": None,
+}
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "nurlanuuulubeksultan@gmail.com"
+EMAIL_HOST_PASSWORD = "wsuiqcvccbcdacma"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_JQUERY_URL = (
+    "//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"  # URL to jQuery
+)
+CKEDITOR_IMAGE_BACKEND = "pillow"  # Путь к пакету Pillow для обработки изображений
+CKEDITOR_CONFIGS = {
+    "default": {
+        "toolbar": "Custom",  # Вы можете настроить свою собственную панель инструментов CKEditor
+        "height": 300,
+        "width": 800,
+    },
 }

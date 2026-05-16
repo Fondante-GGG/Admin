@@ -1,0 +1,282 @@
+
+
+.modal {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    margin: auto;
+    font-family: "Exo 2 ", sans-serif;
+    max-height: 100vh;
+    align-content: space-around;
+    overflow: hidden;
+}
+
+.modal_texte {
+    color: #000;
+}
+
+.modal_overlay {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    -ms-overflow-style: auto;
+    max-height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: auto;
+    padding: 0;
+    margin-top: 40px;
+}
+
+.modal_overlay::-webkit-scrollbar {
+    display: none !important;
+}
+
+.modal_overlay::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.modal_overlay::-webkit-scrollbar-thumb {
+    background: #05C17B;
+    border-radius: 10px;
+    border: 2px solid #f1f1f1;
+}
+
+.modal_overlay::-webkit-scrollbar-thumb:hover {
+    background: #048f5d;
+}
+
+.modal_box {
+    z-index: 1000;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #F5F5F5;
+    overflow: hidden;
+    padding: 20px;
+    /* max-height: 80vh; */
+    height: auto;
+    box-sizing: border-box;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    width: 100%;
+}
+
+.modal_det .modal_box {
+    padding-bottom: 250px;
+    height: 100vh;
+    border-radius: 30px;
+    overflow-y: auto;
+}
+
+.modal_sign .modal_box {
+    padding: 150px 30px;
+    min-height: 50vh;
+}
+
+.modal_img {
+    object-fit: cover;
+    border-radius: 10px;
+    position: absolute;
+    right: 1px;
+    top: 10px;
+    width: 100px;
+    height: 100px;
+    margin-right: 20px;
+}
+
+.modal_close {
+    display: flex;
+    /* Делаем кнопку закрытия видимой */
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    background: #05C17B;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.modal_hero {
+    background: #D6D2CF;
+    border-radius: 20px;
+    padding: 30px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.modal_direction {
+    width: 100%;
+}
+
+.modal_text {
+    width: 95%;
+    padding: 20px;
+    margin: 0 auto;
+}
+
+.modalSign_hero {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.modal .card {
+    background: transparent;
+    width: 50%;
+    height: 100%;
+    min-height: auto;
+    color: black;
+    padding-bottom: 1px;
+}
+
+.modal .card_discount {
+    margin-top: 50px;
+}
+
+.modal_sign .modal_box {
+    border-radius: 30px;
+}
+
+.modalSign_form {
+    width: 100%;
+    padding: 30px;
+    padding-top: 1px;
+    border-radius: 20px;
+}
+
+.modalSign_form input {
+    width: 100%;
+    height: 50px;
+    border-radius: 10px;
+    margin-top: 20px;
+    padding: 0 20px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    outline: none;
+}
+
+.modalSign_form>div {
+    display: flex;
+    gap: 20px;
+}
+
+.modal_sign .card {
+    color: #000;
+}
+
+.modalSign_form .btn {
+    width: 100%;
+    margin-top: 30px;
+    height: 50px;
+    border: none;
+    background: #05C17B;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modalSign_form .btn:hover {
+    background: #048f5d;
+}
+
+@media (max-width: 768px) {
+    .modal_hero {
+        margin-top: 50px;
+    }
+
+    .modalSign_hero {
+        flex-direction: column;
+    }
+
+    .card_img {
+        padding: 10px 0;
+    }
+
+    .modal .card {
+        width: 100%;
+        max-width: 100%;
+        margin: 10px;
+    }
+
+    .modal_text {
+        padding: 0;
+    }
+
+    .modalSign_form {
+        width: 100%;
+        padding: 0;
+    }
+
+    .modalSign_form div {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .modal .card_discount {
+        margin-top: 0;
+    }
+
+    .modal_sign .modal_box {
+        padding-bottom: 200px;
+    }
+
+    .modal_overlay {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .modal_box {
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 1px !important;
+    }
+
+    .modal_img {
+        object-fit: cover;
+        border-radius: 10px;
+        position: absolute;
+        right: 1px;
+        top: 10px;
+        width: 60px;
+        height: 60px;
+        margin-right: 20px;
+    }
+
+
+    .modal_close {
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+
+    .modal_hero {
+        padding: 20px;
+    }
+
+    .modal_text {
+        padding: 10px;
+    }
+}
