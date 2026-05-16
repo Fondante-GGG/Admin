@@ -89,6 +89,43 @@
   padding: 4px 0;
 }
 
+.crm-settings-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0 !important;
+}
+
+.crm-settings-card__label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.crm-settings-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.crm-settings-card__add {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+
+.crm-settings-card__add:hover {
+  background: #1d4ed8;
+}
+
 .crm-settings-card__link {
   color: #8b5cf6;
   text-decoration: none;

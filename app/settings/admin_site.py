@@ -252,6 +252,42 @@ class CRMAdminSite(AdminSite):
 
     SIDEBAR_SETTINGS_ONLY_MODELS: frozenset[str] = frozenset({"config.crmsetting"})
 
+    SIDEBAR_SITE_SETTINGS_MODELS: frozenset[str] = frozenset(
+        {
+            "academy.settings",
+            "academy.contacts",
+            "academy.aboutpage",
+            "academy.aboutobjects",
+            "academy.aboutobjects2",
+            "academy.typecourse",
+            "academy.courses",
+            "academy.coursespage",
+            "academy.coursesmodel",
+            "academy.courseapplication",
+            "academy.teacher",
+            "academy.students",
+            "academy.aboutstudents",
+            "academy.feedback",
+        }
+    )
+
+    SIDEBAR_SITE_SETTINGS_ORDER: tuple[str, ...] = (
+        "academy.settings",
+        "academy.contacts",
+        "academy.aboutpage",
+        "academy.aboutobjects",
+        "academy.aboutobjects2",
+        "academy.typecourse",
+        "academy.courses",
+        "academy.coursespage",
+        "academy.coursesmodel",
+        "academy.courseapplication",
+        "academy.teacher",
+        "academy.students",
+        "academy.aboutstudents",
+        "academy.feedback",
+    )
+
     @staticmethod
     def _role(user) -> str:
         role = getattr(user, "role", "") or ""
@@ -439,7 +475,12 @@ class CRMAdminSite(AdminSite):
                 menu.append(item)
 
         for model_str in model_order:
-            if model_str in handled or model_str in course_children_keys or model_str in self.SIDEBAR_SETTINGS_ONLY_MODELS:
+            if (
+                model_str in handled
+                or model_str in course_children_keys
+                or model_str in self.SIDEBAR_SETTINGS_ONLY_MODELS
+                or model_str in self.SIDEBAR_SITE_SETTINGS_MODELS
+            ):
                 continue
             if model_str == "settings.calendarevent":
                 handled.add(model_str)
@@ -464,6 +505,22 @@ class CRMAdminSite(AdminSite):
                 url=reverse(f"{self.name}:archive_index"),
             )
         )
+
+        site_settings_children: list[dict] = []
+        for model_str in self.SIDEBAR_SITE_SETTINGS_ORDER:
+            child = take_model(model_str)
+            if child:
+                site_settings_children.append(child)
+        if site_settings_children:
+            menu.append(
+                self._sidebar_item(
+                    request,
+                    title="Настройки сайта",
+                    icon="fas fa-globe",
+                    url=reverse(f"{self.name}:site_settings_index"),
+                    children=site_settings_children,
+                )
+            )
 
         menu.append({"heading": True, "title": "НАСТРОЙКИ"})
 
@@ -731,6 +788,11 @@ class CRMAdminSite(AdminSite):
             path("parents/create/", self.admin_view(self.parent_quick_create), name="parent_quick_create"),
             path("about/", self.admin_view(self.about_view), name="about"),
             path("settings/", self.admin_view(self.settings_index), name="settings_index"),
+            path(
+                "site-settings/",
+                self.admin_view(self.site_settings_index),
+                name="site_settings_index",
+            ),
             path("accounting/meta/", self.admin_view(self.accounting_meta), name="accounting_meta"),
             path("accounting/entry/create/", self.admin_view(self.accounting_entry_create), name="accounting_entry_create"),
             path("accounting/transfer/create/", self.admin_view(self.accounting_transfer_create), name="accounting_transfer_create"),
@@ -868,6 +930,83 @@ class CRMAdminSite(AdminSite):
             **self.each_context(request),
         }
         return TemplateResponse(request, "admin/settings_index.html", context)
+
+    def site_settings_index(self, request):
+        def _item(name, model_name):
+            try:
+                return {
+                    "name": name,
+                    "list_url": reverse(f"{self.name}:academy_{model_name}_changelist"),
+                    "add_url": reverse(f"{self.name}:academy_{model_name}_add"),
+                }
+            except Exception:
+                return {"name": name, "list_url": None, "add_url": None}
+
+        sections = [
+            {
+                "title": "Главная страница",
+                "icon": "fas fa-home",
+                "color": "#3b82f6",
+                "items": [_item("Баннер и блоки", "settings")],
+            },
+            {
+                "title": "Контакты",
+                "icon": "fas fa-address-book",
+                "color": "#10b981",
+                "items": [_item("Контакты и адреса", "contacts")],
+            },
+            {
+                "title": "Страница «О нас»",
+                "icon": "fas fa-info-circle",
+                "color": "#8b5cf6",
+                "items": [
+                    _item("Баннер и текст", "aboutpage"),
+                    _item("Данные 1", "aboutobjects"),
+                    _item("Данные 2", "aboutobjects2"),
+                ],
+            },
+            {
+                "title": "Курсы",
+                "icon": "fas fa-book",
+                "color": "#f59e0b",
+                "items": [
+                    _item("Типы курсов", "typecourse"),
+                    _item("Курсы", "courses"),
+                    _item("Страница курсов", "coursespage"),
+                    _item("Модальные окна", "coursesmodel"),
+                    _item("Заявки на курсы", "courseapplication"),
+                ],
+            },
+            {
+                "title": "Преподаватели",
+                "icon": "fas fa-chalkboard-teacher",
+                "color": "#ec4899",
+                "items": [_item("Преподаватели", "teacher")],
+            },
+            {
+                "title": "Студенты",
+                "icon": "fas fa-user-graduate",
+                "color": "#6366f1",
+                "items": [
+                    _item("Страница студентов", "students"),
+                    _item("Выпускники", "aboutstudents"),
+                ],
+            },
+            {
+                "title": "Обратная связь",
+                "icon": "fas fa-envelope",
+                "color": "#14b8a6",
+                "items": [_item("Сообщения с сайта", "feedback")],
+            },
+        ]
+
+        context = {
+            "title": "Настройки сайта",
+            "sections": sections,
+            "can_edit": request.user.is_staff,
+            **self.each_context(request),
+        }
+        return TemplateResponse(request, "admin/site_settings_index.html", context)
 
     def org_switch(self, request, org_id: int):
         from app.settings.models import Organization
