@@ -1,0 +1,476 @@
+{% extends "portal/mentor_base.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .registration-container {
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .registration-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  .registration-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  
+  .registration-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1f2937;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  
+  .registration-header p {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  .role-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 12px;
+  }
+  
+  .role-tab {
+    flex: 1;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+  }
+  
+  .role-tab:hover {
+    color: #667eea;
+  }
+  
+  .role-tab.active {
+    background: #fff;
+    color: #667eea;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .form-group input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .search-container {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  
+  .search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    margin-top: 4px;
+    z-index: 10;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .search-results.show {
+    display: block;
+  }
+  
+  .search-result-item {
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+  }
+  
+  .search-result-item:hover {
+    background: #f9fafb;
+  }
+  
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+  
+  .search-result-name {
+    font-weight: 500;
+    color: #1f2937;
+    margin-bottom: 2px;
+  }
+  
+  .search-result-details {
+    font-size: 12px;
+    color: #6b7280;
+  }
+  
+  .selected-student {
+    background: #ede9fe;
+    border: 1.5px solid #8b5cf6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  
+  .selected-student.show {
+    display: block;
+  }
+  
+  .selected-student-name {
+    font-weight: 600;
+    color: #667eea;
+  }
+  
+  .btn-register {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-top: 8px;
+  }
+  
+  .btn-register:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+  }
+  
+  .error-msg {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .success-msg {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .login-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  .login-link a {
+    color: #667eea;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  
+  .login-link a:hover {
+    text-decoration: underline;
+  }
+  
+  .form-section {
+    display: none;
+  }
+  
+  .form-section.active {
+    display: block;
+  }
+  
+  .required {
+    color: #dc2626;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="registration-container">
+  <div class="registration-card">
+    <div class="registration-header">
+      <h1>Регистрация</h1>
+      <p>Создайте свой аккаунт в Codify</p>
+    </div>
+    
+    {% if error %}
+      <div class="error-msg">{{ error }}</div>
+    {% endif %}
+    
+    {% if success_message %}
+      <div class="success-msg">{{ success_message }}</div>
+    {% endif %}
+    
+    <div class="role-tabs">
+      <button class="role-tab active" data-role="student">Студент</button>
+      <button class="role-tab" data-role="mentor">Ментор</button>
+      <button class="role-tab" data-role="parent">Родитель</button>
+    </div>
+    
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="role" id="role-input" value="student">
+      
+      <!-- Регистрация студента -->
+      <div class="form-section active" id="student-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="student_first_name">Имя <span class="required">*</span></label>
+            <input type="text" id="student_first_name" name="first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="student_last_name">Фамилия <span class="required">*</span></label>
+            <input type="text" id="student_last_name" name="last_name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="student_middle_name">Отчество</label>
+          <input type="text" id="student_middle_name" name="middle_name">
+        </div>
+        <div class="form-group">
+          <label for="student_phone">Телефон</label>
+          <input type="text" id="student_phone" name="phone_number" placeholder="+996 XXX XXX XXX">
+        </div>
+        <div class="form-group">
+          <label for="student_email">Email</label>
+          <input type="email" id="student_email" name="email">
+        </div>
+        <div class="form-group">
+          <label for="student_password">Пароль <span class="required">*</span></label>
+          <input type="password" id="student_password" name="password" required>
+        </div>
+        <button type="submit" class="btn-register">Зарегистрироваться как Студент</button>
+      </div>
+      
+      <!-- Регистрация ментора -->
+      <div class="form-section" id="mentor-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mentor_first_name">Имя <span class="required">*</span></label>
+            <input type="text" id="mentor_first_name" name="mentor_first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="mentor_last_name">Фамилия <span class="required">*</span></label>
+            <input type="text" id="mentor_last_name" name="mentor_last_name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mentor_middle_name">Отчество</label>
+          <input type="text" id="mentor_middle_name" name="mentor_middle_name">
+        </div>
+        <div class="form-group">
+          <label for="mentor_phone">Телефон</label>
+          <input type="text" id="mentor_phone" name="mentor_phone" placeholder="+996 XXX XXX XXX">
+        </div>
+        <div class="form-group">
+          <label for="mentor_email">Email</label>
+          <input type="email" id="mentor_email" name="mentor_email">
+        </div>
+        <div class="form-group">
+          <label for="mentor_password">Пароль <span class="required">*</span></label>
+          <input type="password" id="mentor_password" name="mentor_password" required>
+        </div>
+        <button type="submit" class="btn-register">Зарегистрироваться как Ментор</button>
+      </div>
+      
+      <!-- Регистрация родителя -->
+      <div class="form-section" id="parent-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="parent_first_name">Имя <span class="required">*</span></label>
+            <input type="text" id="parent_first_name" name="parent_first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="parent_last_name">Фамилия <span class="required">*</span></label>
+            <input type="text" id="parent_last_name" name="parent_last_name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="parent_phone">Телефон</label>
+          <input type="text" id="parent_phone" name="parent_phone" placeholder="+996 XXX XXX XXX">
+        </div>
+        <div class="form-group">
+          <label for="parent_password">Пароль <span class="required">*</span></label>
+          <input type="password" id="parent_password" name="parent_password" required>
+        </div>
+        <div class="form-group">
+          <label for="student_search">Привязать студента <span class="required">*</span></label>
+          <div class="search-container">
+            <input type="text" id="student_search" name="student_search" placeholder="Поиск студента по ФИО..." autocomplete="off">
+            <div class="search-results" id="search-results"></div>
+          </div>
+          <div class="selected-student" id="selected-student">
+            <span class="selected-student-name"></span>
+            <input type="hidden" name="parent_student_id" id="parent_student_id">
+          </div>
+        </div>
+        <button type="submit" class="btn-register">Зарегистрироваться как Родитель</button>
+      </div>
+    </form>
+    
+    <div class="login-link">
+      Уже есть аккаунт? <a href="{% url 'portal_login' %}">Войти</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Переключение табов
+  document.querySelectorAll('.role-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const role = this.dataset.role;
+      
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      
+      document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(role + '-section').classList.add('active');
+      
+      document.getElementById('role-input').value = role;
+    });
+  });
+  
+  // Поиск студентов для родителя
+  const studentSearch = document.getElementById('student_search');
+  const searchResults = document.getElementById('search-results');
+  const selectedStudent = document.getElementById('selected-student');
+  const selectedStudentName = selectedStudent.querySelector('.selected-student-name');
+  const parentStudentId = document.getElementById('parent_student_id');
+  
+  let searchTimeout = null;
+  
+  studentSearch.addEventListener('input', function() {
+    const query = this.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+      searchResults.classList.remove('show');
+      return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+      fetch(`/admin/search-students/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+          searchResults.innerHTML = '';
+          
+          if (data.students.length === 0) {
+            searchResults.innerHTML = '<div class="search-result-item">Студенты не найдены</div>';
+            searchResults.classList.add('show');
+            return;
+          }
+          
+          data.students.forEach(student => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+              <div class="search-result-name">${student.name}</div>
+              <div class="search-result-details">${student.details}</div>
+            `;
+            item.addEventListener('click', () => {
+              studentSearch.value = student.name;
+              selectedStudentName.textContent = student.name;
+              parentStudentId.value = student.id;
+              searchResults.classList.remove('show');
+              selectedStudent.classList.add('show');
+            });
+            searchResults.appendChild(item);
+          });
+          
+          searchResults.classList.add('show');
+        });
+    }, 300);
+  });
+  
+  // Скрыть результаты при клике вне
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-container')) {
+      searchResults.classList.remove('show');
+    }
+  });
+  
+  // Обработка формы родителя
+  const parentForm = document.querySelector('#parent-section form');
+  if (parentForm) {
+    parentForm.addEventListener('submit', function(e) {
+      if (!parentStudentId.value) {
+        e.preventDefault();
+        alert('Пожалуйста, выберите студента для привязки');
+        studentSearch.focus();
+      }
+    });
+  }
+</script>
+{% endblock %}

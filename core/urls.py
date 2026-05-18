@@ -11,11 +11,14 @@ from app.settings.views import (
     student_dashboard, parent_dashboard,
     error_404, error_500, error_403, error_401,
     tabel_view,
+    search_students, public_registration,
 )
 
 urlpatterns = [
     path('admin-men/', crm_admin_site.urls),
     path('login/', portal_login, name='portal_login'),
+    path('register/', public_registration, name='public_registration'),
+    path('search-students/', search_students, name='search_students'),
     path('portal/mentor/', mentor_dashboard, name='mentor_dashboard'),
     path('portal/mentor/lessons/', mentor_lessons, name='mentor_lessons'),
     path('portal/mentor/lesson/<int:lesson_id>/', lesson_detail, name='lesson_detail'),

@@ -426,8 +426,8 @@
           <p>{{settings.feedback_description|safe}}</p>
         </div>
 
-        <form class="questions_form" method="POST">
-          {% csrf_token %}python
+        <form class="questions_form" method="POST" action="/">
+          {% csrf_token %}
           
           <!-- ФИО -->
           <input type="text" name="name_register" placeholder="Фамилия Имя" required>
@@ -435,14 +435,23 @@
           <!-- Класс/Университет -->
           <input type="text" name="grade" placeholder="Класс / Университет">
 
-          <!-- Телефон ученика -->
-          <input type="tel" name="student_phone" placeholder="Телефон ученика">
-
-          <!-- Телефон родителя (WhatsApp) -->
-          <input type="tel" name="phone_register" placeholder="Телефон родителя (WhatsApp)" required>
+          <div class="questions_form_row">
+            <input type="tel" name="student_phone" placeholder="Телефон ученика">
+            <input type="tel" name="parent_phone" placeholder="Телефон родителя (WhatsApp)">
+          </div>
 
           <!-- Email -->
-          <input type="email" name="email_register" placeholder="Электронная почта">
+          <div class="questions_form_row">
+            <input type="tel" name="phone_register" placeholder="Телефон для связи" required>
+            <input type="email" name="email_register" placeholder="Электронная почта">
+          </div>
+
+          <select name="course_id" required>
+            <option value="">Выберите курс</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}">{{ course.title }}</option>
+            {% endfor %}
+          </select>
 
           <!-- Причина изучения -->
           <textarea name="reason" placeholder="Почему хочешь изучать английский?"></textarea>
@@ -451,7 +460,7 @@
           <textarea name="plans" placeholder="Планы после окончания школы"></textarea>
 
           <!-- Время -->
-          <div>
+          <div class="questions_form_radio">
             <label><input type="radio" name="study_time" value="30 минут"> 30 минут</label>
             <label><input type="radio" name="study_time" value="1 час"> 1 час</label>
             <label><input type="radio" name="study_time" value="Больше 1 часа"> Больше 1 часа</label>
@@ -461,7 +470,7 @@
           <textarea name="skills" placeholder="Что хочешь научиться на английском?"></textarea>
 
           <!-- Готовность -->
-          <div>
+          <div class="questions_form_radio questions_form_radio_short">
             <label><input type="radio" name="ready" value="Да"> Да</label>
             <label><input type="radio" name="ready" value="Нет"> Нет</label>
           </div>
@@ -495,18 +504,22 @@
       }
 
       #questions{
-        padding: 80px 150px;
+        padding: 150px 0 0 0;
       }
 
       #questions .container{
-        max-width: 1300px;
+        max-width: 1320px;
         margin: 0 auto;
       }
 
       .questions{
+        width: 100%;
+        background: #f5f5f5;
+        border-radius: 20px;
+        padding: 56px 64px;
         display: grid;
-        grid-template-columns: 1fr 600px;
-        gap: 50px;
+        grid-template-columns: minmax(280px, 420px) minmax(520px, 1fr);
+        gap: 56px;
         align-items: flex-start;
       }
 
@@ -524,13 +537,16 @@
         font-size: 18px;
         line-height: 1.8;
         color: var(--muted);
-        max-width: 90%;
+        max-width: 320px;
       }
 
       /* Форма */
       .questions_form{
         background: var(--card);
-        padding: 35px;
+        width: 100%;
+        max-width: 720px;
+        justify-self: end;
+        padding: 32px;
         border-radius: var(--radius);
         box-shadow: var(--shadow);
         display: flex;
@@ -539,7 +555,8 @@
       }
 
       .questions_form input,
-      .questions_form textarea{
+      .questions_form textarea,
+      .questions_form select{
         width: 100%;
         padding: 16px 18px;
         border-radius: 14px;
@@ -552,20 +569,49 @@
       }
 
       .questions_form input:focus,
-      .questions_form textarea:focus{
+      .questions_form textarea:focus,
+      .questions_form select:focus{
         background: #fff;
         border-color: var(--accent);
         box-shadow: 0 0 0 5px rgba(37,99,235,0.2);
         outline: none;
       }
 
-      .questions_form > div{
+      .questions_form_row{
         display: flex;
         gap: 18px;
       }
 
-      .questions_form > div input{
+      .questions_form_row input{
         flex: 1;
+      }
+
+      .questions_form_radio{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+      }
+
+      .questions_form_radio label{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.4;
+      }
+
+      .questions_form_radio input{
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        margin: 0;
+        flex: 0 0 auto;
+      }
+
+      .questions_form_radio_short{
+        gap: 28px;
       }
 
       .questions_form textarea{
@@ -603,6 +649,33 @@
       @media (max-width: 1200px){
         .questions{
           grid-template-columns: 1fr;
+          padding: 40px;
+          gap: 32px;
+        }
+
+        .questions_form{
+          max-width: 100%;
+          justify-self: stretch;
+        }
+      }
+
+      @media (max-width: 768px){
+        #questions{
+          padding: 100px 0 0 0;
+        }
+
+        .questions{
+          padding: 24px 18px;
+          gap: 24px;
+        }
+
+        .questions_form{
+          padding: 20px 16px;
+        }
+
+        .questions_form_row{
+          flex-direction: column;
+          gap: 20px;
         }
       }
     </style>

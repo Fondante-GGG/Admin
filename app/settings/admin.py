@@ -182,6 +182,19 @@ class ParentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.Model
         return ", ".join(str(s.user.get_full_name() or s.user.username) for s in obj.students.all()[:5]) or "—"
     students_list.short_description = "Студенты"
 
+    @staticmethod
+    def _students_for_parent_form(request):
+        qs = Student.objects.select_related("user").filter(is_archived=False)
+        org_id = request.session.get("current_org_id")
+        if org_id:
+            qs = qs.filter(organization_id=org_id)
+        return qs.order_by("user__last_name", "user__first_name", "user__username")
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["students_for_parent"] = self._students_for_parent_form(request)
+        return super().changelist_view(request, extra_context=extra_context)
+
 
 @admin.register(User, site=crm_admin_site)
 class UserAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):

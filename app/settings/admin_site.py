@@ -455,6 +455,17 @@ class CRMAdminSite(AdminSite):
             )
         )
 
+        # Добавляем ссылку на регистрацию пользователей
+        menu.append(
+            self._sidebar_item(
+                request,
+                title="Регистрация пользователей",
+                icon="fas fa-user-plus",
+                url="/register/",
+                match_url=False,
+            )
+        )
+
         if "settings.cursues" in model_map:
             append_courses(menu)
 
@@ -1952,21 +1963,51 @@ class CRMAdminSite(AdminSite):
 
     def parent_quick_create(self, request):
         if request.method != "POST":
-            return redirect(reverse(f"{self.name}:settings_parent_changelist"))
+            # GET-запрос → показываем форму с поиском студентов
+            students_qs = Student.objects.select_related("user").filter(is_archived=False)
+            org_id = request.session.get("current_org_id")
+            if org_id:
+                students_qs = students_qs.filter(organization_id=org_id)
+            students_qs = students_qs.order_by("user__last_name", "user__first_name", "user__username")
+            context = {
+                "title": "Создать родителя",
+                "students": students_qs,
+                **self.each_context(request),
+            }
+            return TemplateResponse(request, "admin/parent_create.html", context)
+        
         cl_url = reverse(f"{self.name}:settings_parent_changelist")
         first_name = (request.POST.get("first_name") or "").strip()
         last_name = (request.POST.get("last_name") or "").strip()
         phone = (request.POST.get("phone_number") or "").strip()
         student_ids = request.POST.getlist("students")
+        
         if not first_name or not last_name:
             messages.error(request, "Укажите имя и фамилию.")
             return redirect(cl_url)
+        
+        if not student_ids:
+            messages.error(request, "Выберите хотя бы одного студента для привязки.")
+            return redirect(cl_url)
+
+        students_qs = Student.objects.filter(pk__in=student_ids, is_archived=False)
+        org_id = request.session.get("current_org_id")
+        if org_id:
+            students_qs = students_qs.filter(organization_id=org_id)
+        if not students_qs.exists():
+            messages.error(
+                request,
+                "Выбранные студенты не найдены. Проверьте организацию в боковом меню и список студентов.",
+            )
+            return redirect(cl_url)
+
         base_user = slugify(f"{first_name}-{last_name}")[:40] or "parent"
         username = base_user
         n = 0
         while User.objects.filter(username=username).exists():
             n += 1
             username = f"{base_user}{n}"
+        
         try:
             with transaction.atomic():
                 user = User(
@@ -1980,12 +2021,16 @@ class CRMAdminSite(AdminSite):
                 raw_password = (request.POST.get("password") or "").strip() or _generate_password()
                 user.set_password(raw_password)
                 user.save()
-                parent = Parent.objects.create(user=user, phone_number=phone or "")
-                if student_ids:
-                    parent.students.set(Student.objects.filter(pk__in=student_ids))
+                parent = Parent.objects.create(
+                    user=user,
+                    phone_number=phone or "",
+                    organization_id=org_id or None,
+                )
+                parent.students.set(students_qs)
         except Exception as exc:
             messages.error(request, f"Не удалось создать родителя: {exc}")
             return redirect(cl_url)
+        
         messages.success(request, f"Родитель создан. Логин: {username} | Пароль: {raw_password}")
         return redirect(cl_url)
 

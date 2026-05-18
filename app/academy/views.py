@@ -101,7 +101,7 @@ def settings(request):
     courses = Courses.objects.prefetch_related('programs', 'modals')
     model_all_dict = {model.courses.id: model for model in CoursesModel.objects.all()}
 
-    return render(request, 'index.html', {
+    return render(request, 'website/index.html', {
         'settings': settings_obj,
         'contact': contact,
         'teachers': teachers,
@@ -111,7 +111,7 @@ def settings(request):
 
 
 class AboutView(TemplateView):
-    template_name = 'about.html'
+    template_name = 'website/about.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -134,7 +134,7 @@ def courses(request):
     courses_all = Courses.objects.select_related('direction').prefetch_related('programs', 'modals')
     directions = TypeCourse.objects.all()
     settings_obj = Settings.objects.latest("id")
-    return render(request, 'courses.html', {
+    return render(request, 'website/courses.html', {
         'courses_page': courses_page,
         'courses_all': courses_all,
         'directions': directions,
@@ -163,4 +163,4 @@ def students_page(request):
         'years': years,
         'selected_year': selected_year
     }
-    return render(request, 'student.html', context)
+    return render(request, 'website/student.html', context)

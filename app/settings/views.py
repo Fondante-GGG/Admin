@@ -2,11 +2,14 @@ from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.db.models import Avg, Q, Prefetch
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 
 from app.settings.models import (
     User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor,
     LessonLink, Homework, StudentGrade, Student, TimeSlot, Schedule,
-    CurriculumModule,
+    CurriculumModule, Parent,
 )
 
 
@@ -701,9 +704,239 @@ def parent_dashboard(request):
     try:
         if getattr(request.user, "role", "") != "Родитель":
             return render(request, "errors/403.html", status=403)
-        return render(request, "portal/parent_dashboard.html")
-    except Exception:
+        
+        # Получаем профиль родителя с предзагруженными студентами и их данными
+        try:
+            parent_profile = request.user.parent_profile
+        except AttributeError:
+            return render(request, "errors/500.html", status=500)
+        
+        active_courses_qs = Cursues.objects.filter(is_archived=False).prefetch_related(
+            "mentors__user"
+        )
+        grades_qs = StudentGrade.objects.select_related(
+            "lesson__course", "lesson__curriculum_module"
+        ).order_by("-created_at")
+
+        students = parent_profile.students.select_related("user").prefetch_related(
+            Prefetch("cursues_set", queryset=active_courses_qs),
+            Prefetch("lesson_grades", queryset=grades_qs),
+        ).order_by("user__last_name", "user__first_name")
+
+        student_cards = []
+        for student in students:
+            grades = list(student.lesson_grades.all())
+            active_courses = list(student.cursues_set.all())
+            grades_count = len(grades)
+            attended = sum(1 for g in grades if g.grade == 1)
+            avg_grade = (
+                round(sum(g.grade for g in grades) / grades_count, 1)
+                if grades_count
+                else None
+            )
+
+            course_ids = [c.pk for c in active_courses]
+            homeworks = []
+            if course_ids:
+                homeworks = list(
+                    Homework.objects.filter(lesson__course_id__in=course_ids)
+                    .select_related("lesson__course")
+                    .order_by("-created_at")[:10]
+                )
+
+            student_cards.append(
+                {
+                    "student": student,
+                    "active_courses": active_courses,
+                    "active_courses_count": len(active_courses),
+                    "grades": grades[:20],
+                    "grades_count": grades_count,
+                    "avg_grade": avg_grade,
+                    "attendance_display": f"{attended}/{grades_count}" if grades_count else "—",
+                    "homeworks": homeworks,
+                }
+            )
+
+        return render(
+            request,
+            "portal/parent_dashboard.html",
+            {
+                "parent_profile": parent_profile,
+                "student_cards": student_cards,
+            },
+        )
+    except Exception as e:
+        print(f"[DEBUG] Error in parent_dashboard: {e}")
+        import traceback
+        traceback.print_exc()
         return render(request, "errors/500.html", status=500)
+
+
+@require_http_methods(["GET"])
+def search_students(request):
+    """API для поиска студентов (используется в форме регистрации родителя)"""
+    q = (request.GET.get('q') or '').strip()
+    
+    if len(q) < 2:
+        return JsonResponse({'students': []})
+    
+    students = Student.objects.select_related('user').filter(
+        is_archived=False
+    ).filter(
+        Q(user__first_name__icontains=q) |
+        Q(user__last_name__icontains=q) |
+        Q(user__username__icontains=q) |
+        Q(middle_name__icontains=q)
+    ).order_by('user__last_name', 'user__first_name')[:10]
+    
+    result = []
+    for student in students:
+        full_name = student.user.get_full_name() or student.user.username
+        result.append({
+            'id': student.id,
+            'name': full_name,
+            'details': f"{'Статус: ' + student.get_status_display() if student.status else ''}"
+        })
+    
+    return JsonResponse({'students': result})
+
+
+@require_http_methods(["POST"])
+def public_registration(request):
+    """Публичная регистрация для студентов, менторов и родителей"""
+    error = None
+    success_message = None
+    
+    role = request.POST.get('role', 'student')
+    
+    if role == 'student':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        middle_name = request.POST.get('middle_name', '').strip()
+        phone = request.POST.get('phone_number', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        
+        if not first_name or not last_name or not password:
+            error = 'Укажите имя, фамилию и пароль'
+        else:
+            try:
+                from django.utils.text import slugify
+                base_username = slugify(f"{first_name}-{last_name}")[:40] or 'student'
+                username = base_username
+                n = 0
+                while User.objects.filter(username=username).exists():
+                    n += 1
+                    username = f"{base_username}{n}"
+                
+                user = User.objects.create(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    middle_name=middle_name,
+                    phone_number=phone,
+                    email=email,
+                    role='Студент',
+                    is_staff=False,
+                )
+                user.set_password(password)
+                user.save()
+                
+                Student.objects.create(user=user, status='active')
+                
+                success_message = f'Студент зарегистрирован! Логин: {username}'
+            except Exception as e:
+                error = f'Ошибка регистрации: {e}'
+    
+    elif role == 'mentor':
+        first_name = request.POST.get('mentor_first_name', '').strip()
+        last_name = request.POST.get('mentor_last_name', '').strip()
+        middle_name = request.POST.get('mentor_middle_name', '').strip()
+        phone = request.POST.get('mentor_phone', '').strip()
+        email = request.POST.get('mentor_email', '').strip()
+        password = request.POST.get('mentor_password', '')
+        
+        if not first_name or not last_name or not password:
+            error = 'Укажите имя, фамилию и пароль'
+        else:
+            try:
+                from django.utils.text import slugify
+                base_username = slugify(f"{first_name}-{last_name}")[:40] or 'mentor'
+                username = base_username
+                n = 0
+                while User.objects.filter(username=username).exists():
+                    n += 1
+                    username = f"{base_username}{n}"
+                
+                user = User.objects.create(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    middle_name=middle_name,
+                    phone_number=phone,
+                    email=email,
+                    role='Ментор',
+                    is_staff=False,
+                )
+                user.set_password(password)
+                user.save()
+                
+                Mentor.objects.create(user=user)
+                
+                success_message = f'Ментор зарегистрирован! Логин: {username}'
+            except Exception as e:
+                error = f'Ошибка регистрации: {e}'
+    
+    elif role == 'parent':
+        first_name = request.POST.get('parent_first_name', '').strip()
+        last_name = request.POST.get('parent_last_name', '').strip()
+        phone = request.POST.get('parent_phone', '').strip()
+        password = request.POST.get('parent_password', '')
+        student_id = request.POST.get('parent_student_id', '').strip()
+        
+        if not first_name or not last_name or not password:
+            error = 'Укажите имя, фамилию и пароль'
+        elif not student_id:
+            error = 'Выберите студента для привязки'
+        else:
+            try:
+                student = Student.objects.get(pk=student_id, is_archived=False)
+                
+                from django.utils.text import slugify
+                base_username = slugify(f"{first_name}-{last_name}")[:40] or 'parent'
+                username = base_username
+                n = 0
+                while User.objects.filter(username=username).exists():
+                    n += 1
+                    username = f"{base_username}{n}"
+                
+                user = User.objects.create(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone,
+                    role='Родитель',
+                    is_staff=False,
+                )
+                user.set_password(password)
+                user.save()
+                
+                parent = Parent.objects.create(user=user, phone_number=phone)
+                parent.students.add(student)
+                
+                success_message = f'Родитель зарегистрирован! Логин: {username}. Привязан к студенту: {student.user.get_full_name() or student.user.username}'
+            except Student.DoesNotExist:
+                error = 'Студент не найден'
+            except Exception as e:
+                error = f'Ошибка регистрации: {e}'
+    
+    else:
+        error = 'Неверная роль'
+    
+    return render(request, 'portal/registration.html', {
+        'error': error,
+        'success_message': success_message,
+    })
 
 
 def error_404(request, exception=None):
