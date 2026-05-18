@@ -897,10 +897,44 @@ class IndividualCourseAdmin(CursuesAdmin):
 @admin.register(Lead, site=crm_admin_site)
 class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
-    list_display = ("full_name", "phone_number", "status", "created_at")
+    list_display = ("full_name", "phone_number", "source", "message_short", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
-    search_fields = ("full_name", "phone_number")
+    search_fields = ("full_name", "phone_number", "email", "message", "conversation_log")
     actions = (archive_selected, unarchive_selected)
+    readonly_fields = ("created_at", "source", "session_key", "conversation_log")
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "organization",
+                    "full_name",
+                    "phone_number",
+                    "email",
+                    "source",
+                    "status",
+                    "created_at",
+                )
+            },
+        ),
+        (
+            "Чат",
+            {
+                "fields": (
+                    "session_key",
+                    "message",
+                    "bot_reply",
+                    "conversation_log",
+                )
+            },
+        ),
+    )
+
+    def message_short(self, obj: Lead):
+        if not obj.message:
+            return "—"
+        return obj.message[:50] + "…" if len(obj.message) > 50 else obj.message
+    message_short.short_description = "Вопрос"
 
 
 @admin.register(Payment, site=crm_admin_site)

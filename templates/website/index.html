@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="{% static 'style/swiper.css' %}">
   <link rel="stylesheet" href="{% static 'style/modal.css' %}">
   <link rel="stylesheet" href="{% static 'style/modalSign.css' %}">
+  <link rel="stylesheet" href="{% static 'style/chat-widget.css' %}">
  
 </head>
 
@@ -722,6 +723,49 @@
   </section>
 
 
+  <div class="chat-widget" data-chat-endpoint="{% url 'chat_message' %}">
+    <button class="chat-widget__toggle" type="button" aria-expanded="false" aria-controls="assistant-panel">
+      <span class="chat-widget__status-dot"></span>
+      <svg class="chat-widget__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3C6.477 3 2 6.94 2 11.8c0 2.462 1.158 4.688 3.026 6.286L4 22l4.548-2.276c1.066.253 2.217.387 3.452.387 5.523 0 10-3.94 10-8.811C22 6.94 17.523 3 12 3Zm-4.5 9.3a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm4.5 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm4.5 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z" fill="currentColor"/>
+      </svg>
+      <span class="chat-widget__toggle-text">Онлайн связь</span>
+    </button>
+
+    <section class="chat-widget__panel" id="assistant-panel" hidden>
+      <div class="chat-widget__header">
+        <div>
+          <p class="chat-widget__eyebrow">AI консультант</p>
+          <h3>American Dream Assistant</h3>
+        </div>
+        <button class="chat-widget__close" type="button" aria-label="Закрыть чат">×</button>
+      </div>
+
+      <div class="chat-widget__messages" aria-live="polite">
+        <div class="chat-widget__bubble chat-widget__bubble--bot">
+          Здравствуйте! Я локальный автоответчик сайта. Могу подсказать по курсам, ценам, длительности, преподавателям и контактам.
+        </div>
+      </div>
+
+      <div class="chat-widget__quick-actions">
+        <button type="button" data-quick-message="Какие курсы есть?">Курсы</button>
+        <button type="button" data-quick-message="Сколько стоит обучение?">Цены</button>
+        <button type="button" data-quick-message="Дайте контакты">Контакты</button>
+      </div>
+
+      <div class="chat-widget__meta">
+        <input type="text" name="name" placeholder="Имя">
+        <input type="tel" name="phone" placeholder="Телефон">
+      </div>
+
+      <form class="chat-widget__form">
+        <textarea name="message" rows="3" placeholder="Напишите ваш вопрос..." required></textarea>
+        <button type="submit" class="chat-widget__send">Отправить</button>
+      </form>
+    </section>
+  </div>
+
+
   <!-- footer -->
   <footer class="footer">
     <div class="footer-section-1">
@@ -764,6 +808,7 @@
   <script src="{% static 'js/courses.js' %}"></script>
   <script src="{% static 'js/teachers.js' %}"></script>
   <script src="{% static 'js/burger.js' %}"></script>
+  <script src="{% static 'js/chat-widget.js' %}"></script>
 </body>
 
 </html>

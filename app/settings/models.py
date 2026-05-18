@@ -423,8 +423,52 @@ class Lead(ArchiveBase):
         verbose_name="Организация",
         related_name="leads",
     )
-    full_name = models.CharField(max_length=255, verbose_name="ФИО")
-    phone_number = models.CharField(max_length=64, verbose_name="Телефон")
+    full_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Посетитель сайта",
+        verbose_name="ФИО",
+    )
+    phone_number = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name="Телефон",
+    )
+    email = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Email",
+    )
+    source = models.CharField(
+        max_length=32,
+        blank=True,
+        default="manual",
+        verbose_name="Источник",
+    )
+    session_key = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="Сессия чата",
+    )
+    message = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Последний вопрос",
+    )
+    bot_reply = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Последний ответ бота",
+    )
+    conversation_log = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="История переписки",
+    )
     status = models.CharField(
         max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Статус"
     )
