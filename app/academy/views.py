@@ -335,7 +335,10 @@ class AboutView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["about_id"] = AboutPage.objects.latest("id")
-        context["settings_obj"] = Settings.objects.latest("id")
+        settings_obj = Settings.objects.latest("id")
+        context["settings_obj"] = settings_obj
+        context["settings"] = settings_obj
+        context["contact"] = Contacts.objects.prefetch_related("addresses").order_by("-id").first()
         objs1 = list(AboutObjects.objects.all())
         objs2 = list(AboutObjects2.objects.all())
         combined = []
