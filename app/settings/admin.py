@@ -1,4 +1,8 @@
+from django import forms
 from django.contrib import admin
+from django.contrib.auth import password_validation
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.contrib.admin.models import LogEntry
 import io
 from django.shortcuts import get_object_or_404
@@ -48,8 +52,112 @@ from .models import (
     User,
 )
 
+from django.core.exceptions import ValidationError
+
 def _role(user) -> str:
     return getattr(user, "role", "") or ""
+
+
+class CRMUserCreationForm(forms.ModelForm):
+    password1 = forms.CharField(
+        label="Пароль",
+        strip=False,
+        widget=forms.PasswordInput,
+        help_text=password_validation.password_validators_help_text_html(),
+    )
+    password2 = forms.CharField(
+        label="Подтверждение пароля",
+        strip=False,
+        widget=forms.PasswordInput,
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "role",
+            "is_staff",
+            "is_active",
+            "is_superuser",
+        )
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("Пароли не совпадают.")
+        probe_user = User(
+            username=self.cleaned_data.get("username", ""),
+            first_name=self.cleaned_data.get("first_name", ""),
+            last_name=self.cleaned_data.get("last_name", ""),
+            email=self.cleaned_data.get("email", ""),
+            phone_number=self.cleaned_data.get("phone_number", ""),
+            role=self.cleaned_data.get("role", ""),
+            is_staff=self.cleaned_data.get("is_staff", False),
+            is_active=self.cleaned_data.get("is_active", True),
+            is_superuser=self.cleaned_data.get("is_superuser", False),
+        )
+        password_validation.validate_password(password2, probe_user)
+        return password2
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
+
+
+class CRMUserChangeForm(forms.ModelForm):
+    password = ReadOnlyPasswordHashField(
+        label="Текущий пароль",
+        help_text="Сырый пароль не хранится. Чтобы сменить пароль, задайте новый ниже.",
+    )
+    new_password1 = forms.CharField(
+        label="Новый пароль",
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput,
+        help_text=password_validation.password_validators_help_text_html(),
+    )
+    new_password2 = forms.CharField(
+        label="Подтверждение нового пароля",
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput,
+    )
+
+    class Meta:
+        model = User
+        fields = "__all__"
+
+    def clean_password(self):
+        return self.initial.get("password")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get("new_password1")
+        new_password2 = cleaned_data.get("new_password2")
+        if new_password1 or new_password2:
+            if new_password1 != new_password2:
+                raise ValidationError("Новые пароли не совпадают.")
+            password_validation.validate_password(new_password2, self.instance)
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        new_password = self.cleaned_data.get("new_password1")
+        if new_password:
+            user.set_password(new_password)
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
 
 class RoleRestrictedAdminMixin:
@@ -197,11 +305,42 @@ class ParentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, admin.Model
 
 
 @admin.register(User, site=crm_admin_site)
-class UserAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
+class UserAdmin(RoleRestrictedAdminMixin, DjangoUserAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
-    list_display = ("username", "email", "phone_number", "role", "is_staff", "is_active")
+    form = CRMUserChangeForm
+    add_form = CRMUserCreationForm
+    list_display = ("username", "first_name", "last_name", "email", "phone_number", "role", "is_staff", "is_active")
     list_filter = ("role", "is_staff", "is_active")
-    search_fields = ("username", "email", "phone_number")
+    search_fields = ("username", "first_name", "last_name", "email", "phone_number")
+    ordering = ("username",)
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        ("Личные данные", {"fields": ("first_name", "last_name", "email", "phone_number", "role")}),
+        ("Смена пароля", {"fields": ("new_password1", "new_password2")}),
+        ("Права доступа", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
+        ("Важные даты", {"fields": ("last_login", "date_joined")}),
+    )
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "username",
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "phone_number",
+                    "role",
+                    "password1",
+                    "password2",
+                    "is_staff",
+                    "is_active",
+                    "is_superuser",
+                ),
+            },
+        ),
+    )
 
 
 @admin.register(Student, site=crm_admin_site)

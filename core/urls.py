@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 
 from app.settings.admin_site import crm_admin_site
 from app.settings.views import (
-    portal_login,
+    portal_login, portal_logout,
     mentor_dashboard, mentor_lessons, mentor_homework, mentor_schedule,
     mentor_gradebook, mentor_students, mentor_curriculum, mentor_profile,
     lesson_detail,
@@ -17,6 +17,7 @@ from app.settings.views import (
 urlpatterns = [
     path('admin-men/', crm_admin_site.urls),
     path('login/', portal_login, name='portal_login'),
+    path('logout/', portal_logout, name='portal_logout'),
     path('register/', public_registration, name='public_registration'),
     path('search-students/', search_students, name='search_students'),
     path('portal/mentor/', mentor_dashboard, name='mentor_dashboard'),

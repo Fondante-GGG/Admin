@@ -1,10 +1,12 @@
-from django.contrib.auth import authenticate, login as auth_login
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.db.models import Avg, Q, Prefetch
+from django.db.models import Q
 from django.http import JsonResponse
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from app.settings.models import (
     User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor,
@@ -13,6 +15,8 @@ from app.settings.models import (
 )
 
 
+@never_cache
+@ensure_csrf_cookie
 def portal_login(request):
     error = None
     logged_in_user = request.user if request.user.is_authenticated else None
@@ -37,6 +41,12 @@ def portal_login(request):
             error = "Ошибка сервера при входе. Попробуйте позже."
 
     return render(request, "portal/login.html", {"error": error, "logged_in_user": logged_in_user})
+
+
+@never_cache
+def portal_logout(request):
+    auth_logout(request)
+    return redirect("portal_login")
 
 
 def _redirect_by_role(user: User):
@@ -699,70 +709,121 @@ def student_dashboard(request):
         return render(request, "errors/500.html", status=500)
 
 
+def _parent_selected_object(objects, selected_id):
+    if not selected_id:
+        return objects[0] if objects else None
+    for obj in objects:
+        if str(obj.pk) == selected_id:
+            return obj
+    return objects[0] if objects else None
+
+
 @login_required
 def parent_dashboard(request):
     try:
         if getattr(request.user, "role", "") != "Родитель":
             return render(request, "errors/403.html", status=403)
-        
-        # Получаем профиль родителя с предзагруженными студентами и их данными
+
         try:
             parent_profile = request.user.parent_profile
         except AttributeError:
             return render(request, "errors/500.html", status=500)
-        
-        active_courses_qs = Cursues.objects.filter(is_archived=False).prefetch_related(
-            "mentors__user"
+
+        students = list(
+            parent_profile.students.filter(is_archived=False)
+            .select_related("user")
+            .order_by("user__last_name", "user__first_name", "id")
         )
-        grades_qs = StudentGrade.objects.select_related(
-            "lesson__course", "lesson__curriculum_module"
-        ).order_by("-created_at")
+        selected_student = _parent_selected_object(
+            students,
+            (request.GET.get("student_id") or "").strip(),
+        )
 
-        students = parent_profile.students.select_related("user").prefetch_related(
-            Prefetch("cursues_set", queryset=active_courses_qs),
-            Prefetch("lesson_grades", queryset=grades_qs),
-        ).order_by("user__last_name", "user__first_name")
+        courses = []
+        selected_course = None
+        lesson_cells = []
+        attendance_total = 0
+        attendance_marked = 0
+        comment_count = 0
 
-        student_cards = []
-        for student in students:
-            grades = list(student.lesson_grades.all())
-            active_courses = list(student.cursues_set.all())
-            grades_count = len(grades)
-            attended = sum(1 for g in grades if g.grade == 1)
-            avg_grade = (
-                round(sum(g.grade for g in grades) / grades_count, 1)
-                if grades_count
-                else None
-            )
-
-            course_ids = [c.pk for c in active_courses]
-            homeworks = []
-            if course_ids:
-                homeworks = list(
-                    Homework.objects.filter(lesson__course_id__in=course_ids)
-                    .select_related("lesson__course")
-                    .order_by("-created_at")[:10]
+        if selected_student:
+            courses = list(
+                Cursues.objects.active()
+                .filter(
+                    Q(students=selected_student)
+                    | Q(enrollment__student=selected_student)
+                    | Q(lessons__grades__student=selected_student)
                 )
-
-            student_cards.append(
-                {
-                    "student": student,
-                    "active_courses": active_courses,
-                    "active_courses_count": len(active_courses),
-                    "grades": grades[:20],
-                    "grades_count": grades_count,
-                    "avg_grade": avg_grade,
-                    "attendance_display": f"{attended}/{grades_count}" if grades_count else "—",
-                    "homeworks": homeworks,
-                }
+                .prefetch_related("mentors__user")
+                .distinct()
+                .order_by("title", "id")
             )
+            selected_course = _parent_selected_object(
+                courses,
+                (request.GET.get("course_id") or request.GET.get("group_id") or "").strip(),
+            )
+
+        if selected_student and selected_course:
+            lessons = list(
+                Lesson.objects.filter(
+                    course=selected_course,
+                    is_archived=False,
+                ).order_by("order", "id")
+            )
+            grades = {
+                grade.lesson_id: grade
+                for grade in StudentGrade.objects.filter(
+                    student=selected_student,
+                    lesson__course=selected_course,
+                )
+                .select_related("lesson")
+                .order_by("lesson__order", "lesson_id")
+            }
+
+            for lesson in lessons:
+                grade = grades.get(lesson.id)
+                grade_value = grade.grade if grade else None
+                if grade_value is not None:
+                    attendance_marked += 1
+                    if grade_value == 1:
+                        attendance_total += 1
+                if grade and grade.comment:
+                    comment_count += 1
+
+                lesson_cells.append(
+                    {
+                        "lesson": lesson,
+                        "grade": grade,
+                        "grade_value": grade_value,
+                        "status_label": (
+                            "Присутствовал"
+                            if grade_value == 1
+                            else "Отсутствовал"
+                            if grade_value == 0
+                            else "Не отмечено"
+                        ),
+                    }
+                )
 
         return render(
             request,
             "portal/parent_dashboard.html",
             {
                 "parent_profile": parent_profile,
-                "student_cards": student_cards,
+                "students": students,
+                "selected_student": selected_student,
+                "courses": courses,
+                "selected_course": selected_course,
+                "lesson_cells": lesson_cells,
+                "attendance_total": attendance_total,
+                "attendance_marked": attendance_marked,
+                "missed_total": max(attendance_marked - attendance_total, 0),
+                "comment_count": comment_count,
+                "attendance_percent": (
+                    round((attendance_total / attendance_marked) * 100)
+                    if attendance_marked
+                    else None
+                ),
             },
         )
     except Exception as e:

@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
-
 ]
 
 MIDDLEWARE = [
@@ -271,12 +270,12 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_JQUERY_URL = (
-    "//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"  # URL to jQuery
+    "//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"  
 )
-CKEDITOR_IMAGE_BACKEND = "pillow"  # Путь к пакету Pillow для обработки изображений
+CKEDITOR_IMAGE_BACKEND = "pillow"  
 CKEDITOR_CONFIGS = {
     "default": {
-        "toolbar": "Custom",  # Вы можете настроить свою собственную панель инструментов CKEditor
+        "toolbar": "Custom", 
         "height": 300,
         "width": 800,
     },

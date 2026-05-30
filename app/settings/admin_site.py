@@ -3,15 +3,14 @@ from __future__ import annotations
 import csv
 import io
 import json
-import random
 import re
-import string
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings as django_settings
+from django.contrib.auth import password_validation
 from django.contrib.admin import AdminSite
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -56,9 +55,22 @@ from .models import (
 from app.config.models import CRMAbout
 
 
-def _generate_password(length: int = 8) -> str:
-    chars = string.ascii_letters + string.digits
-    return "".join(random.choice(chars) for _ in range(length))
+def _validation_message(exc: ValidationError) -> str:
+    parts = []
+    if hasattr(exc, "error_dict"):
+        for errs in exc.error_dict.values():
+            parts.extend(str(e) for e in errs)
+    else:
+        parts = list(getattr(exc, "messages", []) or [str(exc)])
+    return " ".join(parts)
+
+
+def _require_valid_password(raw_password: str, user: User) -> str:
+    password = (raw_password or "").strip()
+    if not password:
+        raise ValidationError("Укажите пароль.")
+    password_validation.validate_password(password, user)
+    return password
 
 
 @dataclass(frozen=True)
@@ -1858,7 +1870,7 @@ class CRMAdminSite(AdminSite):
                     role="Ментор",
                     is_staff=False,
                 )
-                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                raw_password = _require_valid_password(request.POST.get("password"), user)
                 user.set_password(raw_password)
                 user.save()
                 mentor = Mentor(
@@ -1882,18 +1894,12 @@ class CRMAdminSite(AdminSite):
                 mentor.full_clean()
                 mentor.save()
         except ValidationError as exc:
-            parts = []
-            if hasattr(exc, "error_dict"):
-                for errs in exc.error_dict.values():
-                    parts.extend(str(e) for e in errs)
-            else:
-                parts = list(getattr(exc, "messages", []) or [str(exc)])
-            messages.error(request, " ".join(parts))
+            messages.error(request, _validation_message(exc))
             return redirect(cl_url)
         except Exception as exc:
             messages.error(request, f"Не удалось создать ментора: {exc}")
             return redirect(cl_url)
-        messages.success(request, f"Ментор создан. Логин: {username} | Пароль: {raw_password}")
+        messages.success(request, f"Ментор создан. Логин: {username}")
         return redirect(cl_url)
 
     def student_quick_create(self, request):
@@ -1935,7 +1941,7 @@ class CRMAdminSite(AdminSite):
                     role="Студент",
                     is_staff=False,
                 )
-                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                raw_password = _require_valid_password(request.POST.get("password"), user)
                 user.set_password(raw_password)
                 user.save()
                 student = Student.objects.create(
@@ -1955,10 +1961,13 @@ class CRMAdminSite(AdminSite):
                     if course:
                         Enrollment.objects.get_or_create(student=student, course=course)
                         course.students.add(student)
+        except ValidationError as exc:
+            messages.error(request, _validation_message(exc))
+            return redirect(cl_url)
         except Exception as exc:
             messages.error(request, f"Не удалось создать студента: {exc}")
             return redirect(cl_url)
-        messages.success(request, f"Студент создан. Логин: {username} | Пароль: {raw_password}")
+        messages.success(request, f"Студент создан. Логин: {username}")
         return redirect(cl_url)
 
     def parent_quick_create(self, request):
@@ -2018,7 +2027,7 @@ class CRMAdminSite(AdminSite):
                     role="Родитель",
                     is_staff=False,
                 )
-                raw_password = (request.POST.get("password") or "").strip() or _generate_password()
+                raw_password = _require_valid_password(request.POST.get("password"), user)
                 user.set_password(raw_password)
                 user.save()
                 parent = Parent.objects.create(
@@ -2027,11 +2036,14 @@ class CRMAdminSite(AdminSite):
                     organization_id=org_id or None,
                 )
                 parent.students.set(students_qs)
+        except ValidationError as exc:
+            messages.error(request, _validation_message(exc))
+            return redirect(cl_url)
         except Exception as exc:
             messages.error(request, f"Не удалось создать родителя: {exc}")
             return redirect(cl_url)
         
-        messages.success(request, f"Родитель создан. Логин: {username} | Пароль: {raw_password}")
+        messages.success(request, f"Родитель создан. Логин: {username}")
         return redirect(cl_url)
 
     def students_csv(self, request):

@@ -117,17 +117,19 @@
     {% endif %}
 
     {% if logged_in_user %}
-      <div style="text-align:center; margin-bottom:20px;">
+      <div style="text-align:center; margin-bottom:20px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
         <p style="color:#374151; font-size:14px; margin-bottom:10px;">
-          Вы уже вошли как <strong>{{ logged_in_user.get_full_name|default:logged_in_user.username }}</strong>
+          Сейчас вы вошли как <strong>{{ logged_in_user.get_full_name|default:logged_in_user.username }}</strong>
           ({{ logged_in_user.role|default:"—" }})
         </p>
-        <a href="/admin/" class="btn-login" style="display:inline-block; width:auto; padding:10px 24px; margin-right:8px; text-decoration:none;">В админку</a>
-        <a href="/admin/logout/" class="btn-login" style="display:inline-block; width:auto; padding:10px 24px; background:linear-gradient(135deg,#ef4444,#dc2626); text-decoration:none;">Выйти</a>
+        <p style="color:#6b7280; font-size:13px; margin-bottom:12px;">
+          Ниже можно войти под другим аккаунтом или сначала выйти из текущего.
+        </p>
+        <a href="{% url 'portal_logout' %}" class="btn-login" style="display:inline-block; width:auto; padding:10px 24px; background:linear-gradient(135deg,#ef4444,#dc2626); text-decoration:none;">Выйти из текущего аккаунта</a>
       </div>
     {% endif %}
 
-    <form method="post" action="">
+    <form method="post" action="" id="portal-login-form">
       {% csrf_token %}
       <div class="form-group">
         <label for="username">Имя пользователя</label>
@@ -152,5 +154,38 @@
       <span>Родитель</span>
     </div>
   </div>
+  <script>
+    (function () {
+      function getCookie(name) {
+        const match = document.cookie
+          .split(";")
+          .map(function (item) { return item.trim(); })
+          .find(function (item) { return item.indexOf(name + "=") === 0; });
+        return match ? decodeURIComponent(match.slice(name.length + 1)) : "";
+      }
+
+      function syncCsrfToken() {
+        const form = document.getElementById("portal-login-form");
+        const csrfInput = form ? form.querySelector('input[name="csrfmiddlewaretoken"]') : null;
+        const cookieToken = getCookie("csrftoken");
+
+        if (csrfInput && cookieToken) {
+          csrfInput.value = cookieToken;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("portal-login-form");
+        syncCsrfToken();
+
+        if (form) {
+          // Keep the form token aligned with the current cookie after login/logout in another tab.
+          form.addEventListener("submit", syncCsrfToken);
+        }
+      });
+
+      window.addEventListener("pageshow", syncCsrfToken);
+    })();
+  </script>
 </body>
 </html>
