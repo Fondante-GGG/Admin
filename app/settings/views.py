@@ -10,7 +10,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from app.settings.models import (
     User, Lesson, Exam, Cursues, GroupCourse, IndividualCourse, Mentor,
-    LessonLink, Homework, StudentGrade, Student, TimeSlot, Schedule,
+    LessonLink, StudentGrade, Student, Schedule,
     CurriculumModule, Parent,
 )
 
@@ -150,40 +150,6 @@ def mentor_lessons(request):
 
 
 @login_required
-def mentor_homework(request):
-    try:
-        if getattr(request.user, "role", "") != "Ментор":
-            return render(request, "errors/403.html", status=403)
-        
-        mentor_profile = Mentor.objects.get(user=request.user)
-        
-        # Получаем все курсы ментора
-        mentor_courses = Cursues.objects.filter(mentors=mentor_profile)
-        
-        # Получаем домашние задания ментора
-        from app.settings.models import Homework, Lesson
-        homeworks = Homework.objects.filter(
-            lesson__course__mentors=mentor_profile
-        ).select_related('lesson', 'lesson__course').order_by('-created_at')
-        
-        # Фильтрация по группе
-        group_id = request.GET.get('group_id')
-        if group_id:
-            homeworks = homeworks.filter(lesson__course_id=group_id)
-        
-        return render(request, "portal/mentor_homework.html", {
-            "active": "homework",
-            "homeworks": homeworks,
-            "groups": mentor_courses,
-        })
-    except Exception as e:
-        print(f"[DEBUG] Error in mentor_homework: {e}")
-        import traceback
-        traceback.print_exc()
-        return render(request, "errors/500.html", status=500)
-
-
-@login_required
 def mentor_schedule(request):
     try:
         if getattr(request.user, "role", "") != "Ментор":
@@ -302,8 +268,8 @@ def mentor_gradebook(request):
             grades = grades.filter(student__enrollment__course_id=group_id)
         
         attendance_data = {}
-        homework_data = {}
         selected_group = None
+        lessons_in_course = []
         
         group_id = request.GET.get('group_id')
         if group_id:
@@ -328,14 +294,6 @@ def mentor_gradebook(request):
                         'total': 0
                     }
                     
-                    # Данные домашних заданий (на основе оценок)
-                    homework_data[student.id] = {
-                        'student_name': student_name,
-                        'lessons': {},
-                        'total': 0,
-                        'standup': 0
-                    }
-                    
                     for lesson in lessons_in_course:
                         # Получаем оценку для урока
                         grade = StudentGrade.objects.filter(
@@ -347,18 +305,8 @@ def mentor_gradebook(request):
                             # Посещаемость (1 - присутствовал, 0 - отсутствовал)
                             attendance_data[student.id]['lessons'][lesson.id] = grade.grade
                             attendance_data[student.id]['total'] += grade.grade
-                            
-                            # ДЗ (оценка от 1 до 10)
-                            # Для примера используем случайные оценки, т.к. в модели только 0/1
-                            hw_score = (grade.grade * 10) if grade.grade > 0 else 0
-                            homework_data[student.id]['lessons'][lesson.id] = hw_score
-                            homework_data[student.id]['total'] += hw_score
                         else:
                             attendance_data[student.id]['lessons'][lesson.id] = 0
-                            homework_data[student.id]['lessons'][lesson.id] = 0
-                    
-                    # StandUp оценка (для примера)
-                    homework_data[student.id]['standup'] = 85
         
         return render(request, "portal/mentor_gradebook.html", {
             "active": "gradebook",
@@ -366,8 +314,7 @@ def mentor_gradebook(request):
             "groups": mentor_courses,
             "selected_group": selected_group,
             "attendance_data": attendance_data,
-            "homework_data": homework_data,
-            "lessons_in_course": lessons_in_course if group_id else [],
+            "lessons_in_course": lessons_in_course,
         })
     except Exception as e:
         print(f"[DEBUG] Error in mentor_gradebook: {e}")
@@ -608,7 +555,6 @@ def lesson_detail(request, lesson_id):
         
         # Получаем связанные данные
         links = lesson.links.all().order_by('order')
-        homeworks = lesson.homeworks.all().order_by('-created_at')
         grades = StudentGrade.objects.filter(lesson=lesson).select_related('student')
         
         if request.method == "POST":
@@ -616,7 +562,6 @@ def lesson_detail(request, lesson_id):
             lesson.title = request.POST.get("title", "")
             lesson.description = request.POST.get("description", "")
             lesson.date = request.POST.get("date") or None
-            lesson.deadline = request.POST.get("deadline") or None
             lesson.save()
             
             # Обновляем ссылки
@@ -631,26 +576,7 @@ def lesson_detail(request, lesson_id):
                         url=url,
                         order=i
                     )
-            
-            # Обрабатываем домашние задания
-            homework_title = request.POST.get("homework_title", "")
-            homework_description = request.POST.get("homework_description", "")
-            homework_file = request.FILES.get("homework_file")
-            
-            print(f"[DEBUG] Homework data: title='{homework_title}', description='{homework_description}', file={homework_file}")
-            
-            if homework_title and (homework_description or homework_file):
-                print(f"[DEBUG] Creating homework...")
-                homework = Homework.objects.create(
-                    lesson=lesson,
-                    title=homework_title,
-                    description=homework_description,
-                    file=homework_file
-                )
-                print(f"[DEBUG] Homework created: {homework.id}")
-            else:
-                print(f"[DEBUG] Homework not created - missing data")
-            
+            links = lesson.links.all().order_by('order')
             # Обновляем оценки студентов
             for student in students:
                 grade_key = f"grade_{student.id}"
@@ -679,7 +605,6 @@ def lesson_detail(request, lesson_id):
                 "lesson": lesson,
                 "students": students,
                 "links": links,
-                "homeworks": homeworks,
                 "grades": updated_grades,
                 "success": True,
             })
@@ -689,7 +614,6 @@ def lesson_detail(request, lesson_id):
             "lesson": lesson,
             "students": students,
             "links": links,
-            "homeworks": homeworks,
             "grades": grades,
         })
     except Exception as e:

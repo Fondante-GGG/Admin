@@ -4,7 +4,7 @@ from .models import Notification
 
 class NotificationService:
     @staticmethod
-    def create_notification(recipient, sender, title, message, notification_type='homework', related_lesson=None):
+    def create_notification(recipient, sender, title, message, notification_type='system', related_lesson=None):
         notification = Notification.objects.create(
             recipient=recipient,
             sender=sender,
@@ -42,19 +42,5 @@ class NotificationService:
     
     @staticmethod
     def create_homework_notification(student, lesson, homework_title):
-        mentor = lesson.course.mentors.first() 
-        
-        if mentor:
-            title = "Новое домашнее задание"
-            message = f"Студент {student.user.first_name} {student.user.last_name} отправил домашнее задание '{homework_title}' для урока '{lesson.title}'"
-            
-            return NotificationService.create_notification(
-                recipient=mentor.user,
-                sender=student.user,
-                title=title,
-                message=message,
-                notification_type='homework',
-                related_lesson=lesson
-            )
-        
+        # Homework submissions are disabled in the mentor portal.
         return None

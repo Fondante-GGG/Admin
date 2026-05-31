@@ -10,7 +10,7 @@
     </div>
   {% endif %}
   
-  <form method="post" class="lesson-form" enctype="multipart/form-data">
+  <form method="post" class="lesson-form">
     {% csrf_token %}
     
     <!-- Блок 1: Информация об уроке -->
@@ -31,18 +31,10 @@
                     class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; resize: vertical;">{{ lesson.description }}</textarea>
         </div>
         
-        <div class="form-row">
-          <div class="form-group">
-            <label for="date" style="color: #9ca3af; display: block; margin-bottom: 8px;">Дата урока</label>
-            <input type="date" id="date" name="date" value="{{ lesson.date|date:'Y-m-d'|default:'' }}" 
-                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
-          </div>
-          
-          <div class="form-group">
-            <label for="deadline" style="color: #9ca3af; display: block; margin-bottom: 8px;">Дедлайн домашнего задания</label>
-            <input type="datetime-local" id="deadline" name="deadline" value="{{ lesson.deadline|date:'Y-m-d\TH:i'|default:'' }}" 
-                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
-          </div>
+        <div class="form-group">
+          <label for="date" style="color: #9ca3af; display: block; margin-bottom: 8px;">Дата урока</label>
+          <input type="date" id="date" name="date" value="{{ lesson.date|date:'Y-m-d'|default:'' }}" 
+                 class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
         </div>
         
         <!-- Ссылки на уроки -->
@@ -80,55 +72,7 @@
       </div>
     </div>
     
-    <!-- Блок 2: Домашние задания -->
-    <div class="portal-card" style="margin-top: 24px;">
-      <div class="card-header">
-        <h3 style="color: #fff; margin: 0;">Домашние задания</h3>
-      </div>
-      <div class="card-body">
-        {% for homework in homeworks %}
-          <div class="homework-item">
-            <div class="homework-header">
-              <strong style="color: #fff;">{{ homework.title }}</strong>
-              <span style="color: #6b7280; font-size: 12px;">{{ homework.created_at|date:'d.m.Y H:i' }}</span>
-            </div>
-            <div class="homework-description" style="color: #d1d5db; margin: 8px 0;">{{ homework.description }}</div>
-            {% if homework.file %}
-              <div class="homework-file">
-                <a href="{{ homework.file.url }}" target="_blank" 
-                   style="color: #667eea; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z"/>
-                    <polyline points="14 2 14 8 22 8"/>
-                  </svg>
-                  {{ homework.file.name|slice:"20:" }}
-                </a>
-              </div>
-            {% endif %}
-          </div>
-        {% empty %}
-          <p style="color: #6b7280;">Домашние задания не загружены</p>
-        {% endfor %}
-        
-        <div class="homework-upload" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <h4 style="color: #fff; margin-bottom: 12px;">Загрузить новое домашнее задание</h4>
-          <div class="form-group">
-            <input type="file" id="homework_file" name="homework_file" 
-                   class="form-input" style="width: 100%; padding: 8px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
-          </div>
-          <div class="form-group">
-            <input type="text" name="homework_title" placeholder="Название задания" 
-                   class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff;">
-          </div>
-          <div class="form-group">
-            <textarea name="homework_description" placeholder="Описание задания" rows="3" 
-                      class="form-input" style="width: 100%; padding: 12px; background: #242731; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; resize: vertical;"></textarea>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Блок 3: Таблица студентов -->
+    <!-- Блок 2: Таблица студентов -->
     {% if students %}
     <div class="portal-card" style="margin-top: 24px;">
       <div class="card-header">
@@ -262,39 +206,6 @@
     
     .btn-add:hover {
       background: #5a67d8;
-    }
-    
-    /* Стили для домашних заданий */
-    .homework-item {
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-    
-    .homework-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    
-    .homework-file a {
-      background: rgba(102, 126, 234, 0.1);
-      padding: 8px 12px;
-      border-radius: 6px;
-      text-decoration: none;
-      transition: background 0.15s;
-    }
-    
-    .homework-file a:hover {
-      background: rgba(102, 126, 234, 0.2);
-    }
-    
-    .homework-upload {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.1);
     }
     
     /* Стили для таблицы студентов */

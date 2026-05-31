@@ -57,43 +57,6 @@
         </div>
     </div>
 
-    <!-- Баллы за домашние задания -->
-    <div class="gradebook-card">
-        <div class="card-header">Баллы за домашние задания</div>
-        <div class="table-wrapper">
-            <table class="gradebook-table">
-                <thead>
-                    <tr>
-                        <th>№</th>
-                        <th>ФИО</th>
-                        {% for lesson in lessons_in_course %}
-                        <th>Урок №{{ lesson.order|default:lesson.id }}</th>
-                        {% endfor %}
-                        <th>Итого</th>
-                        <th>StandUp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student_id, data in homework_data.items %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ data.student_name }}</td>
-                        {% for lesson in lessons_in_course %}
-                        {% with homework_score=data.lessons|lookup:lesson.id %}
-                        <td class="homework-{% if homework_score >= 9 %}high{% elif homework_score >= 7 %}medium{% else %}low{% endif %}">
-                            {{ homework_score|default:0 }}
-                        </td>
-                        {% endwith %}
-                        {% endfor %}
-                        <td class="total-score">{{ data.total }}</td>
-                        <td class="standup-score">{{ data.standup }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <!-- Баллы за контрольные работы -->
     <div class="gradebook-card">
         <div class="card-header">Баллы за контрольные работы</div>
@@ -111,7 +74,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for student_id, data in homework_data.items %}
+                    {% for student_id, data in attendance_data.items %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ data.student_name }}</td>
@@ -258,27 +221,8 @@
     color: #4a9eff;
 }
 
-.homework-high {
-    color: #00ff88;
-    font-weight: bold;
-}
-
-.homework-medium {
-    color: #ffaa00;
-    font-weight: bold;
-}
-
-.homework-low {
-    color: #ff4444;
-}
-
 .total-score {
     color: #ffd700;
-    font-weight: bold;
-}
-
-.standup-score {
-    color: #4a9eff;
     font-weight: bold;
 }
 
