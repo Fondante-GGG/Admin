@@ -43,13 +43,21 @@ def _match_course(message: str, courses: list[Courses]) -> Courses | None:
         tokens = re.findall(r"[\w+]+", f"{course.title} {course.direction}".lower())
         long_tokens = {token for token in tokens if len(token) >= 4}
         score = sum(1 for token in long_tokens if token in normalized_message)
-        if course.title.lower() in normalized_message:
+        if course.title and course.title.lower() in normalized_message:
             score += 3
         if score > best_score:
             best_score = score
             best_match = course
 
     return best_match if best_score > 0 else None
+
+
+def _course_name(course: Courses) -> str:
+    return course.title or "Курс"
+
+
+def _course_value(value, fallback: str = "уточняется") -> str:
+    return str(value) if value not in (None, "") else fallback
 
 
 def _course_overview(course: Courses) -> str:
@@ -60,23 +68,23 @@ def _course_overview(course: Courses) -> str:
     ]
     programs_text = f" Основные темы: {', '.join(programs)}." if programs else ""
     return (
-        f"{course.title}: {course.monthly_price} сом/мес, "
-        f"полная стоимость {course.discounted_price} сом, "
-        f"длительность {course.duration_months} мес.{programs_text}"
+        f"{_course_name(course)}: {_course_value(course.monthly_price)} сом/мес, "
+        f"полная стоимость {_course_value(course.discounted_price)} сом, "
+        f"длительность {_course_value(course.duration_months)} мес.{programs_text}"
     )
 
 
 def _courses_reply(courses: list[Courses]) -> str:
     if not courses:
         return "Сейчас список курсов временно недоступен. Оставьте номер телефона, и менеджер подскажет актуальные варианты."
-    course_titles = ", ".join(course.title for course in courses[:6])
+    course_titles = ", ".join(_course_name(course) for course in courses[:6])
     return f"Сейчас доступны курсы: {course_titles}. Если нужен конкретный курс, напишите его название, и я подскажу цену и длительность."
 
 
 def _pricing_reply(courses: list[Courses]) -> str:
     if not courses:
         return "По ценам лучше уточнить у менеджера. Можете оставить номер телефона прямо в чате."
-    lines = [f"{course.title}: {course.monthly_price} сом/мес" for course in courses[:4]]
+    lines = [f"{_course_name(course)}: {_course_value(course.monthly_price)} сом/мес" for course in courses[:4]]
     return "По основным курсам цены такие: " + "; ".join(lines) + "."
 
 
@@ -124,12 +132,12 @@ def _build_chatbot_reply(message: str, courses: list[Courses], contact: Contacts
 
     if any(word in text for word in ("длитель", "месяц", "сколько идет", "сколько длится")):
         if matched_course:
-            return f"Курс {matched_course.title} длится {matched_course.duration_months} мес. Полная стоимость {matched_course.discounted_price} сом."
+            return f"Курс {_course_name(matched_course)} длится {_course_value(matched_course.duration_months)} мес. Полная стоимость {_course_value(matched_course.discounted_price)} сом."
         return "Длительность зависит от курса. Напишите название курса, и я сразу подскажу сроки."
 
     if any(word in text for word in ("распис", "когда занятия", "время", "дни")):
         if matched_course:
-            return f"Расписание для курса {matched_course.title} зависит от набора группы. Оставьте номер телефона, и менеджер отправит точное время."
+            return f"Расписание для курса {_course_name(matched_course)} зависит от набора группы. Оставьте номер телефона, и менеджер отправит точное время."
         return "Расписание зависит от курса и группы. Напишите нужный курс или оставьте номер телефона для связи."
 
     if any(word in text for word in ("учител", "преподав", "ментор")):

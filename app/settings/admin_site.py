@@ -1074,11 +1074,11 @@ class CRMAdminSite(AdminSite):
                 return next_url
             return default_url
 
-        def parse_positive_int(value: str, default: int, minimum: int = 0) -> int:
+        def parse_positive_int(value: str, minimum: int = 0) -> int | None:
             try:
                 return max(minimum, int((value or "").strip()))
             except (TypeError, ValueError):
-                return default
+                return None
 
         course_type = (request.POST.get("course_type") or Cursues.CourseType.GROUP).strip()
         if course_type not in {Cursues.CourseType.GROUP, Cursues.CourseType.INDIVIDUAL}:
@@ -1092,9 +1092,6 @@ class CRMAdminSite(AdminSite):
         next_url = safe_next(reverse(f"{self.name}:{list_url_name}"))
 
         title = (request.POST.get("title") or "").strip()
-        if not title:
-            messages.error(request, "Укажите название курса.")
-            return redirect(next_url)
 
         allowed_statuses = {
             "Подготовка",
@@ -1104,13 +1101,13 @@ class CRMAdminSite(AdminSite):
             "Закончен",
             "Архивирован",
         }
-        status = (request.POST.get("status") or "Подготовка").strip()
-        if status not in allowed_statuses:
-            status = "Подготовка"
+        status = (request.POST.get("status") or "").strip()
+        if status and status not in allowed_statuses:
+            status = ""
 
-        start = parse_date((request.POST.get("start") or "").strip()) or timezone.localdate()
-        duration_months = parse_positive_int(request.POST.get("duration_months") or "", default=6, minimum=1)
-        capacity = parse_positive_int(request.POST.get("capacity") or "", default=10, minimum=0)
+        start = parse_date((request.POST.get("start") or "").strip())
+        duration_months = parse_positive_int(request.POST.get("duration_months") or "", minimum=1)
+        capacity = parse_positive_int(request.POST.get("capacity") or "", minimum=0)
         org_id = request.session.get("current_org_id")
 
         course = Cursues.objects.create(
@@ -1120,7 +1117,7 @@ class CRMAdminSite(AdminSite):
             subject=(request.POST.get("subject") or "").strip(),
             status=status,
             start=start,
-            duration_days=duration_months * 30,
+            duration_days=duration_months * 30 if duration_months is not None else None,
             capacity=capacity,
             room=(request.POST.get("room") or "").strip(),
             schedule_note="",
@@ -1128,7 +1125,7 @@ class CRMAdminSite(AdminSite):
             archived_at=timezone.now() if status == "Архивирован" else None,
         )
 
-        messages.success(request, f"Курс «{course.title}» добавлен.")
+        messages.success(request, f"Курс «{course}» добавлен.")
         return redirect(next_url)
 
     def accounting_meta(self, request):
@@ -1193,8 +1190,7 @@ class CRMAdminSite(AdminSite):
         status = (request.POST.get("status") or "").strip()
         schedule_note = (request.POST.get("schedule_note") or "").strip()
 
-        if title:
-            course.title = title
+        course.title = title
 
         capacity_raw = (request.POST.get("capacity") or "").strip()
         if capacity_raw:
@@ -1202,6 +1198,8 @@ class CRMAdminSite(AdminSite):
                 course.capacity = max(0, int(capacity_raw))
             except ValueError:
                 pass
+        else:
+            course.capacity = None
 
         start_raw = (request.POST.get("start") or "").strip()
         if start_raw:
@@ -1215,6 +1213,8 @@ class CRMAdminSite(AdminSite):
                 parsed = None
             if parsed:
                 course.start = parsed
+        else:
+            course.start = None
 
         duration_raw = (request.POST.get("duration_months") or "").strip()
         if duration_raw:
@@ -1223,6 +1223,8 @@ class CRMAdminSite(AdminSite):
                 course.duration_days = duration_months * 30
             except ValueError:
                 pass
+        else:
+            course.duration_days = None
 
         price_raw = (request.POST.get("price") or "").strip()
         if price_raw:
@@ -1230,15 +1232,16 @@ class CRMAdminSite(AdminSite):
                 course.price = Decimal(price_raw)
             except (InvalidOperation, ValueError):
                 pass
+        else:
+            course.price = None
 
-        if status:
-            course.status = status
-            if status == "Архивирован":
-                course.is_archived = True
-                course.archived_at = course.archived_at or timezone.now()
-            elif course.status != "Архивирован":
-                course.is_archived = False
-                course.archived_at = None
+        course.status = status
+        if status == "Архивирован":
+            course.is_archived = True
+            course.archived_at = course.archived_at or timezone.now()
+        else:
+            course.is_archived = False
+            course.archived_at = None
         course.subject = subject
         course.room = room
         course.schedule_note = schedule_note

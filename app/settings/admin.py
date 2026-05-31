@@ -707,8 +707,9 @@ class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdm
 
     def students_badge(self, obj: Cursues):
         count = obj.students.count()
+        capacity = obj.capacity if obj.capacity is not None else "—"
         return mark_safe(
-            f'<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:#ef4444;color:#fff;font-weight:800;">{count}/{obj.capacity}</span>'
+            f'<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:#ef4444;color:#fff;font-weight:800;">{count}/{capacity}</span>'
         )
 
     students_badge.short_description = "Студенты"

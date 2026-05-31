@@ -30,12 +30,12 @@
 
         <div class="crm-course-create-form__grid">
           <label>
-            <span>Название*</span>
-            <input type="text" name="title" required data-course-create-focus>
+            <span>Название</span>
+            <input type="text" name="title" data-course-create-focus>
           </label>
           <label>
-            <span>Нужно студентов*</span>
-            <input type="number" name="capacity" min="0" value="10" required>
+            <span>Нужно студентов</span>
+            <input type="number" name="capacity" min="0">
           </label>
 
           <label>
@@ -53,10 +53,11 @@
           </label>
 
           <label>
-            <span>Статус*</span>
-            <select name="status" required>
+            <span>Статус</span>
+            <select name="status">
+              <option value="">---------</option>
               {% for status_value, status_label in course_status_choices %}
-              <option value="{{ status_value }}"{% if status_value == "Подготовка" %} selected{% endif %}>{{ status_label }}</option>
+              <option value="{{ status_value }}">{{ status_label }}</option>
               {% endfor %}
             </select>
           </label>
@@ -85,9 +86,9 @@
           </label>
 
           <label>
-            <span>Продолжительность*</span>
+            <span>Продолжительность</span>
             <div class="crm-course-create-duration-row">
-              <input type="number" name="duration_months" min="1" value="6" required>
+              <input type="number" name="duration_months" min="1">
               <select aria-label="Единица длительности" disabled>
                 <option selected>Месяц</option>
               </select>

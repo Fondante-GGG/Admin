@@ -252,31 +252,32 @@ class Cursues(ArchiveBase):
         verbose_name="Организация",
         related_name="courses",
     )
-    title = models.CharField(max_length=155, verbose_name="Название курса")
+    title = models.CharField(max_length=155, blank=True, default="", verbose_name="Название курса")
     course_type = models.CharField(
         max_length=16,
         choices=CourseType.choices,
         default=CourseType.GROUP,
+        blank=True,
         verbose_name="Тип курса",
     )
-    start = models.DateField(verbose_name="Начало курса")
+    start = models.DateField(null=True, blank=True, verbose_name="Начало курса")
     end = models.DateField(verbose_name="Конец курса", null=True, blank=True)
-    lessons_per_month = models.PositiveIntegerField(default=15, verbose_name="Уроков в месяц")
-    duration_days = models.PositiveIntegerField(default=0, verbose_name="Длительность (дней)")
-    status = models.CharField(choices=STATUS_CURSUES, max_length=155, verbose_name="Статус")
-    subject = models.CharField(max_length=155, blank=True, verbose_name="Предмет")
+    lessons_per_month = models.PositiveIntegerField(null=True, blank=True, default=15, verbose_name="Уроков в месяц")
+    duration_days = models.PositiveIntegerField(null=True, blank=True, default=0, verbose_name="Длительность (дней)")
+    status = models.CharField(choices=STATUS_CURSUES, max_length=155, blank=True, default="", verbose_name="Статус")
+    subject = models.CharField(max_length=155, blank=True, default="", verbose_name="Предмет")
     price = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, verbose_name="Цена (с.)"
+        max_digits=12, decimal_places=2, null=True, blank=True, default=0, verbose_name="Цена (с.)"
     )
-    capacity = models.PositiveIntegerField(default=10, verbose_name="Лимит студентов")
-    room = models.CharField(max_length=64, blank=True, verbose_name="Кабинет")
-    schedule_note = models.CharField(max_length=255, blank=True, verbose_name="Расписание")
+    capacity = models.PositiveIntegerField(null=True, blank=True, default=10, verbose_name="Лимит студентов")
+    room = models.CharField(max_length=64, blank=True, default="", verbose_name="Кабинет")
+    schedule_note = models.CharField(max_length=255, blank=True, default="", verbose_name="Расписание")
     mentors = models.ManyToManyField(Mentor, blank=True, verbose_name="Менторы")
     students = models.ManyToManyField(Student, blank=True, verbose_name="Студенты")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
 
     def __str__(self):
-        return self.title
+        return self.title or "Курс без названия"
     
     @property
     def duration_label(self) -> str:

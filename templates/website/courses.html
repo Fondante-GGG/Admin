@@ -102,10 +102,12 @@
                   <div class="card {{ course.color_theme }}">
                     <div class="card_img">
                       <div>
-                        <p>{{ course.direction }}</p>
-                        <h5>{{ course.title }}</h5>
+                        <p>{{ course.direction|default:"" }}</p>
+                        <h5>{{ course.title|default:"Курс" }}</h5>
                       </div>
+                      {% if course.photo %}
                       <img src="{{ course.photo.url }}" style="width: 100px; height: 100px;" alt="{{ course.title }}">
+                      {% endif %}
                     </div>
                     <ul class="card_list">
                       {% for program in course.programs.all %}
@@ -117,13 +119,13 @@
                     <div class="card_discount">
                       <div class="card_discount_head">
                         <div>
-                          <p class="card_discount_title line-through">{{ course.price }} сом</p>
-                          <p class="card_discount_title">{{ course.discounted_price }} сом</p>
+                          <p class="card_discount_title line-through">{{ course.price|default:"—" }} сом</p>
+                          <p class="card_discount_title">{{ course.discounted_price|default:"—" }} сом</p>
                         </div>
                         <div class="card_price_minus">{{ course.discount_percent }}%</div>
                       </div>
                       <div class="card_price">
-                        <h1 class="card_price_n">{{ course.monthly_price }}</h1>
+                        <h1 class="card_price_n">{{ course.monthly_price|default:"—" }}</h1>
                         <p class="card_price_som">сом/мес</p>
                       </div>
                     </div>
@@ -140,9 +142,11 @@
                         <button class="modal_close" data-close="modal-{{ course.id }}">×</button>
                         <div class="modal_text">
                           <div class="modal_hero">
-                            <h2 class="modal_title">{{ course.title }}</h2>
-                            <p class="modal_direction">{{ course.direction }}</p>
+                            <h2 class="modal_title">{{ course.title|default:"Курс" }}</h2>
+                            <p class="modal_direction">{{ course.direction|default:"" }}</p>
+                            {% if course.photo %}
                             <img src="{{ course.photo.url }}" alt="{{ course.title }}" class="modal_img">
+                            {% endif %}
                           </div>
                           <div class="modal_description">
                             {{ course.title_model|safe }}
@@ -162,20 +166,22 @@
                           <div class="card">
                             <div class="card_img">
                               <div>
-                                <p class="modal_texte">{{ course.direction }}</p>
-                                <h5  class="modal_texte" >{{ course.title }}</h5>
+                                <p class="modal_texte">{{ course.direction|default:"" }}</p>
+                                <h5  class="modal_texte" >{{ course.title|default:"Курс" }}</h5>
                               </div>
+                              {% if course.photo %}
                               <img src="{{ course.photo.url }}" style="width: 50px; height: 50px;" alt="{{ course.title }}">
+                              {% endif %}
                             </div>
                             <div class="card_discount">
                               <div class="card_discount_head">
                                 <div>
-                                  <p class="card_discount_title">{{ course.discounted_price }} сом</p>
+                                  <p class="card_discount_title">{{ course.discounted_price|default:"—" }} сом</p>
                                 </div>
                                 <div class="card_price_minus">{{ course.discount_percent }}%</div>
                               </div>
                               <div class="card_price">
-                                <h1 class="card_price_n">{{ course.monthly_price }}</h1>
+                                <h1 class="card_price_n">{{ course.monthly_price|default:"—" }}</h1>
                                 <p class="card_price_som">сом/мес</p>
                               </div>
                             </div>

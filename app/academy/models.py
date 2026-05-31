@@ -170,63 +170,73 @@ class AboutObjects2(models.Model):
         verbose_name_plural = 'Данные 2'
 
 class TypeCourse(models.Model):
-    title = models.CharField(max_length=255, verbose_name='тип курсов')
+    title = models.CharField(max_length=255, blank=True, default="", verbose_name='тип курсов')
 
     def __str__(self):
-        return self.title
+        return self.title or "Тип курса"
 
 
 class Courses(models.Model):
-    title = models.CharField(max_length=255, verbose_name='заголовок')
-    direction = models.ForeignKey(TypeCourse, on_delete = models.CASCADE, verbose_name='направление')
-    photo = models.ImageField(upload_to = 'courses/', verbose_name = 'фото')
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
-    duration_months = models.PositiveIntegerField(verbose_name="Продолжительность (мес.)")
-    discounted_price = models.IntegerField()
-    monthly_price = models.IntegerField()
-    color_theme = models.CharField(max_length=50, help_text="Цвет темы: light-purple, dark-blue, green и т.д.")
+    title = models.CharField(max_length=255, blank=True, default="", verbose_name='заголовок')
+    direction = models.ForeignKey(TypeCourse, on_delete = models.SET_NULL, null=True, blank=True, verbose_name='направление')
+    photo = models.ImageField(upload_to = 'courses/', null=True, blank=True, verbose_name = 'фото')
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Цена")
+    duration_months = models.PositiveIntegerField(null=True, blank=True, verbose_name="Продолжительность (мес.)")
+    discounted_price = models.IntegerField(null=True, blank=True)
+    monthly_price = models.IntegerField(null=True, blank=True)
+    color_theme = models.CharField(max_length=50, blank=True, default="", help_text="Цвет темы: light-purple, dark-blue, green и т.д.")
     title_model = RichTextField(
+        blank=True,
+        default="",
         verbose_name='Заголовка Модельного окна'
     )
     description_model = RichTextField(
+        blank=True,
+        default="",
         verbose_name='Описание Модельного окна'
     )
 
 
     @property
     def discount_percent(self):
-        if self.price:
+        if self.price and self.discounted_price:
             return round((float(self.price) - float(self.discounted_price)) / float(self.price) * 100)
         return 0
 
     def __str__(self):
-        return self.title
+        return self.title or "Курс без названия"
     
     class Meta:
         verbose_name_plural = 'Курсы'
     
 class CoursesProgram(models.Model):
     course = models.ForeignKey(Courses, on_delete=models.CASCADE, related_name='programs')
-    title = models.CharField(max_length=155, verbose_name='Заголовка')
+    title = models.CharField(max_length=155, blank=True, default="", verbose_name='Заголовка')
 
     def __str__(self):
-        return self.title
+        return self.title or "Программа курса"
     
 
 class CoursesModel(models.Model):
-    courses = models.ForeignKey(Courses, on_delete= models.CASCADE, related_name='modals')
+    courses = models.ForeignKey(Courses, on_delete= models.SET_NULL, null=True, blank=True, related_name='modals')
     title_model = RichTextField(
+        blank=True,
+        default="",
         verbose_name='Заголовка Модельного окна'
     )
     description_model = RichTextField(
+        blank=True,
+        default="",
         verbose_name='Описание Модельного окна'
     )
     image = models.ImageField(
         upload_to='courses',
+        null=True,
+        blank=True,
         verbose_name='Фото'
     )
     def __str__(self):
-        return self.title_model
+        return self.title_model or "Модельное окно курса"
     
     class Meta:
         verbose_name_plural = 'модельное окно'
