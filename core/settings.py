@@ -203,7 +203,7 @@ JAZZMIN_SETTINGS = {
         "settings": [
             {
                 "name": "Архив",
-                "url": "/admin/archive/",
+                "url": "/admin-men/archive/",
                 "icon": "fas fa-archive",
             },
         ],

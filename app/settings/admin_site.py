@@ -1489,27 +1489,30 @@ class CRMAdminSite(AdminSite):
         return resp
 
     def archive_index(self, request):
+        def archive_url(model_name: str) -> str:
+            return f"{reverse(f'{self.name}:settings_{model_name}_changelist')}?archived=1"
+
         sections = [
             {
                 "title": "Люди",
                 "items": [
-                    {"title": "Студенты", "url": "/admin/settings/student/?archived=1"},
-                    {"title": "Менторы", "url": "/admin/settings/mentor/?archived=1"},
-                    {"title": "Лиды", "url": "/admin/settings/lead/?archived=1"},
+                    {"title": "Студенты", "url": archive_url("student")},
+                    {"title": "Менторы", "url": archive_url("mentor")},
+                    {"title": "Лиды", "url": archive_url("lead")},
                 ],
             },
             {
                 "title": "Курсы и занятия",
                 "items": [
-                    {"title": "Курсы", "url": "/admin/settings/cursues/?archived=1"},
-                    {"title": "Календарь", "url": "/admin/settings/calendarevent/?archived=1"},
+                    {"title": "Курсы", "url": archive_url("cursues")},
+                    {"title": "Календарь", "url": archive_url("calendarevent")},
                 ],
             },
             {
                 "title": "Коммуникации",
                 "items": [
-                    {"title": "Звонки", "url": "/admin/settings/call/?archived=1"},
-                    {"title": "Задачи", "url": "/admin/settings/task/?archived=1"},
+                    {"title": "Звонки", "url": archive_url("call")},
+                    {"title": "Задачи", "url": archive_url("task")},
                 ],
             },
         ]
@@ -1518,7 +1521,7 @@ class CRMAdminSite(AdminSite):
                 {
                     "title": "Финансы",
                     "items": [
-                        {"title": "Бухгалтерия", "url": "/admin/settings/accountingentry/?archived=1"},
+                        {"title": "Бухгалтерия", "url": archive_url("accountingentry")},
                     ],
                 }
             )
