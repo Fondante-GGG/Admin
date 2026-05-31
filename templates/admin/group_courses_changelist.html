@@ -63,7 +63,7 @@
 
       <div class="crm-group-grid">
         {% for course in section.items %}
-        <a href="{% url 'admin:settings_groupcourse_change' course.id %}" class="crm-group-card">
+        <a href="{% url 'crm_admin:settings_groupcourse_change' course.id %}" class="crm-group-card">
           <div class="crm-group-card__top">
             <div class="crm-group-card__room">{{ course.room }}</div>
             <div class="crm-group-card__capacity">

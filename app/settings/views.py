@@ -52,16 +52,16 @@ def portal_logout(request):
 def _redirect_by_role(user: User):
     role = getattr(user, "role", "")
     if role == "Админ" or user.is_superuser:
-        return redirect("/admin/")
+        return redirect(reverse("crm_admin:index"))
     if role == "Менеджер":
-        return redirect("/admin/")
+        return redirect(reverse("crm_admin:index"))
     if role == "Ментор" and hasattr(user, "mentor_profile"):
         return redirect("/portal/mentor/")
     if role == "Студент" and hasattr(user, "student"):
         return redirect("/portal/student/")
     if role == "Родитель" and hasattr(user, "parent_profile"):
         return redirect("/portal/parent/")
-    return redirect("/admin/")
+    return redirect(reverse("crm_admin:index"))
 
 
 @login_required

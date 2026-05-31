@@ -105,7 +105,7 @@
   async function ensureMeta() {
     if (metaLoaded) return;
     try {
-      const resp = await fetch("/admin/accounting/meta/", { credentials: "same-origin" });
+      const resp = await fetch("/admin-men/accounting/meta/", { credentials: "same-origin" });
       const data = await resp.json();
       setSelectOptions(selAccount, data.accounts, false);
       setSelectOptions(selFrom, data.accounts, false);
@@ -196,7 +196,7 @@
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const url = mode === "transfer" ? "/admin/accounting/transfer/create/" : "/admin/accounting/entry/create/";
+    const url = mode === "transfer" ? "/admin-men/accounting/transfer/create/" : "/admin-men/accounting/entry/create/";
     const body = formToBody(form);
     function getCookie(name) {
       const m = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));

@@ -1625,7 +1625,7 @@ class CalendarEventAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, Arch
     actions = (archive_selected, unarchive_selected)
 
     def changelist_view(self, request, extra_context=None):
-        return redirect("/admin/calendar/")
+        return redirect(reverse(f"{crm_admin_site.name}:calendar"))
 
 
 @admin.register(Call, site=crm_admin_site)

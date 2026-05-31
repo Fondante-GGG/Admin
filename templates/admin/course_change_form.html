@@ -315,7 +315,7 @@
     <div class="crm-course-head__meta">
       Статус: <strong style="color:#111827;">{{ original.status|default:"—" }}</strong>
     </div>
-    <div class="crm-course-actions crm-toolbar" data-students-csv-url="{% url 'admin:course_students_csv' original.pk %}">
+    <div class="crm-course-actions crm-toolbar" data-students-csv-url="{% url 'crm_admin:course_students_csv' original.pk %}">
       <button type="button" class="crm-btn crm-btn--secondary" data-course-tab="info">Изменить</button>
       <button type="button" class="crm-btn crm-btn--outline" data-course-tab="info">Статус</button>
       <button type="button" class="crm-btn crm-btn--secondary" data-course-tab="students">Студенты</button>
@@ -550,7 +550,7 @@
       if (link.classList.contains("crm-pg")) {
         e.preventDefault();
         var u = new URL(href, window.location.origin);
-        var currentA = panel.querySelector("a[href*='/admin/settings/student/']");
+        var currentA = panel.querySelector("a[href*='/admin-men/settings/student/']");
         var current = currentA ? currentA.getAttribute("href") || "" : "";
         var m2 = current.match(/student\/(\d+)\//) || current.match(/\/(\d+)\/change\/?/);
         if (!m2) return;

@@ -11,7 +11,7 @@
 
   {% if can_edit and about %}
     <div class="crm-about__actions">
-      <a href="{% url 'admin:config_crmabout_change' about.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
+      <a href="{% url 'crm_admin:config_crmabout_change' about.id %}" class="crm-btn crm-btn--primary">Редактировать</a>
     </div>
   {% endif %}
 

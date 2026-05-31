@@ -96,7 +96,7 @@
         e.preventDefault();
         const u = new URL(href, window.location.origin);
         // keep current student id in drawer url
-        const current = panel.querySelector("a[href*='/admin/settings/student/']")?.getAttribute("href") || "";
+        const current = panel.querySelector("a[href*='/admin-men/settings/student/']")?.getAttribute("href") || "";
         const m2 =
           current.match(/student\/(\d+)\//) ||
           current.match(/\/(\d+)\/change\/?/) ||
@@ -117,7 +117,7 @@
         if (sid) loadStudent(sid);
         return;
       }
-      // href may be absolute or relative (e.g. "166/change/" or "/admin/.../student/166/change/")
+      // href may be absolute or relative (e.g. "166/change/" or "/admin-men/.../student/166/change/")
       const m =
         href.match(/student\/(\d+)\//) ||
         href.match(/\/(\d+)\/change\/?/) ||

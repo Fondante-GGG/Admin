@@ -421,7 +421,7 @@
     }
     
     searchTimeout = setTimeout(() => {
-      fetch(`/admin/search-students/?q=${encodeURIComponent(query)}`)
+      fetch(`{% url 'search_students' %}?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
           searchResults.innerHTML = '';

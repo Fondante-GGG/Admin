@@ -1047,7 +1047,7 @@ class CRMAdminSite(AdminSite):
             request.session.pop("current_org_id", None)
             request.session.pop("current_org_name", None)
             messages.success(request, "Выбраны все организации")
-        referer = request.META.get("HTTP_REFERER") or "/admin/"
+        referer = request.META.get("HTTP_REFERER") or reverse(f"{self.name}:index")
         return redirect(referer)
 
     def about_view(self, request):

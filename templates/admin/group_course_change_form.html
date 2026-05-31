@@ -511,7 +511,7 @@
       if (link.classList.contains("crm-pg")) {
         e.preventDefault();
         var u = new URL(href, window.location.origin);
-        var currentA = panel.querySelector("a[href*='/admin/settings/student/']");
+        var currentA = panel.querySelector("a[href*='/admin-men/settings/student/']");
         var current = currentA ? currentA.getAttribute("href") || "" : "";
         var m2 = current.match(/student\/(\d+)\//) || current.match(/\/(\d+)\/change\/?/);
         if (!m2) return;

@@ -10,7 +10,7 @@
   {% if original and original.user_id %}
     <div class="crm-student-head">
       <div class="crm-student-head__title">Студент</div>
-      <a class="crm-student-head__name" href="{% url 'admin:settings_user_change' original.user_id %}" title="Открыть пользователя">
+      <a class="crm-student-head__name" href="{% url 'crm_admin:settings_user_change' original.user_id %}" title="Открыть пользователя">
         {{ original.user.get_full_name|default:original.user.username }}
         <span class="crm-student-head__icon" aria-hidden="true">↗</span>
       </a>
