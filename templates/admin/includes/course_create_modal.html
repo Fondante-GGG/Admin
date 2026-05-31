@@ -1,0 +1,110 @@
+<div class="crm-course-create" data-course-create-root>
+  <div class="crm-course-create-dd" data-course-create-dd>
+    <button type="button" class="{{ split_button_class|default:'crm-group-split-btn' }}" data-course-create-toggle>
+      <span class="{{ split_main_class|default:'crm-group-split-btn__main' }}"><i class="fas fa-plus"></i> Добавить</span>
+      <span class="{{ split_arrow_class|default:'crm-group-split-btn__arrow' }}"><i class="fas fa-caret-down"></i></span>
+    </button>
+    <div class="crm-course-create-dd__menu">
+      <button type="button" class="crm-course-create-dd__item" data-course-create-open data-course-variant="ordinary" data-course-label="Обычный курс">
+        <i class="fas fa-plus"></i>
+        <span>Обычный курс</span>
+      </button>
+      <button type="button" class="crm-course-create-dd__item" data-course-create-open data-course-variant="continuous" data-course-label="Непрерывный курс">
+        <i class="fas fa-plus"></i>
+        <span>Непрерывный курс</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="crm-course-create-modal is-hidden" data-course-create-modal aria-hidden="true">
+    <div class="crm-course-create-modal__backdrop" data-course-create-close></div>
+    <div class="crm-course-create-modal__panel" role="dialog" aria-modal="true" aria-labelledby="crmCourseCreateTitle">
+      <form method="post" action="{{ course_create_url }}" class="crm-course-create-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ course_create_next|default:request.get_full_path }}">
+        <input type="hidden" name="course_type" value="{{ course_create_type }}">
+        <input type="hidden" name="course_variant" value="ordinary" data-course-create-variant>
+
+        <h2 id="crmCourseCreateTitle" class="crm-course-create-form__title" data-course-create-title>Обычный курс</h2>
+
+        <div class="crm-course-create-form__grid">
+          <label>
+            <span>Название*</span>
+            <input type="text" name="title" required data-course-create-focus>
+          </label>
+          <label>
+            <span>Нужно студентов*</span>
+            <input type="number" name="capacity" min="0" value="10" required>
+          </label>
+
+          <label>
+            <span>Направление</span>
+            <select name="subject">
+              <option value="">---------</option>
+              {% for subject in course_subject_choices %}
+              <option value="{{ subject }}">{{ subject }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Место проведения</span>
+            <input type="text" name="room">
+          </label>
+
+          <label>
+            <span>Статус*</span>
+            <select name="status" required>
+              {% for status_value, status_label in course_status_choices %}
+              <option value="{{ status_value }}"{% if status_value == "Подготовка курсов" %} selected{% endif %}>{{ status_label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Ссылка на онлайн-урок</span>
+            <input type="url" name="online_url">
+            <small>Оставьте пустым для авто-генерации</small>
+          </label>
+
+          <label>
+            <span>Дата начала</span>
+            <input type="date" name="start">
+          </label>
+          <label>
+            <span>Цвет в календаре</span>
+            <div class="crm-course-create-color-field">
+              <span class="crm-course-create-color-preview" data-course-create-color-preview></span>
+              <select name="calendar_color" data-course-create-color>
+                <option value="#8ed99a" selected></option>
+                <option value="#7c6df2"></option>
+                <option value="#ffcc66"></option>
+                <option value="#6ec6ff"></option>
+                <option value="#ff8f8f"></option>
+              </select>
+            </div>
+          </label>
+
+          <label>
+            <span>Продолжительность*</span>
+            <div class="crm-course-create-duration-row">
+              <input type="number" name="duration_months" min="1" value="6" required>
+              <select aria-label="Единица длительности" disabled>
+                <option selected>Месяц</option>
+              </select>
+            </div>
+          </label>
+        </div>
+
+        <div class="crm-course-create-form__options">
+          <label><input type="checkbox" name="has_lesson_limit"> Есть лимит на количество занятий</label>
+          <p>Каждому студенту можно установить кол-во занятий, которое он может посетить</p>
+          <label><input type="checkbox" name="count_debts_by_used_coupons"> Считать долги исходя из потраченных талонов</label>
+          <label><input type="checkbox" name="count_only_after_join"> Если включено, при расчете пропусков студента учитываются только уроки, проведенные после его даты присоединения.</label>
+        </div>
+
+        <div class="crm-course-create-form__submit">
+          <button type="submit">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

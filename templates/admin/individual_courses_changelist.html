@@ -3,6 +3,7 @@
 
 {% block extrastyle %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'crm_dashboard/course_create.css' %}">
 <link rel="stylesheet" href="{% static 'crm_dashboard/individual_courses.css' %}">
 {% endblock %}
 
@@ -17,10 +18,7 @@
   <div class="crm-individual-toolbar">
     <div class="crm-individual-toolbar__left">
       {% if has_add_permission %}
-      <a href="{{ individual_add_url }}" class="crm-split-btn">
-        <span class="crm-split-btn__main"><i class="fas fa-plus"></i> Добавить</span>
-        <span class="crm-split-btn__arrow"><i class="fas fa-caret-down"></i></span>
-      </a>
+      {% include "admin/includes/course_create_modal.html" with course_create_type="individual" course_create_next=request.get_full_path split_button_class="crm-split-btn" split_main_class="crm-split-btn__main" split_arrow_class="crm-split-btn__arrow" %}
       {% endif %}
       <a href="{{ individual_archive_url }}" class="crm-dark-btn{% if individual_is_archive %} is-active{% endif %}">
         <i class="far fa-trash-alt"></i> Архив
@@ -78,4 +76,5 @@
   </div>
   {% endif %}
 </div>
+<script src="{% static 'crm_dashboard/course_create.js' %}"></script>
 {% endblock %}
