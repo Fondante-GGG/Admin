@@ -19,7 +19,7 @@
   <div class="crm-group-toolbar">
     <div class="crm-group-toolbar__left">
       {% if has_add_permission %}
-      {% include "admin/includes/course_create_modal.html" with course_create_type="group" course_create_next=request.get_full_path split_button_class="crm-group-split-btn" split_main_class="crm-group-split-btn__main" split_arrow_class="crm-group-split-btn__arrow" %}
+      {% include "admin/includes/course_create_modal.html" with course_create_type="group" course_create_next=group_current_url split_button_class="crm-group-split-btn" split_main_class="crm-group-split-btn__main" split_arrow_class="crm-group-split-btn__arrow" %}
       {% endif %}
 
       <a href="{{ group_archive_url }}" class="crm-group-archive-btn{% if group_is_archive %} is-active{% endif %}">

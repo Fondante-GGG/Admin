@@ -371,7 +371,7 @@
             <span>Статус*</span>
             <select name="status" required>
               {% for status_value, status_label in course_status_choices %}
-              <option value="{{ status_value }}"{% if original.status == status_value %} selected{% endif %}>{{ status_label }}</option>
+              <option value="{{ status_value }}"{% if course_status_value == status_value %} selected{% endif %}>{{ status_label }}</option>
               {% endfor %}
             </select>
           </label>

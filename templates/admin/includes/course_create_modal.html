@@ -1,4 +1,5 @@
 <div class="crm-course-create" data-course-create-root>
+  {% url 'crm_admin:course_quick_create' as default_course_create_url %}
   <div class="crm-course-create-dd" data-course-create-dd>
     <button type="button" class="{{ split_button_class|default:'crm-group-split-btn' }}" data-course-create-toggle>
       <span class="{{ split_main_class|default:'crm-group-split-btn__main' }}"><i class="fas fa-plus"></i> Добавить</span>
@@ -19,9 +20,9 @@
   <div class="crm-course-create-modal is-hidden" data-course-create-modal aria-hidden="true">
     <div class="crm-course-create-modal__backdrop" data-course-create-close></div>
     <div class="crm-course-create-modal__panel" role="dialog" aria-modal="true" aria-labelledby="crmCourseCreateTitle">
-      <form method="post" action="{{ course_create_url }}" class="crm-course-create-form">
+      <form method="post" action="{% if course_create_url %}{{ course_create_url }}{% else %}{{ default_course_create_url }}{% endif %}" class="crm-course-create-form">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{{ course_create_next|default:request.get_full_path }}">
+        <input type="hidden" name="next" value="{{ course_create_next }}">
         <input type="hidden" name="course_type" value="{{ course_create_type }}">
         <input type="hidden" name="course_variant" value="ordinary" data-course-create-variant>
 
@@ -55,7 +56,7 @@
             <span>Статус*</span>
             <select name="status" required>
               {% for status_value, status_label in course_status_choices %}
-              <option value="{{ status_value }}"{% if status_value == "Подготовка курсов" %} selected{% endif %}>{{ status_label }}</option>
+              <option value="{{ status_value }}"{% if status_value == "Подготовка" %} selected{% endif %}>{{ status_label }}</option>
               {% endfor %}
             </select>
           </label>

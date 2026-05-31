@@ -775,6 +775,11 @@ class CRMAdminSite(AdminSite):
                 name="course_students_csv",
             ),
             path(
+                "settings/course/create/",
+                self.admin_view(self.course_quick_create),
+                name="course_quick_create",
+            ),
+            path(
                 "settings/course/<int:course_id>/update/",
                 self.admin_view(self.course_update),
                 name="course_update",
@@ -1057,6 +1062,75 @@ class CRMAdminSite(AdminSite):
         }
         return TemplateResponse(request, "admin/about.html", context)
 
+    def course_quick_create(self, request):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        if self._role(request.user) not in {"Администратор", "Менеджер", "Ментор"}:
+            return HttpResponseForbidden("Недостаточно прав.")
+
+        def safe_next(default_url: str) -> str:
+            next_url = (request.POST.get("next") or "").strip()
+            if next_url.startswith("/") and not next_url.startswith("//"):
+                return next_url
+            return default_url
+
+        def parse_positive_int(value: str, default: int, minimum: int = 0) -> int:
+            try:
+                return max(minimum, int((value or "").strip()))
+            except (TypeError, ValueError):
+                return default
+
+        course_type = (request.POST.get("course_type") or Cursues.CourseType.GROUP).strip()
+        if course_type not in {Cursues.CourseType.GROUP, Cursues.CourseType.INDIVIDUAL}:
+            course_type = Cursues.CourseType.GROUP
+
+        list_url_name = (
+            "settings_individualcourse_changelist"
+            if course_type == Cursues.CourseType.INDIVIDUAL
+            else "settings_groupcourse_changelist"
+        )
+        next_url = safe_next(reverse(f"{self.name}:{list_url_name}"))
+
+        title = (request.POST.get("title") or "").strip()
+        if not title:
+            messages.error(request, "Укажите название курса.")
+            return redirect(next_url)
+
+        allowed_statuses = {
+            "Подготовка",
+            "Готов к запуску",
+            "Запущен",
+            "Приостановлен",
+            "Закончен",
+            "Архивирован",
+        }
+        status = (request.POST.get("status") or "Подготовка").strip()
+        if status not in allowed_statuses:
+            status = "Подготовка"
+
+        start = parse_date((request.POST.get("start") or "").strip()) or timezone.localdate()
+        duration_months = parse_positive_int(request.POST.get("duration_months") or "", default=6, minimum=1)
+        capacity = parse_positive_int(request.POST.get("capacity") or "", default=10, minimum=0)
+        org_id = request.session.get("current_org_id")
+
+        course = Cursues.objects.create(
+            organization_id=org_id or None,
+            title=title,
+            course_type=course_type,
+            subject=(request.POST.get("subject") or "").strip(),
+            status=status,
+            start=start,
+            duration_days=duration_months * 30,
+            capacity=capacity,
+            room=(request.POST.get("room") or "").strip(),
+            schedule_note="",
+            is_archived=status == "Архивирован",
+            archived_at=timezone.now() if status == "Архивирован" else None,
+        )
+
+        messages.success(request, f"Курс «{course.title}» добавлен.")
+        return redirect(next_url)
+
     def accounting_meta(self, request):
         denied = self._deny_accounting_for_manager(request)
         if denied:
@@ -1159,6 +1233,12 @@ class CRMAdminSite(AdminSite):
 
         if status:
             course.status = status
+            if status == "Архивирован":
+                course.is_archived = True
+                course.archived_at = course.archived_at or timezone.now()
+            elif course.status != "Архивирован":
+                course.is_archived = False
+                course.archived_at = None
         course.subject = subject
         course.room = room
         course.schedule_note = schedule_note
@@ -1174,12 +1254,13 @@ class CRMAdminSite(AdminSite):
         action = (request.POST.get("action") or "").strip()
 
         if action == "finish":
-            course.status = "Завершенные курсы"
+            course.status = "Закончен"
             course.save(update_fields=["status"])
         elif action == "archive":
+            course.status = "Архивирован"
             course.is_archived = True
             course.archived_at = timezone.now()
-            course.save(update_fields=["is_archived", "archived_at"])
+            course.save(update_fields=["status", "is_archived", "archived_at"])
 
         if action == "archive":
             next_url = reverse(f"{self.name}:settings_groupcourse_changelist")

@@ -62,7 +62,7 @@ class ParentDashboardViewTests(TestCase):
         self.course = Cursues.objects.create(
             title="IELTS Evening",
             start=date(2026, 1, 10),
-            status="Активные курсы",
+            status="Запущен",
             subject="IELTS",
         )
         self.course.students.add(self.student)
@@ -97,7 +97,7 @@ class ParentDashboardViewTests(TestCase):
         self.other_course = Cursues.objects.create(
             title="SAT Morning",
             start=date(2026, 2, 1),
-            status="Активные курсы",
+            status="Запущен",
             subject="SAT",
         )
         self.other_course.students.add(self.other_student)

@@ -54,6 +54,32 @@ from .models import (
 
 from django.core.exceptions import ValidationError
 
+
+COURSE_LEGACY_STATUS_MAP = {
+    "Подготовка курсов": "Подготовка",
+    "Активные курсы": "Запущен",
+    "Завершенные курсы": "Закончен",
+}
+
+
+def _course_status_choices():
+    return list(Cursues._meta.get_field("status").choices)
+
+
+def _course_status_values() -> list[str]:
+    return [value for value, _label in _course_status_choices()]
+
+
+def _canonical_course_status(status: str) -> str:
+    return COURSE_LEGACY_STATUS_MAP.get(status, status)
+
+
+def _course_status_filter_values(status: str) -> list[str]:
+    values = [status]
+    values.extend(legacy for legacy, current in COURSE_LEGACY_STATUS_MAP.items() if current == status)
+    return values
+
+
 def _role(user) -> str:
     return getattr(user, "role", "") or ""
 
@@ -687,6 +713,15 @@ class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdm
 
     students_badge.short_description = "Студенты"
 
+    def save_model(self, request, obj, form, change):
+        if obj.status == "Архивирован":
+            obj.is_archived = True
+            obj.archived_at = obj.archived_at or timezone.now()
+        elif obj.is_archived and obj.status != "Архивирован" and "status" in getattr(form, "changed_data", []):
+            obj.is_archived = False
+            obj.archived_at = None
+        super().save_model(request, obj, form, change)
+
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
         course = self.get_object(request, object_id)
@@ -733,11 +768,8 @@ class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdm
                 .select_related("student__user")
                 .order_by("-dropped_at", "student__user__first_name", "student__user__username")
             )
-            extra_context["course_status_label"] = {
-                "Подготовка курсов": "Подготовка",
-                "Активные курсы": "Запущен",
-                "Завершенные курсы": "Завершен",
-            }.get(course.status, course.status or "—")
+            extra_context["course_status_value"] = _canonical_course_status(course.status) if course.status else ""
+            extra_context["course_status_label"] = extra_context["course_status_value"] or "—"
             extra_context["course_duration_months"] = max(1, round((course.duration_days or 0) / 30)) if (course.duration_days or 0) > 0 else 1
             extra_context["course_update_url"] = reverse(f"{crm_admin_site.name}:course_update", args=[course.pk])
             extra_context["course_status_url"] = reverse(f"{crm_admin_site.name}:course_status_update", args=[course.pk])
@@ -746,7 +778,7 @@ class CursuesAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdm
             extra_context["course_students_upload_url"] = reverse(f"{crm_admin_site.name}:course_students_upload", args=[course.pk])
             extra_context["course_contracts_generate_url"] = reverse(f"{crm_admin_site.name}:course_contracts_generate", args=[course.pk])
             extra_context["course_payment_methods"] = Payment.Method.choices
-            extra_context["course_status_choices"] = list(course._meta.get_field("status").choices)
+            extra_context["course_status_choices"] = _course_status_choices()
             extra_context["course_subject_choices"] = list(
                 Cursues.objects.exclude(subject="").values_list("subject", flat=True).distinct().order_by("subject")
             )
@@ -803,6 +835,10 @@ class GroupCourseAdmin(CursuesAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     change_list_template = "admin/group_courses_changelist.html"
     change_form_template = "admin/group_course_change_form.html"
+
+    def save_model(self, request, obj, form, change):
+        obj.course_type = Cursues.CourseType.GROUP
+        super().save_model(request, obj, form, change)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).prefetch_related("students", "mentors__user")
@@ -862,10 +898,10 @@ class GroupCourseAdmin(CursuesAdmin):
 
         status = params.get("status", "")
         if status:
-            base = base.filter(status=status)
+            base = base.filter(status__in=_course_status_filter_values(status))
 
         group_by = params.get("group_by", "status")
-        statuses = ["Подготовка курсов", "Активные курсы", "Завершенные курсы"]
+        statuses = _course_status_values()
 
         def build_url(**updates):
             params = request._crm_group_params.copy()
@@ -882,6 +918,7 @@ class GroupCourseAdmin(CursuesAdmin):
         extra_context["selected_status"] = params.get("status", "")
         extra_context["selected_subject"] = params.get("subject", "")
         extra_context["search_query"] = q
+        extra_context["group_current_url"] = build_url()
 
         subjects = list(
             self.get_queryset(request)
@@ -892,6 +929,9 @@ class GroupCourseAdmin(CursuesAdmin):
         )
         extra_context["subjects"] = subjects
         extra_context["status_choices"] = statuses
+        extra_context["course_status_choices"] = _course_status_choices()
+        extra_context["course_subject_choices"] = subjects
+        extra_context["course_create_url"] = reverse(f"{crm_admin_site.name}:course_quick_create")
 
         if group_by == "subject":
             sections = []
@@ -919,7 +959,7 @@ class GroupCourseAdmin(CursuesAdmin):
         else:
             sections = []
             for s in statuses:
-                items = list(base.filter(status=s).order_by("-created_at"))
+                items = list(base.filter(status__in=_course_status_filter_values(s)).order_by("-created_at"))
                 if not items:
                     continue
                 sections.append(
@@ -949,6 +989,10 @@ class IndividualCourseAdmin(CursuesAdmin):
     allowed_roles = {"Администратор", "Менеджер", "Ментор"}
     change_list_template = "admin/individual_courses_changelist.html"
 
+    def save_model(self, request, obj, form, change):
+        obj.course_type = Cursues.CourseType.INDIVIDUAL
+        super().save_model(request, obj, form, change)
+
     def get_queryset(self, request):
         qs = super().get_queryset(request).prefetch_related("students__user", "mentors__user")
         return qs.filter(course_type=Cursues.CourseType.INDIVIDUAL)
@@ -960,10 +1004,14 @@ class IndividualCourseAdmin(CursuesAdmin):
 
     @staticmethod
     def _status_meta(status: str) -> tuple[str, str]:
+        status = _canonical_course_status(status)
         mapping = {
-            "Подготовка курсов": ("#f59e0b", "#fff7ed"),
-            "Активные курсы": ("#10b981", "#ecfdf5"),
-            "Завершенные курсы": ("#6b7280", "#f3f4f6"),
+            "Подготовка": ("#f59e0b", "#fff7ed"),
+            "Готов к запуску": ("#2563eb", "#eff6ff"),
+            "Запущен": ("#10b981", "#ecfdf5"),
+            "Приостановлен": ("#ef4444", "#fef2f2"),
+            "Закончен": ("#6b7280", "#f3f4f6"),
+            "Архивирован": ("#64748b", "#f1f5f9"),
         }
         color, bg = mapping.get(status, ("#6c5ce7", "#f3f0ff"))
         return color, bg
@@ -1006,7 +1054,7 @@ class IndividualCourseAdmin(CursuesAdmin):
                     "student": (student_user.get_full_name() or student_user.username) if student_user else "—",
                     "mentor": (mentor_user.get_full_name() or mentor_user.username) if mentor_user else "—",
                     "start": course.start,
-                    "status": course.status,
+                    "status": _canonical_course_status(course.status),
                     "status_color": status_color,
                     "status_bg": status_bg,
                     "change_url": reverse(
@@ -1028,6 +1076,15 @@ class IndividualCourseAdmin(CursuesAdmin):
                 "individual_archive_url": archive_url,
                 "individual_search_query": (request.GET.get("q") or "").strip(),
                 "individual_is_archive": request.GET.get("archived") == "1",
+                "course_create_url": reverse(f"{crm_admin_site.name}:course_quick_create"),
+                "course_status_choices": _course_status_choices(),
+                "course_subject_choices": list(
+                    self.get_queryset(request)
+                    .exclude(subject="")
+                    .values_list("subject", flat=True)
+                    .distinct()
+                    .order_by("subject")
+                ),
             }
         )
         return response

@@ -122,7 +122,7 @@ class Command(BaseCommand):
                 course_type=course_type,
                 start=today - timedelta(days=random.randint(0, 120)),
                 duration_days=random.choice([30, 60, 90, 180]),
-                status=random.choice(["Подготовка курсов", "Активные курсы", "Завершенные курсы"]),
+                status=random.choice(["Подготовка", "Готов к запуску", "Запущен", "Приостановлен", "Закончен"]),
                 subject=random.choice(["English", "Math", "Python", "Design", ""]),
                 price=random.choice([2500, 3500, 4500, 5500]),
                 capacity=random.choice([10, 12, 15]),
