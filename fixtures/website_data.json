@@ -1,0 +1,545 @@
+[
+{
+  "model": "academy.settings",
+  "pk": 1,
+  "fields": {
+    "title_banner": "American Dream Academy",
+    "description_banner": "<p>Подготовка к IELTS, SAT и поступлению в зарубежные университеты с понятной программой, сильными преподавателями и реальными результатами.</p>",
+    "title_about": "Почему выбирают нас",
+    "image_about": "settings/about-main.png",
+    "description_about": "<p>Мы выстраиваем обучение вокруг целей ученика: поступление, экзамены, академический английский и уверенная разговорная практика.</p>",
+    "title_about2": "Обучение с результатом",
+    "description_about2": "<p>Каждый курс включает диагностику уровня, индивидуальный план и регулярную обратную связь для родителей и студентов.</p>",
+    "description_about3": "<p>Студенты учатся по международным материалам, тренируют speaking, writing и готовятся к реальным форматам экзаменов.</p>",
+    "description_about4": "<p>Наша цель не просто дать знания, а довести ученика до конкретного результата: высокого балла, гранта или поступления.</p>",
+    "popular_courses": "Популярные курсы",
+    "our_teachers": "Наши преподаватели",
+    "feedback": "Свяжитесь с нами",
+    "feedback_description": "<p>Оставьте заявку, и мы подберем программу, которая подойдет по цели, уровню английского и расписанию.</p>",
+    "linksinsta": "https://instagram.com/americandream.academy",
+    "linksyoutube": "https://youtube.com/@americandreamacademy",
+    "linkstiktok": "https://tiktok.com/@americandreamacademy"
+  }
+},
+{
+  "model": "academy.contacts",
+  "pk": 1,
+  "fields": {
+    "phone_numbers": "<p>+996 700 123 456<br>+996 555 987 654</p>",
+    "email": "hello@americandream.kg",
+    "address": "г. Бишкек, ул. Исанова 42/1",
+    "links_email": "mailto:hello@americandream.kg",
+    "links_address": "https://maps.google.com/?q=%D0%98%D1%81%D0%B0%D0%BD%D0%BE%D0%B2%D0%B0+42%2F1+%D0%91%D0%B8%D1%88%D0%BA%D0%B5%D0%BA"
+  }
+},
+{
+  "model": "academy.contacts",
+  "pk": 2,
+  "fields": {
+    "phone_numbers": "+996 700 000 000",
+    "email": "academy@example.com",
+    "address": "Osh",
+    "links_email": "mailto:academy@example.com",
+    "links_address": "https://maps.example.com"
+  }
+},
+{
+  "model": "academy.address",
+  "pk": 1,
+  "fields": {
+    "contact": 1,
+    "address": "Главный офис: г. Бишкек, ул. Исанова 42/1",
+    "link": "https://maps.google.com/?q=%D0%98%D1%81%D0%B0%D0%BD%D0%BE%D0%B2%D0%B0+42%2F1+%D0%91%D0%B8%D1%88%D0%BA%D0%B5%D0%BA"
+  }
+},
+{
+  "model": "academy.address",
+  "pk": 2,
+  "fields": {
+    "contact": 1,
+    "address": "Филиал: г. Бишкек, пр. Чуй 109",
+    "link": "https://maps.google.com/?q=%D0%A7%D1%83%D0%B9+109+%D0%91%D0%B8%D1%88%D0%BA%D0%B5%D0%BA"
+  }
+},
+{
+  "model": "academy.teacher",
+  "pk": 1,
+  "fields": {
+    "name": "Айжан Сагынбаева",
+    "photo": "teachers/Айжан_Сагынбаева.png",
+    "bio_title": "Кто преподает?",
+    "experience": "7 лет подготовки к IELTS и академическому английскому"
+  }
+},
+{
+  "model": "academy.teacher",
+  "pk": 2,
+  "fields": {
+    "name": "Даниэль Мусаев",
+    "photo": "teachers/Даниэль_Мусаев.png",
+    "bio_title": "Кто преподает?",
+    "experience": "5 лет подготовки к SAT и поступлению в зарубежные вузы"
+  }
+},
+{
+  "model": "academy.teacher",
+  "pk": 3,
+  "fields": {
+    "name": "Мээрим Абдуллаева",
+    "photo": "teachers/Мээрим_Абдуллаева.png",
+    "bio_title": "Кто преподает?",
+    "experience": "6 лет преподавания General English и speaking practice"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 1,
+  "fields": {
+    "teacher": 1,
+    "text": "Подготовила более 150 студентов к IELTS"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 2,
+  "fields": {
+    "teacher": 1,
+    "text": "Средний рост студентов: +1.5 балла за курс"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 3,
+  "fields": {
+    "teacher": 1,
+    "text": "Выпускница программы academic writing trainer"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 4,
+  "fields": {
+    "teacher": 2,
+    "text": "Консультировал абитуриентов по поступлению в США"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 5,
+  "fields": {
+    "teacher": 2,
+    "text": "Ведет интенсивы по SAT Math и Verbal"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 6,
+  "fields": {
+    "teacher": 2,
+    "text": "Работает с грантовыми кейсами старшеклассников"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 7,
+  "fields": {
+    "teacher": 3,
+    "text": "Специализируется на разговорном английском"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 8,
+  "fields": {
+    "teacher": 3,
+    "text": "Собирает индивидуальные speaking-планы для студентов"
+  }
+},
+{
+  "model": "academy.achievement",
+  "pk": 9,
+  "fields": {
+    "teacher": 3,
+    "text": "Проводит клубные занятия и дебаты на английском"
+  }
+},
+{
+  "model": "academy.aboutpage",
+  "pk": 1,
+  "fields": {
+    "title_banner": "О нашей академии",
+    "description_banner": "<p>American Dream Academy помогает школьникам и студентам выйти на международный уровень подготовки и уверенно поступать в сильные вузы.</p>",
+    "title": "Обучение, которое ведет к цели",
+    "description": "<p>Мы объединили языковую подготовку, академическое сопровождение и работу с мотивацией ученика. Поэтому наши программы подходят тем, кто хочет не просто посещать занятия, а двигаться к конкретному результату.</p>"
+  }
+},
+{
+  "model": "academy.aboutobjects",
+  "pk": 1,
+  "fields": {
+    "title": "Подготовка к международным экзаменам",
+    "description": "<p>IELTS, SAT и Duolingo English Test с фокусом на структуру экзамена и рост балла.</p>",
+    "image": "about/IELTS.png"
+  }
+},
+{
+  "model": "academy.aboutobjects",
+  "pk": 2,
+  "fields": {
+    "title": "Поступление за рубеж",
+    "description": "<p>Помогаем собрать сильный профиль, подготовить эссе и пройти путь до зачисления.</p>",
+    "image": "about/BECB1HIGHTER.png"
+  }
+},
+{
+  "model": "academy.aboutobjects",
+  "pk": 3,
+  "fields": {
+    "title": "Академический английский",
+    "description": "<p>Развиваем writing, reading и speaking для учебы, интервью и международной среды.</p>",
+    "image": "about/SAT.png"
+  }
+},
+{
+  "model": "academy.aboutobjects2",
+  "pk": 1,
+  "fields": {
+    "title": "Малые группы",
+    "description": "<p>В группах до 8 человек преподаватель успевает работать с каждым учеником адресно.</p>",
+    "image": "about/rec1.png"
+  }
+},
+{
+  "model": "academy.aboutobjects2",
+  "pk": 2,
+  "fields": {
+    "title": "Прозрачный трекинг прогресса",
+    "description": "<p>Регулярные отчеты показывают, как растут навыки и где нужно усиление.</p>",
+    "image": "about/rec2.png"
+  }
+},
+{
+  "model": "academy.typecourse",
+  "pk": 1,
+  "fields": {
+    "title": "IELTS"
+  }
+},
+{
+  "model": "academy.typecourse",
+  "pk": 2,
+  "fields": {
+    "title": "SAT"
+  }
+},
+{
+  "model": "academy.typecourse",
+  "pk": 3,
+  "fields": {
+    "title": "General English"
+  }
+},
+{
+  "model": "academy.typecourse",
+  "pk": 4,
+  "fields": {
+    "title": "Speaking Club"
+  }
+},
+{
+  "model": "academy.courses",
+  "pk": 1,
+  "fields": {
+    "title": "IELTS Intensive 6.5+",
+    "direction": 1,
+    "photo": "courses/IELTS_Intensive_6.5.png",
+    "price": "18000.00",
+    "duration_months": 3,
+    "discounted_price": 15000,
+    "monthly_price": 5000,
+    "color_theme": "dark-blue",
+    "title_model": "<h3>Для тех, кто хочет результат 6.5 и выше</h3>",
+    "description_model": "<p>Интенсивная подготовка с пробными тестами, разбором writing и speaking.</p>"
+  }
+},
+{
+  "model": "academy.courses",
+  "pk": 2,
+  "fields": {
+    "title": "SAT Math & Verbal",
+    "direction": 2,
+    "photo": "courses/SAT_Math__Verbal.png",
+    "price": "22000.00",
+    "duration_months": 4,
+    "discounted_price": 19000,
+    "monthly_price": 4750,
+    "color_theme": "green",
+    "title_model": "<h3>Подготовка к SAT для поступления на грант</h3>",
+    "description_model": "<p>Фокус на math strategies, reading reasoning и работе в тайминге экзамена.</p>"
+  }
+},
+{
+  "model": "academy.courses",
+  "pk": 3,
+  "fields": {
+    "title": "General English Upper-Intermediate",
+    "direction": 3,
+    "photo": "courses/General_English_Upper-Intermediate.png",
+    "price": "12000.00",
+    "duration_months": 5,
+    "discounted_price": 9900,
+    "monthly_price": 1980,
+    "color_theme": "light-orange",
+    "title_model": "<h3>Системный рост английского для учебы и работы</h3>",
+    "description_model": "<p>Развитие разговорной речи, грамматики и словаря без отрыва от практики.</p>"
+  }
+},
+{
+  "model": "academy.courses",
+  "pk": 4,
+  "fields": {
+    "title": "Speaking Club Weekend",
+    "direction": 4,
+    "photo": "courses/Speaking_Club_Weekend.png",
+    "price": "6000.00",
+    "duration_months": 2,
+    "discounted_price": 4500,
+    "monthly_price": 2250,
+    "color_theme": "warm-red",
+    "title_model": "<h3>Разговорная практика без языкового барьера</h3>",
+    "description_model": "<p>Живые дискуссии, актуальные темы и постоянная практика speaking в мини-группах.</p>"
+  }
+},
+{
+  "model": "academy.courses",
+  "pk": 5,
+  "fields": {
+    "title": "IELTS Master",
+    "direction": 1,
+    "photo": "courses/test.png",
+    "price": "12000.00",
+    "duration_months": 6,
+    "discounted_price": 10000,
+    "monthly_price": 3500,
+    "color_theme": "green",
+    "title_model": "IELTS",
+    "description_model": "Course description"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 1,
+  "fields": {
+    "course": 1,
+    "title": "Диагностика уровня"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 2,
+  "fields": {
+    "course": 1,
+    "title": "Writing Task 1 и Task 2"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 3,
+  "fields": {
+    "course": 1,
+    "title": "Speaking mock interview"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 4,
+  "fields": {
+    "course": 1,
+    "title": "Еженедельный пробный тест"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 5,
+  "fields": {
+    "course": 2,
+    "title": "SAT Math drills"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 6,
+  "fields": {
+    "course": 2,
+    "title": "Critical Reading"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 7,
+  "fields": {
+    "course": 2,
+    "title": "Vocabulary in context"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 8,
+  "fields": {
+    "course": 2,
+    "title": "Full-length practice tests"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 9,
+  "fields": {
+    "course": 3,
+    "title": "Grammar in use"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 10,
+  "fields": {
+    "course": 3,
+    "title": "Speaking every lesson"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 11,
+  "fields": {
+    "course": 3,
+    "title": "Academic vocabulary"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 12,
+  "fields": {
+    "course": 3,
+    "title": "Listening with analysis"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 13,
+  "fields": {
+    "course": 4,
+    "title": "Topic-based discussions"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 14,
+  "fields": {
+    "course": 4,
+    "title": "Pronunciation practice"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 15,
+  "fields": {
+    "course": 4,
+    "title": "Debates and role play"
+  }
+},
+{
+  "model": "academy.coursesprogram",
+  "pk": 16,
+  "fields": {
+    "course": 4,
+    "title": "Feedback after each session"
+  }
+},
+{
+  "model": "academy.coursesmodel",
+  "pk": 1,
+  "fields": {
+    "courses": 1,
+    "title_model": "<h3>Для тех, кто хочет результат 6.5 и выше</h3>",
+    "description_model": "<p>Интенсивная подготовка с пробными тестами, разбором writing и speaking.</p>",
+    "image": "courses/DUOLINGO.png"
+  }
+},
+{
+  "model": "academy.coursesmodel",
+  "pk": 2,
+  "fields": {
+    "courses": 2,
+    "title_model": "<h3>Подготовка к SAT для поступления на грант</h3>",
+    "description_model": "<p>Фокус на math strategies, reading reasoning и работе в тайминге экзамена.</p>",
+    "image": "courses/SAT.png"
+  }
+},
+{
+  "model": "academy.coursesmodel",
+  "pk": 3,
+  "fields": {
+    "courses": 3,
+    "title_model": "<h3>Системный рост английского для учебы и работы</h3>",
+    "description_model": "<p>Развитие разговорной речи, грамматики и словаря без отрыва от практики.</p>",
+    "image": "courses/VEC3.png"
+  }
+},
+{
+  "model": "academy.coursesmodel",
+  "pk": 4,
+  "fields": {
+    "courses": 4,
+    "title_model": "<h3>Разговорная практика без языкового барьера</h3>",
+    "description_model": "<p>Живые дискуссии, актуальные темы и постоянная практика speaking в мини-группах.</p>",
+    "image": "courses/VEC2.png"
+  }
+},
+{
+  "model": "academy.coursespage",
+  "pk": 1,
+  "fields": {
+    "title": "Наши программы",
+    "description": "<p>Выберите курс под свою цель: поднять английский, подготовиться к международному экзамену или усилить профиль для поступления в университет.</p>"
+  }
+},
+{
+  "model": "academy.students",
+  "pk": 1,
+  "fields": {
+    "title": "Истории наших студентов",
+    "description": "Результаты учеников, которые улучшили английский, сдали экзамены и поступили в желаемые университеты.",
+    "title2": "Результат измеряется поступлением и уверенностью",
+    "description2": "Мы показываем не обещания, а реальные кейсы: рост баллов, сильные эссе и успешные поступления."
+  }
+},
+{
+  "model": "academy.aboutstudents",
+  "pk": 1,
+  "fields": {
+    "title": "Алина Токтосунова",
+    "description": "После курса IELTS Intensive Алина подняла результат с 5.0 до 6.5 и подала документы в университет Малайзии.",
+    "image": "courses/BECB2VONTAGE.png",
+    "release_year": 2024
+  }
+},
+{
+  "model": "academy.aboutstudents",
+  "pk": 2,
+  "fields": {
+    "title": "Нурсултан Ибраимов",
+    "description": "Прошел SAT Math & Verbal, усилил профиль и получил частичный грант на обучение в Турции.",
+    "image": "courses/DUOLINGO_nDwuexL.png",
+    "release_year": 2025
+  }
+},
+{
+  "model": "academy.aboutstudents",
+  "pk": 3,
+  "fields": {
+    "title": "Сезим Жээнбаева",
+    "description": "На программе General English вышла на уверенный Upper-Intermediate и успешно прошла интервью на английском.",
+    "image": "courses/IELTS.png",
+    "release_year": 2023
+  }
+}
+]
