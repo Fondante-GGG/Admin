@@ -27,7 +27,11 @@ SECRET_KEY = "django-insecure-gx$=+dr8p#3w!r$d1s128@e7ow3n73wz6&grdjbi)y&i!$n-e5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [ 
+    "american-dream.webtm.ru",
+    "www.american-dream.webtm.ru",
+    "195.133.25.232",
+]
 
 
 # Application definition
