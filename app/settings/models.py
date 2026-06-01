@@ -487,7 +487,9 @@ class Lead(ArchiveBase):
 
 class Payment(models.Model):
     class Method(models.TextChoices):
-        CASH = "cash", "Наличные"
+        MBANK = "mbank", "МБанк"
+        CASH = "cash", "Наличкой"
+        BOOK = "book", "За Книгу"
         BANK = "bank", "Банковский перевод"
         CARD = "card", "Карта"
         AITI_TRANSFER = "aiti_transfer", "Aiti переводы"

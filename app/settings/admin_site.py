@@ -57,6 +57,13 @@ from .receipts import payment_receipt_pdf
 from app.config.models import CRMAbout
 
 
+STUDENT_PAYMENT_METHOD_CHOICES = (
+    (Payment.Method.MBANK, Payment.Method.MBANK.label),
+    (Payment.Method.CASH, Payment.Method.CASH.label),
+    (Payment.Method.BOOK, Payment.Method.BOOK.label),
+)
+
+
 def _validation_message(exc: ValidationError) -> str:
     parts = []
     if hasattr(exc, "error_dict"):
@@ -2309,7 +2316,7 @@ class CRMAdminSite(AdminSite):
             "instant_pay_url": instant_pay_url,
             "schedule_note": (course.schedule_note if course else "") or "—",
             "course_start_display": course.start.strftime("%d.%m.%Y") if course and course.start else "—",
-            "payment_methods": Payment.Method.choices,
+            "payment_methods": STUDENT_PAYMENT_METHOD_CHOICES,
             "accounting_accounts": accounts_qs,
             "payment_create_url": reverse(f"{self.name}:student_payment_create", args=[student.pk]),
             "payment_operated_at_default": timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M"),
