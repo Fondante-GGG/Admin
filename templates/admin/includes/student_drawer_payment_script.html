@@ -1,0 +1,155 @@
+<script>
+(function () {
+  if (window.crmStudentPaymentReady) return;
+  window.crmStudentPaymentReady = true;
+
+  function qs(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function qsa(sel, root) {
+    return Array.from((root || document).querySelectorAll(sel));
+  }
+
+  function clickEl(event) {
+    var target = event.target;
+    if (!target) return null;
+    return target.nodeType === 1 ? target : target.parentElement;
+  }
+
+  function drawerRoot(el) {
+    return el.closest(".crm-drawer__panel") || document;
+  }
+
+  function showModal(modal) {
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModals(root) {
+    qsa(".crm-student-pay-overlay", root).forEach(function (modal) {
+      modal.hidden = true;
+    });
+    if (!qs(".crm-drawer:not(.is-hidden) .crm-student-pay-overlay:not([hidden])")) {
+      document.body.style.overflow = "";
+    }
+  }
+
+  function setError(form, message) {
+    var error = qs("[data-st-payment-error]", form);
+    if (!error) return;
+    error.textContent = message || "";
+    error.hidden = !message;
+  }
+
+  document.addEventListener("click", function (event) {
+    var el = clickEl(event);
+    if (!el) return;
+
+    var listButton = el.closest("[data-st-payment-list]");
+    if (listButton) {
+      event.preventDefault();
+      var payments = qs("#student-payments-table", drawerRoot(listButton));
+      if (payments) payments.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    var openButton = el.closest("[data-st-payment-open]");
+    if (openButton) {
+      event.preventDefault();
+      showModal(qs("[data-st-payment-method-modal]", drawerRoot(openButton)));
+      return;
+    }
+
+    var closeButton = el.closest("[data-st-payment-close]");
+    if (closeButton) {
+      event.preventDefault();
+      closeModals(drawerRoot(closeButton));
+      return;
+    }
+
+    var overlay = el.closest(".crm-student-pay-overlay");
+    if (overlay && el === overlay) {
+      closeModals(drawerRoot(overlay));
+      return;
+    }
+
+    var nextButton = el.closest("[data-st-payment-method-next]");
+    if (nextButton) {
+      event.preventDefault();
+      var nextRoot = drawerRoot(nextButton);
+      var choice = qs("[data-st-payment-method-choice]", nextRoot);
+      var field = qs("[data-st-payment-method-field]", nextRoot);
+      if (choice && field) field.value = choice.value;
+      closeModals(nextRoot);
+      showModal(qs("[data-st-payment-form-modal]", nextRoot));
+      return;
+    }
+
+    var fileButton = el.closest("[data-st-payment-file-pick]");
+    if (fileButton) {
+      event.preventDefault();
+      var fileInput = qs("[data-st-payment-file]", drawerRoot(fileButton));
+      if (fileInput) fileInput.click();
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    var input = event.target && event.target.closest ? event.target.closest("[data-st-payment-file]") : null;
+    if (!input) return;
+    var label = qs("[data-st-payment-file-name]", drawerRoot(input));
+    var file = input.files && input.files[0];
+    if (label) label.textContent = file ? file.name : "Файл не выбран";
+  });
+
+  document.addEventListener("submit", async function (event) {
+    var form = event.target && event.target.closest ? event.target.closest("[data-st-payment-form]") : null;
+    if (!form) return;
+
+    event.preventDefault();
+    setError(form, "");
+
+    var submit = qs('button[type="submit"]', form);
+    if (submit) {
+      submit.disabled = true;
+      submit.dataset.originalText = submit.textContent;
+      submit.textContent = "Сохранение...";
+    }
+
+    try {
+      var response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      var data = await response.json();
+      if (!response.ok || !data.ok) {
+        setError(form, data.error || "Не удалось сохранить оплату.");
+        return;
+      }
+
+      var panel = form.closest(".crm-drawer__panel");
+      if (panel && data.html) {
+        panel.innerHTML = data.html;
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      setError(form, "Ошибка сети. Попробуйте еще раз.");
+    } finally {
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = submit.dataset.originalText || "Сохранить";
+      }
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    var openModal = qs(".crm-student-pay-overlay:not([hidden])");
+    if (openModal) closeModals(drawerRoot(openModal));
+  });
+})();
+</script>

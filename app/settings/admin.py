@@ -564,6 +564,11 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
             )
             course.students.add(obj)
 
+    def delete_queryset(self, request, queryset):
+        student_ids = list(queryset.values_list("pk", flat=True))
+        if student_ids:
+            Student.objects.filter(pk__in=student_ids).delete()
+
     def response_add(self, request, obj, post_url_continue=None):
         next_url = self._safe_next_url(request)
         if next_url and "_continue" not in request.POST and "_addanother" not in request.POST:
