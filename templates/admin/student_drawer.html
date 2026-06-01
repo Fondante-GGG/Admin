@@ -208,7 +208,7 @@
     <h3 class="crm-student-drawer__h3">Платежи (всего {{ payments_total|floatformat:0 }} с.)</h3>
     {% if payments_page %}
     <table class="crm-student-drawer__table">
-      <thead><tr><th>ID</th><th>Курс</th><th>Сумма</th><th>Дата</th></tr></thead>
+      <thead><tr><th>ID</th><th>Курс</th><th>Сумма</th><th>Дата</th><th>Чек</th></tr></thead>
       <tbody>
         {% for p in payments_page %}
         <tr>
@@ -216,6 +216,9 @@
           <td>{{ p.course.title|default:"—" }}</td>
           <td>{{ p.amount }}</td>
           <td>{{ p.created_at|date:"d.m.Y" }}</td>
+          <td>
+            <a href="{% url 'crm_admin:payment_receipt' p.id %}" class="crm-student-drawer__receipt-link" target="_blank" rel="noopener">Чек</a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

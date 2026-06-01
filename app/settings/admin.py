@@ -23,6 +23,7 @@ from django.http import JsonResponse
 
 from .admin_site import crm_admin_site
 from .admin_site import _simple_pdf_table
+from .receipts import payment_receipt_pdf
 from .models import (
     AccountingAccount,
     AccountingCategory,
@@ -1496,78 +1497,7 @@ class TuitionPaymentAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, adm
         return resp
 
     def _receipt_pdf(self, payment: Payment):
-        from reportlab.lib.pagesizes import A6
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.units import mm
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        import os
-
-        font_path = os.path.join(os.path.dirname(__file__), "static", "crm_dashboard", "fonts", "DejaVuSans.ttf")
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont("DejaVu", font_path))
-            font_name = "DejaVu"
-        else:
-            font_name = "Helvetica"
-
-        buf = io.BytesIO()
-        c = canvas.Canvas(buf, pagesize=A6)
-        width, height = A6
-        margin = 10 * mm
-
-        y = height - margin
-        c.setFont(font_name, 14)
-        c.drawString(margin, y, "American Dream")
-        y -= 8 * mm
-        c.setFont(font_name, 10)
-        c.drawString(margin, y, "American Dream")
-        y -= 12 * mm
-
-        c.setFont(font_name, 16)
-        c.drawString(margin, y, f"Чек #{payment.pk}")
-        dt = timezone.localtime(payment.created_at).strftime("%d.%m.%Y %H:%M") if payment.created_at else ""
-        c.drawRightString(width - margin, y, dt)
-        y -= 8 * mm
-        c.setStrokeColorRGB(0.7, 0.7, 0.7)
-        c.line(margin, y, width - margin, y)
-        y -= 8 * mm
-
-        c.setFont(font_name, 11)
-        c.drawString(margin, y, "Наименование")
-        c.drawRightString(width - margin, y, "Сумма")
-        y -= 6 * mm
-        c.setFont(font_name, 10)
-        course_title = payment.course.title if payment.course_id else "—"
-        c.drawString(margin, y, course_title[:40])
-        c.drawRightString(width - margin, y, f"{float(payment.amount):.2f} KGS")
-        y -= 8 * mm
-        c.line(margin, y, width - margin, y)
-        y -= 8 * mm
-
-        c.setFont(font_name, 10)
-        c.drawString(margin, y, f"Способ оплаты: {payment.get_method_display()}")
-        y -= 6 * mm
-        u = payment.student.user
-        client_name = u.get_full_name() or u.username
-        c.drawString(margin, y, f"Клиент: {client_name}")
-        y -= 12 * mm
-        c.line(margin, y, width - margin, y)
-        y -= 8 * mm
-
-        c.setFont(font_name, 14)
-        c.drawString(margin, y, "Итого:")
-        c.drawRightString(width - margin, y, f"{float(payment.amount):.2f} KGS")
-        y -= 12 * mm
-        c.setFont(font_name, 12)
-        c.drawString(margin, y, "American Dream")
-        y -= 6 * mm
-        c.setFont(font_name, 9)
-        c.drawString(margin, y, "Codify LMS")
-
-        c.showPage()
-        c.save()
-        buf.seek(0)
-        return buf.getvalue()
+        return payment_receipt_pdf(payment)
 
     def changelist_view(self, request, extra_context=None):
         if request.method == "POST":

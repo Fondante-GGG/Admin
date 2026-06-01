@@ -53,6 +53,7 @@ from .models import (
     TuitionPayment,
     User,
 )
+from .receipts import payment_receipt_pdf
 from app.config.models import CRMAbout
 
 
@@ -810,6 +811,11 @@ class CRMAdminSite(AdminSite):
                 "students/<int:student_id>/payments/create/",
                 self.admin_view(self.student_payment_create),
                 name="student_payment_create",
+            ),
+            path(
+                "payments/<int:payment_id>/receipt/",
+                self.admin_view(self.payment_receipt),
+                name="payment_receipt",
             ),
             path("students/<int:student_id>/drawer/", self.admin_view(self.student_drawer), name="student_drawer"),
             path("mentors/export.xlsx", self.admin_view(self.mentors_export_xlsx), name="mentors_export_xlsx"),
@@ -2315,6 +2321,16 @@ class CRMAdminSite(AdminSite):
         context = self._student_drawer_context(request, student_id)
         return TemplateResponse(request, "admin/student_drawer.html", context)
 
+    def payment_receipt(self, request, payment_id: int):
+        payment = get_object_or_404(
+            Payment.objects.select_related("organization", "student__user", "student__organization", "course__organization"),
+            pk=payment_id,
+        )
+        content = payment_receipt_pdf(payment)
+        response = HttpResponse(content, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="receipt_{payment.pk}.pdf"'
+        return response
+
     def student_payment_create(self, request, student_id: int):
         if request.method != "POST":
             return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
@@ -2393,7 +2409,11 @@ class CRMAdminSite(AdminSite):
         drawer_request.GET = mutable_get
         context = self._student_drawer_context(drawer_request, student.pk)
         html = render_to_string("admin/student_drawer.html", context, request=request)
-        return JsonResponse({"ok": True, "html": html})
+        return JsonResponse({
+            "ok": True,
+            "html": html,
+            "receipt_url": reverse(f"{self.name}:payment_receipt", args=[payment.pk]),
+        })
 
     def index(self, request, extra_context=None):
         context = extra_context or {}

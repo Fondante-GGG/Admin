@@ -116,6 +116,8 @@
       submit.textContent = "Сохранение...";
     }
 
+    var receiptWindow = window.open("about:blank", "_blank");
+
     try {
       var response = await fetch(form.action, {
         method: "POST",
@@ -125,8 +127,19 @@
       });
       var data = await response.json();
       if (!response.ok || !data.ok) {
+        if (receiptWindow && !receiptWindow.closed) receiptWindow.close();
         setError(form, data.error || "Не удалось сохранить оплату.");
         return;
+      }
+
+      if (data.receipt_url) {
+        if (receiptWindow && !receiptWindow.closed) {
+          receiptWindow.location.href = data.receipt_url;
+        } else {
+          window.open(data.receipt_url, "_blank", "noopener");
+        }
+      } else if (receiptWindow && !receiptWindow.closed) {
+        receiptWindow.close();
       }
 
       var panel = form.closest(".crm-drawer__panel");
@@ -136,6 +149,7 @@
         window.location.reload();
       }
     } catch (err) {
+      if (receiptWindow && !receiptWindow.closed) receiptWindow.close();
       setError(form, "Ошибка сети. Попробуйте ещё раз.");
     } finally {
       if (submit) {
