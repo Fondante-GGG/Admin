@@ -86,8 +86,8 @@
     <div class="crm-student-drawer__card-head">
       <span>Оплата</span>
       <span class="crm-student-drawer__card-actions">
-        <span class="crm-student-drawer__icon-btn crm-student-drawer__icon-btn--ghost" title="Список">&#9776;</span>
-        <a href="{% url 'crm_admin:settings_payment_add' %}" class="crm-student-drawer__icon-btn" title="Добавить платёж">+</a>
+        <button type="button" class="crm-student-drawer__icon-btn" data-st-payment-list title="Список оплат">&#9776;</button>
+        <button type="button" class="crm-student-drawer__icon-btn" data-st-payment-open title="Добавить оплату">+</button>
       </span>
     </div>
     {% if month_slots %}
@@ -100,6 +100,84 @@
     <p class="crm-student-drawer__pay-sum">Оплачено {{ months_paid }} месяцев из {{ months_total }}</p>
     <p class="crm-student-drawer__pay-sum">Оплачено {{ paid_total|floatformat:2 }} из {{ tuition_amount|floatformat:0 }}</p>
   </section>
+
+  <div class="crm-student-pay-overlay" data-st-payment-method-modal hidden>
+    <div class="crm-student-pay-modal" role="dialog" aria-modal="true" aria-labelledby="st-payment-method-title">
+      <button type="button" class="crm-student-pay-modal__close" data-st-payment-close aria-label="Закрыть">&times;</button>
+      <h3 id="st-payment-method-title">Выберите способ оплаты</h3>
+      <label class="crm-student-pay-field">
+        <span>Способ оплаты*</span>
+        <select data-st-payment-method-choice>
+          {% for value, label in payment_methods %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="crm-student-pay-modal__actions">
+        <button type="button" class="crm-student-drawer__btn-copy" data-st-payment-method-next>Выбрать</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="crm-student-pay-overlay" data-st-payment-form-modal hidden>
+    <div class="crm-student-pay-modal crm-student-pay-modal--wide" role="dialog" aria-modal="true" aria-labelledby="st-payment-form-title">
+      <button type="button" class="crm-student-pay-modal__close" data-st-payment-close aria-label="Закрыть">&times;</button>
+      <h3 id="st-payment-form-title">Добавить оплату</h3>
+      <form method="post" action="{{ payment_create_url }}" enctype="multipart/form-data" data-st-payment-form>
+        {% csrf_token %}
+        <input type="hidden" name="course" value="{{ course.pk }}">
+        <label class="crm-student-pay-field">
+          <span>Курс</span>
+          <input type="text" value="{{ course.title }}" readonly>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Студент</span>
+          <input type="text" value="{{ student_display_name }}" readonly>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Дата операции*</span>
+          <input type="datetime-local" name="operated_at" value="{{ payment_operated_at_default }}" required>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Способ оплаты*</span>
+          <select name="method" data-st-payment-method-field required>
+            {% for value, label in payment_methods %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Выберите счет{% if accounting_accounts %}*{% endif %}</span>
+          <select name="account" {% if accounting_accounts %}required{% endif %}>
+            <option value="">—</option>
+            {% for account in accounting_accounts %}
+            <option value="{{ account.pk }}">{{ account.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Сумма оплаты*</span>
+          <input type="number" name="amount" min="0" step="0.01" required>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Комментарий</span>
+          <textarea name="description" rows="3"></textarea>
+        </label>
+        <label class="crm-student-pay-field">
+          <span>Приложение к платежу</span>
+          <span class="crm-student-pay-file">
+            <button type="button" class="crm-student-drawer__btn-outline" data-st-payment-file-pick>Выберите файл</button>
+            <span data-st-payment-file-name>Файл не выбран</span>
+            <input type="file" name="receipt_file" accept=".pdf,.jpg,.jpeg,.png" data-st-payment-file hidden>
+          </span>
+        </label>
+        <p class="crm-student-pay-error" data-st-payment-error hidden></p>
+        <div class="crm-student-pay-modal__actions">
+          <button type="submit" class="crm-student-drawer__btn-copy">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <section class="crm-student-drawer__card">
     <div class="crm-student-drawer__card-head">
@@ -114,7 +192,7 @@
   </section>
 
   {% if instant_pay_url %}
-  <section class="crm-student-drawer__card">
+  <section class="crm-student-drawer__card" id="student-payments-table">
     <div class="crm-student-drawer__card-head">
       <span>Моментальная оплата</span>
     </div>

@@ -352,6 +352,120 @@
   text-decoration: none;
 }
 
+.crm-student-pay-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10030;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, 0.42);
+}
+.crm-student-pay-overlay[hidden] {
+  display: none;
+}
+.crm-student-pay-modal {
+  position: relative;
+  width: min(430px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.25);
+  padding: 18px;
+}
+.crm-student-pay-modal--wide {
+  width: min(450px, 100%);
+}
+.crm-student-pay-modal h3 {
+  margin: 0 32px 18px 0;
+  color: #5b5686;
+  font-size: 16px;
+  font-weight: 800;
+}
+.crm-student-pay-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 6px 20px rgba(17, 24, 39, 0.18);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+.crm-student-pay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+  color: #5b5686;
+  font-size: 12px;
+  font-weight: 700;
+}
+.crm-student-pay-field input,
+.crm-student-pay-field select,
+.crm-student-pay-field textarea {
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid #d7d9e2;
+  border-radius: 5px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 9px;
+}
+.crm-student-pay-field input[readonly] {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.crm-student-pay-field textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+.crm-student-pay-file {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  overflow: hidden;
+  border: 1px solid #d7d9e2;
+  border-radius: 5px;
+  background: #fff;
+}
+.crm-student-pay-file .crm-student-drawer__btn-outline {
+  flex: 0 0 auto;
+  margin: -1px 8px -1px -1px;
+  border-radius: 5px 0 0 5px;
+  color: #6b7280 !important;
+  border-color: #d7d9e2;
+}
+.crm-student-pay-file [data-st-payment-file-name] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+.crm-student-pay-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.crm-student-pay-error {
+  margin: 8px 0 0;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .crm-drawer-open {
   overflow: hidden;
 }

@@ -24,6 +24,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import formats, timezone
 from django.utils.dateparse import parse_date
 from django.utils.text import slugify
+from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -805,6 +806,11 @@ class CRMAdminSite(AdminSite):
             path("calendar/events/create/", self.admin_view(self.calendar_event_create), name="calendar_event_create"),
             path("students.csv", self.admin_view(self.students_csv), name="students_csv"),
             path("students.pdf", self.admin_view(self.students_pdf), name="students_pdf"),
+            path(
+                "students/<int:student_id>/payments/create/",
+                self.admin_view(self.student_payment_create),
+                name="student_payment_create",
+            ),
             path("students/<int:student_id>/drawer/", self.admin_view(self.student_drawer), name="student_drawer"),
             path("mentors/export.xlsx", self.admin_view(self.mentors_export_xlsx), name="mentors_export_xlsx"),
             path("mentors/salary/", self.admin_view(self.mentors_salary), name="mentors_salary"),
@@ -2197,7 +2203,7 @@ class CRMAdminSite(AdminSite):
         resp["Content-Disposition"] = 'attachment; filename="students.pdf"'
         return resp
 
-    def student_drawer(self, request, student_id: int):
+    def _student_drawer_context(self, request, student_id: int):
         student = Student.objects.select_related("user").get(pk=student_id)
         course_pk = request.GET.get("course")
         course_pk_int = int(course_pk) if course_pk and str(course_pk).isdigit() else None
@@ -2271,7 +2277,12 @@ class CRMAdminSite(AdminSite):
             host_base = request.build_absolute_uri("/").rstrip("/")
             instant_pay_url = f"{host_base}/instant-pay/?student={student.pk}&course={course.pk}"
 
-        context = {
+        org_id = request.session.get("current_org_id")
+        accounts_qs = AccountingAccount.objects.order_by("title")
+        if org_id:
+            accounts_qs = accounts_qs.filter(Q(organization_id=org_id) | Q(organization__isnull=True))
+
+        return {
             "student": student,
             "user": student.user,
             "enrollment": enrollment,
@@ -2292,9 +2303,97 @@ class CRMAdminSite(AdminSite):
             "instant_pay_url": instant_pay_url,
             "schedule_note": (course.schedule_note if course else "") or "—",
             "course_start_display": course.start.strftime("%d.%m.%Y") if course and course.start else "—",
+            "payment_methods": Payment.Method.choices,
+            "accounting_accounts": accounts_qs,
+            "payment_create_url": reverse(f"{self.name}:student_payment_create", args=[student.pk]),
+            "payment_operated_at_default": timezone.localtime(timezone.now()).strftime("%Y-%m-%dT%H:%M"),
+            "student_display_name": student.user.get_full_name() or student.user.username,
             **self.each_context(request),
         }
+
+    def student_drawer(self, request, student_id: int):
+        context = self._student_drawer_context(request, student_id)
         return TemplateResponse(request, "admin/student_drawer.html", context)
+
+    def student_payment_create(self, request, student_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+        student = get_object_or_404(Student.objects.select_related("user"), pk=student_id)
+        course_id = (request.POST.get("course") or "").strip()
+        method = (request.POST.get("method") or "").strip()
+        amount_raw = (request.POST.get("amount") or "").strip().replace(",", ".")
+        account_id = (request.POST.get("account") or "").strip()
+        description = (request.POST.get("description") or "").strip()
+        operated_at_raw = (request.POST.get("operated_at") or "").strip()
+
+        if method not in dict(Payment.Method.choices):
+            return JsonResponse({"ok": False, "error": "Выберите способ оплаты."}, status=400)
+        if not course_id.isdigit():
+            return JsonResponse({"ok": False, "error": "Курс не найден."}, status=400)
+        course = get_object_or_404(Cursues, pk=int(course_id), is_archived=False)
+
+        if not Enrollment.objects.filter(student=student, course=course).exists():
+            return JsonResponse({"ok": False, "error": "Студент не зачислен на этот курс."}, status=400)
+
+        try:
+            amount = Decimal(amount_raw)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({"ok": False, "error": "Укажите корректную сумму оплаты."}, status=400)
+        if amount <= 0:
+            return JsonResponse({"ok": False, "error": "Сумма оплаты должна быть больше нуля."}, status=400)
+
+        operated_at = timezone.now()
+        if operated_at_raw:
+            try:
+                parsed_dt = timezone.datetime.fromisoformat(operated_at_raw)
+                operated_at = parsed_dt if timezone.is_aware(parsed_dt) else timezone.make_aware(
+                    parsed_dt,
+                    timezone.get_current_timezone(),
+                )
+            except ValueError:
+                return JsonResponse({"ok": False, "error": "Укажите корректную дату операции."}, status=400)
+
+        account = None
+        if account_id:
+            if not account_id.isdigit():
+                return JsonResponse({"ok": False, "error": "Выберите корректный счёт."}, status=400)
+            account = get_object_or_404(AccountingAccount, pk=int(account_id))
+
+        org = course.organization or student.organization
+        receipt = request.FILES.get("receipt_file")
+        if receipt and receipt.size > 10 * 1024 * 1024:
+            return JsonResponse({"ok": False, "error": "Файл слишком большой (макс. 10 МБ)."}, status=400)
+
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                organization=org,
+                student=student,
+                course=course,
+                method=method,
+                amount=amount,
+                description=description,
+                receipt_file=receipt,
+            )
+            Payment.objects.filter(pk=payment.pk).update(created_at=operated_at)
+
+            if account:
+                AccountingEntry.objects.create(
+                    organization=org or account.organization,
+                    entry_type=AccountingEntry.Type.INCOME,
+                    title=f"Оплата: {course.title}" + (f" — {description}" if description else ""),
+                    amount=amount,
+                    operated_at=operated_at,
+                    account=account,
+                )
+
+        drawer_request = request
+        mutable_get = request.GET.copy()
+        mutable_get["course"] = str(course.pk)
+        drawer_request.GET = mutable_get
+        context = self._student_drawer_context(drawer_request, student.pk)
+        html = render_to_string("admin/student_drawer.html", context, request=request)
+        return JsonResponse({"ok": True, "html": html})
 
     def index(self, request, extra_context=None):
         context = extra_context or {}
