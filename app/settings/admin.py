@@ -389,6 +389,24 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
     actions = (archive_selected, unarchive_selected)
     change_form_template = "admin/student_change_form.html"
 
+    @staticmethod
+    def _safe_next_url(request):
+        next_url = (request.POST.get("next") or request.GET.get("next") or "").strip()
+        if next_url.startswith("/") and not next_url.startswith("//"):
+            return next_url
+        return ""
+
+    @staticmethod
+    def _course_id_from_request(request):
+        course_id = (request.POST.get("course") or request.GET.get("course") or "").strip()
+        return int(course_id) if course_id.isdigit() else None
+
+    def _course_from_request(self, request):
+        course_id = self._course_id_from_request(request)
+        if course_id is None:
+            return None
+        return Cursues.objects.filter(pk=course_id, is_archived=False).first()
+
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related("user")
         pay_sub = (
@@ -526,6 +544,31 @@ class StudentAdmin(RoleRestrictedAdminMixin, admin.ModelAdmin):
             Payment.objects.filter(student_id__in=qs.values("id")).aggregate(total=Sum("amount"))["total"] or 0
         )
         return super().changelist_view(request, extra_context=extra_context)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        course = self._course_from_request(request)
+        if course:
+            extra_context["enroll_course"] = course
+            extra_context["next_url"] = self._safe_next_url(request)
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        course = self._course_from_request(request)
+        if course:
+            Enrollment.objects.get_or_create(
+                student=obj,
+                course=course,
+                defaults={"tuition_amount": course.price or 0},
+            )
+            course.students.add(obj)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        next_url = self._safe_next_url(request)
+        if next_url and "_continue" not in request.POST and "_addanother" not in request.POST:
+            return redirect(next_url)
+        return super().response_add(request, obj, post_url_continue=post_url_continue)
 
 
 class StudentEnrollmentInline(admin.TabularInline):

@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from app.settings.admin import CRMUserCreationForm
 from app.settings.admin_site import _require_valid_password
-from app.settings.models import Cursues, Lesson, Mentor, Parent, Student, StudentGrade, User
+from app.settings.models import Cursues, Enrollment, Lesson, Mentor, Parent, Student, StudentGrade, User
 
 
 class ParentDashboardViewTests(TestCase):
@@ -197,3 +197,48 @@ class AdminUserPasswordTests(TestCase):
 
         with self.assertRaises(ValidationError):
             _require_valid_password("", user)
+
+
+class CourseStudentSyncTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="student-sync",
+            password="testpass123",
+            first_name="Айбек",
+            last_name="Касымов",
+            phone_number="+996700000007",
+            role="Студент",
+        )
+        self.student = Student.objects.create(user=self.user, status=Student.Status.ACTIVE)
+        self.course = Cursues.objects.create(
+            title="Grammar Group",
+            course_type=Cursues.CourseType.GROUP,
+            start=date(2026, 3, 1),
+            price=3000,
+            status="Запущен",
+        )
+
+    def test_adding_student_to_course_creates_enrollment(self):
+        self.course.students.add(self.student)
+
+        enrollment = Enrollment.objects.get(student=self.student, course=self.course)
+        self.assertEqual(enrollment.tuition_amount, self.course.price)
+
+    def test_creating_enrollment_adds_student_to_course(self):
+        Enrollment.objects.create(student=self.student, course=self.course, tuition_amount=2500)
+
+        self.assertTrue(self.course.students.filter(pk=self.student.pk).exists())
+
+    def test_removing_student_from_course_deletes_enrollment(self):
+        self.course.students.add(self.student)
+
+        self.course.students.remove(self.student)
+
+        self.assertFalse(Enrollment.objects.filter(student=self.student, course=self.course).exists())
+
+    def test_deleting_enrollment_removes_student_from_course(self):
+        enrollment = Enrollment.objects.create(student=self.student, course=self.course, tuition_amount=2500)
+
+        enrollment.delete()
+
+        self.assertFalse(self.course.students.filter(pk=self.student.pk).exists())

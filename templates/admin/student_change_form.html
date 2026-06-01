@@ -7,6 +7,16 @@
 {% endblock %}
 
 {% block form_top %}
+  {% if enroll_course %}
+    <input type="hidden" name="course" value="{{ enroll_course.pk }}">
+    {% if next_url %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+    {% endif %}
+    <div class="crm-student-head">
+      <div class="crm-student-head__title">Зачисление в группу</div>
+      <div class="crm-student-head__name">{{ enroll_course.title }}</div>
+    </div>
+  {% endif %}
   {% if original and original.user_id %}
     <div class="crm-student-head">
       <div class="crm-student-head__title">Студент</div>

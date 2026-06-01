@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db.models import Sum
+from django.db.models.signals import m2m_changed, post_delete, post_save
+from django.dispatch import receiver
 
 from .enum import STATUS_CURSUES, USER_ROLE
 
@@ -1118,3 +1120,69 @@ class AboutPage(models.Model):
     class Meta:
         verbose_name = "О нас"
         verbose_name_plural = "О нас"
+
+
+def _course_students_through_kwargs(course_id, student_id):
+    field = Cursues._meta.get_field("students")
+    return {
+        f"{field.m2m_field_name()}_id": course_id,
+        f"{field.m2m_reverse_field_name()}_id": student_id,
+    }
+
+
+@receiver(m2m_changed, sender=Cursues.students.through)
+def sync_enrollments_from_course_students(sender, instance, action, reverse, pk_set, using, **kwargs):
+    if action not in {"post_add", "post_remove", "post_clear"}:
+        return
+
+    enrollment_qs = Enrollment.objects.using(using)
+
+    if action == "post_add" and pk_set:
+        if reverse:
+            student = instance
+            for course in Cursues.objects.using(using).filter(pk__in=pk_set):
+                enrollment_qs.get_or_create(
+                    student_id=student.pk,
+                    course_id=course.pk,
+                    defaults={"tuition_amount": course.price or 0},
+                )
+        else:
+            course = instance
+            for student_id in pk_set:
+                enrollment_qs.get_or_create(
+                    student_id=student_id,
+                    course_id=course.pk,
+                    defaults={"tuition_amount": course.price or 0},
+                )
+        return
+
+    if action == "post_remove" and pk_set:
+        if reverse:
+            enrollment_qs.filter(student=instance, course_id__in=pk_set).delete()
+        else:
+            enrollment_qs.filter(course=instance, student_id__in=pk_set).delete()
+        return
+
+    if action == "post_clear":
+        if reverse:
+            enrollment_qs.filter(student=instance).delete()
+        else:
+            enrollment_qs.filter(course=instance).delete()
+
+
+@receiver(post_save, sender=Enrollment)
+def sync_course_students_from_enrollment(sender, instance, using, **kwargs):
+    if not instance.course_id or not instance.student_id:
+        return
+    Cursues.students.through.objects.using(using).get_or_create(
+        **_course_students_through_kwargs(instance.course_id, instance.student_id)
+    )
+
+
+@receiver(post_delete, sender=Enrollment)
+def remove_course_student_from_deleted_enrollment(sender, instance, using, **kwargs):
+    if not instance.course_id or not instance.student_id:
+        return
+    Cursues.students.through.objects.using(using).filter(
+        **_course_students_through_kwargs(instance.course_id, instance.student_id)
+    ).delete()

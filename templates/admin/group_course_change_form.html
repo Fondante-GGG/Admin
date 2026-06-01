@@ -700,7 +700,10 @@
       var action = studentAction.getAttribute("data-student-action");
       closeDropdowns();
       if (action === "add-student") {
-        window.location.href = "{{ course_student_add_url|escapejs }}" + "?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        var addUrl = new URL("{{ course_student_add_url|escapejs }}", window.location.origin);
+        addUrl.searchParams.set("course", "{{ original.pk|escapejs }}");
+        addUrl.searchParams.set("next", window.location.pathname + window.location.search);
+        window.location.href = addUrl.pathname + addUrl.search;
         return;
       }
       if (action === "upload-file") {
