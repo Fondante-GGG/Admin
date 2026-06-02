@@ -413,10 +413,12 @@ class StudentPayments(Enrollment):
 
 class Lead(ArchiveBase):
     class Status(models.TextChoices):
-        NEW = "new", "Новый"
-        IN_PROGRESS = "in_progress", "В работе"
-        WON = "won", "Успешно"
-        LOST = "lost", "Потерян"
+        NEW = "new", "Консультация"
+        IN_PROGRESS = "in_progress", "Ожидание"
+        INVITED = "invited", "Приглашен(а) на открытый урок"
+        PARTICIPATED = "participated", "Участвовал(а) на открытом уроке"
+        WON = "won", "Уже учится"
+        LOST = "lost", "Потерянный лид"
 
     organization = models.ForeignKey(
         Organization,

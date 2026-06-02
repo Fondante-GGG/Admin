@@ -1,3 +1,5 @@
+import csv
+
 from django import forms
 from django.contrib import admin
 from django.contrib.auth import password_validation
@@ -7,8 +9,8 @@ from django.contrib.admin.models import LogEntry
 import io
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
-from django.http import HttpResponse
-from django.urls import reverse
+from django.http import HttpResponse, HttpResponseForbidden
+from django.urls import path, reverse
 from django.db import models
 from django.db.models import F, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
@@ -20,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from datetime import date, timedelta
 from django.http import JsonResponse
+from django.template.response import TemplateResponse
 
 from .admin_site import crm_admin_site
 from .admin_site import _simple_pdf_table
@@ -83,6 +86,76 @@ def _course_status_filter_values(status: str) -> list[str]:
 
 def _role(user) -> str:
     return getattr(user, "role", "") or ""
+
+
+LEAD_BOARD_COLUMNS = (
+    {
+        "key": "consultation",
+        "title": "Консультация",
+        "values": ("new",),
+        "badge": "Важно",
+        "tone": "warning",
+    },
+    {
+        "key": "waiting",
+        "title": "Ожидание",
+        "values": ("in_progress",),
+        "badge": "Важно",
+        "tone": "warning",
+    },
+    {
+        "key": "invited",
+        "title": "Приглашен(а) на отк...",
+        "values": ("invited",),
+        "badge": "Важно",
+        "tone": "warning",
+    },
+    {
+        "key": "participated",
+        "title": "Участвовал(а) на от...",
+        "values": ("participated",),
+        "badge": "Успешно",
+        "tone": "success",
+    },
+    {
+        "key": "studying",
+        "title": "УЖЕ УЧИТЬСЯ",
+        "values": ("won",),
+        "badge": "Успешно",
+        "tone": "success",
+    },
+    {
+        "key": "lost",
+        "title": "Потерянный лид",
+        "values": ("lost",),
+        "badge": "Потерян",
+        "tone": "muted",
+    },
+)
+
+LEAD_STATUS_CHOICES = (
+    ("new", "Консультация"),
+    ("in_progress", "Ожидание"),
+    ("invited", "Приглашен(а) на открытый урок"),
+    ("participated", "Участвовал(а) на открытом уроке"),
+    ("won", "Уже учится"),
+    ("lost", "Потерянный лид"),
+)
+
+LEAD_STATUS_LABELS = dict(LEAD_STATUS_CHOICES)
+LEAD_STATUS_TO_COLUMN = {
+    value: column["key"]
+    for column in LEAD_BOARD_COLUMNS
+    for value in column["values"]
+}
+
+
+class LeadAdminForm(forms.ModelForm):
+    status = forms.ChoiceField(choices=LEAD_STATUS_CHOICES, label="Статус")
+
+    class Meta:
+        model = Lead
+        fields = "__all__"
 
 
 class CRMUserCreationForm(forms.ModelForm):
@@ -1143,6 +1216,8 @@ class IndividualCourseAdmin(CursuesAdmin):
 @admin.register(Lead, site=crm_admin_site)
 class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminMixin, admin.ModelAdmin):
     allowed_roles = {"Администратор", "Менеджер"}
+    form = LeadAdminForm
+    change_list_template = "admin/leads_changelist.html"
     list_display = ("full_name", "phone_number", "source", "message_short", "status", "created_at")
     list_filter = ("status", ArchiveFilter)
     search_fields = ("full_name", "phone_number", "email", "message", "conversation_log")
@@ -1181,6 +1256,241 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             return "—"
         return obj.message[:50] + "…" if len(obj.message) > 50 else obj.message
     message_short.short_description = "Вопрос"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<int:lead_id>/status/",
+                self.admin_site.admin_view(self.lead_status_update),
+                name="settings_lead_status_update",
+            ),
+        ]
+        return custom + urls
+
+    @staticmethod
+    def _lead_status_label(status: str) -> str:
+        return LEAD_STATUS_LABELS.get(status, status or "—")
+
+    @staticmethod
+    def _lead_source_label(source: str) -> str:
+        source = (source or "manual").strip()
+        labels = {
+            "manual": "Ручной",
+            "website": "Сайт",
+            "website_chat": "Чат сайта",
+            "instagram": "Instagram",
+            "telegram": "Telegram",
+            "whatsapp": "WhatsApp",
+        }
+        return labels.get(source, source.replace("_", " ").title())
+
+    @staticmethod
+    def _lead_source_mark(source: str) -> str:
+        source = (source or "manual").strip().lower()
+        if "chat" in source:
+            return "C"
+        if "instagram" in source:
+            return "I"
+        if "telegram" in source:
+            return "T"
+        if "whatsapp" in source:
+            return "W"
+        if "site" in source or "web" in source:
+            return "A"
+        return "A"
+
+    @staticmethod
+    def _lead_column_values(column_key: str) -> tuple[str, ...]:
+        for column in LEAD_BOARD_COLUMNS:
+            if column["key"] == column_key:
+                return tuple(column["values"])
+        if column_key in LEAD_STATUS_LABELS:
+            return (column_key,)
+        return ()
+
+    def _apply_board_filters(self, request, qs):
+        q = (request.GET.get("q") or "").strip()
+        if q:
+            qs = qs.filter(
+                Q(full_name__icontains=q)
+                | Q(phone_number__icontains=q)
+                | Q(email__icontains=q)
+                | Q(message__icontains=q)
+                | Q(conversation_log__icontains=q)
+            )
+
+        source = (request.GET.get("source") or "").strip()
+        if source:
+            qs = qs.filter(source=source)
+
+        status = (request.GET.get("status") or "").strip()
+        status_values = self._lead_column_values(status)
+        if status_values:
+            qs = qs.filter(status__in=status_values)
+
+        created_from = parse_date((request.GET.get("created_from") or "").strip())
+        if created_from:
+            qs = qs.filter(created_at__date__gte=created_from)
+
+        created_to = parse_date((request.GET.get("created_to") or "").strip())
+        if created_to:
+            qs = qs.filter(created_at__date__lte=created_to)
+
+        return qs
+
+    def _lead_export_csv(self, request):
+        qs = self._apply_board_filters(request, self.get_queryset(request)).order_by("-created_at")
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="leads.csv"'
+        response.write("\ufeff")
+        writer = csv.writer(response)
+        writer.writerow(["ФИО", "Телефон", "Email", "Источник", "Статус", "Создано", "Вопрос"])
+        for lead in qs:
+            writer.writerow(
+                [
+                    lead.full_name,
+                    lead.phone_number,
+                    lead.email,
+                    self._lead_source_label(lead.source),
+                    self._lead_status_label(lead.status),
+                    timezone.localtime(lead.created_at).strftime("%d.%m.%Y %H:%M"),
+                    lead.message,
+                ]
+            )
+        return response
+
+    def _lead_card(self, request, lead: Lead) -> dict:
+        created_at = timezone.localtime(lead.created_at)
+        column_key = LEAD_STATUS_TO_COLUMN.get(lead.status, "consultation")
+        column_meta = next((column for column in LEAD_BOARD_COLUMNS if column["key"] == column_key), LEAD_BOARD_COLUMNS[0])
+        user_name = request.user.get_full_name() or request.user.get_username()
+        message = (lead.message or lead.bot_reply or lead.conversation_log or "").strip()
+        phone_or_email = lead.phone_number or lead.email
+        return {
+            "id": lead.pk,
+            "name": lead.full_name or "Посетитель сайта",
+            "phone_or_email": phone_or_email,
+            "message": message[:110] + "..." if len(message) > 110 else message,
+            "status": lead.status,
+            "status_label": self._lead_status_label(lead.status),
+            "badge": column_meta["badge"],
+            "tone": column_meta["tone"],
+            "source": self._lead_source_label(lead.source),
+            "source_mark": self._lead_source_mark(lead.source),
+            "created_date": created_at.date(),
+            "next_contact_date": created_at.date() + timedelta(days=10),
+            "responsible": user_name,
+            "change_url": reverse(f"{self.admin_site.name}:settings_lead_change", args=[lead.pk]),
+            "status_url": reverse(f"{self.admin_site.name}:settings_lead_status_update", args=[lead.pk]),
+        }
+
+    def lead_status_update(self, request, lead_id: int):
+        if request.method != "POST":
+            return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
+
+        status = (request.POST.get("status") or "").strip()
+        if status not in LEAD_STATUS_LABELS:
+            return JsonResponse({"ok": False, "error": "invalid status"}, status=400)
+
+        lead = get_object_or_404(self.get_queryset(request), pk=lead_id)
+        lead.status = status
+        lead.save(update_fields=["status"])
+
+        column_key = LEAD_STATUS_TO_COLUMN.get(status, "consultation")
+        column_meta = next((column for column in LEAD_BOARD_COLUMNS if column["key"] == column_key), LEAD_BOARD_COLUMNS[0])
+        return JsonResponse(
+            {
+                "ok": True,
+                "status": status,
+                "column": column_key,
+                "badge": column_meta["badge"],
+                "tone": column_meta["tone"],
+            }
+        )
+
+    def changelist_view(self, request, extra_context=None):
+        if request.GET.get("export") == "csv":
+            return self._lead_export_csv(request)
+
+        if not self.has_view_or_change_permission(request):
+            return HttpResponseForbidden("Forbidden")
+
+        base_qs = self.get_queryset(request)
+        filtered_qs = self._apply_board_filters(request, base_qs).order_by("-created_at")
+        source_choices = (
+            base_qs.exclude(source="")
+            .values_list("source", flat=True)
+            .distinct()
+            .order_by("source")
+        )
+
+        buckets: dict[str, list[dict]] = {column["key"]: [] for column in LEAD_BOARD_COLUMNS}
+        for lead in filtered_qs:
+            card = self._lead_card(request, lead)
+            buckets.setdefault(LEAD_STATUS_TO_COLUMN.get(card["status"], "consultation"), []).append(card)
+
+        columns = []
+        for column in LEAD_BOARD_COLUMNS:
+            cards = buckets.get(column["key"], [])
+            columns.append(
+                {
+                    **column,
+                    "target_status": column["values"][0],
+                    "count": len(cards),
+                    "cards": cards,
+                }
+            )
+
+        params = request.GET.copy()
+        params["export"] = "csv"
+        export_url = f"{request.path}?{params.urlencode()}"
+
+        filter_values = {
+            "q": (request.GET.get("q") or "").strip(),
+            "status": (request.GET.get("status") or "").strip(),
+            "source": (request.GET.get("source") or "").strip(),
+            "created_from": (request.GET.get("created_from") or "").strip(),
+            "created_to": (request.GET.get("created_to") or "").strip(),
+            "archived": (request.GET.get("archived") or "").strip(),
+        }
+        active_filters_count = sum(1 for key, value in filter_values.items() if key != "archived" and value)
+        if filter_values["archived"] == "1":
+            active_filters_count += 1
+
+        try:
+            tasks_url = reverse(f"{self.admin_site.name}:settings_task_changelist")
+        except Exception:
+            tasks_url = "#"
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Лиды",
+            "opts": self.model._meta,
+            "media": self.media,
+            "lead_board_columns": columns,
+            "lead_total": sum(column["count"] for column in columns),
+            "lead_filter_values": filter_values,
+            "lead_filter_statuses": LEAD_BOARD_COLUMNS,
+            "lead_source_choices": [
+                {"value": source, "label": self._lead_source_label(source)}
+                for source in source_choices
+            ],
+            "lead_active_filters_count": active_filters_count,
+            "lead_filters_open": active_filters_count > 0,
+            "lead_add_url": reverse(f"{self.admin_site.name}:settings_lead_add"),
+            "lead_export_url": export_url,
+            "lead_tasks_url": tasks_url,
+            "lead_forms_url": reverse(f"{self.admin_site.name}:settings_index"),
+            "lead_reset_url": request.path,
+            "is_archive": filter_values["archived"] == "1",
+            "has_add_permission": self.has_add_permission(request),
+        }
+        if extra_context:
+            context.update(extra_context)
+        return TemplateResponse(request, self.change_list_template, context)
 
 
 @admin.register(Payment, site=crm_admin_site)

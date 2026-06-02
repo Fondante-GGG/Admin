@@ -1,0 +1,167 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script defer src="{% static 'crm_dashboard/leads.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-list crm-leads-body{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-leads-page">
+  <header class="crm-leads-head">
+    <div class="crm-leads-title">
+      <h1>Лиды: <span>{% if is_archive %}Архив{% else %}Главная доска{% endif %}</span></h1>
+      <button type="button" class="crm-leads-icon-btn" title="Избранное" aria-label="Избранное">
+        <i class="fas fa-star" aria-hidden="true"></i>
+      </button>
+      <span class="crm-leads-total">{{ lead_total }}</span>
+    </div>
+  </header>
+
+  <div class="crm-leads-toolbar" aria-label="Действия с лидами">
+    <button type="button" class="crm-leads-btn crm-leads-btn--primary" data-lead-filter-toggle>
+      <i class="fas fa-filter" aria-hidden="true"></i>
+      <span>Фильтр</span>
+      {% if lead_active_filters_count %}
+        <strong>{{ lead_active_filters_count }}</strong>
+      {% endif %}
+    </button>
+  </div>
+
+  <form method="get" class="crm-leads-filters{% if not lead_filters_open %} is-hidden{% endif %}" data-lead-filters>
+    <label>
+      Поиск
+      <input type="search" name="q" value="{{ lead_filter_values.q }}" placeholder="Имя, телефон, email">
+    </label>
+    <label>
+      Статус
+      <select name="status">
+        <option value="">Все стадии</option>
+        {% for status in lead_filter_statuses %}
+          <option value="{{ status.key }}"{% if lead_filter_values.status == status.key %} selected{% endif %}>{{ status.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Источник
+      <select name="source">
+        <option value="">Все источники</option>
+        {% for source in lead_source_choices %}
+          <option value="{{ source.value }}"{% if lead_filter_values.source == source.value %} selected{% endif %}>{{ source.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Дата с
+      <input type="date" name="created_from" value="{{ lead_filter_values.created_from }}">
+    </label>
+    <label>
+      Дата по
+      <input type="date" name="created_to" value="{{ lead_filter_values.created_to }}">
+    </label>
+    <label>
+      Раздел
+      <select name="archived">
+        <option value=""{% if not lead_filter_values.archived %} selected{% endif %}>Активные</option>
+        <option value="1"{% if lead_filter_values.archived == "1" %} selected{% endif %}>Архив</option>
+      </select>
+    </label>
+    <div class="crm-leads-filters__actions">
+      <button type="submit" class="crm-leads-btn crm-leads-btn--primary">Применить</button>
+      <a href="{{ lead_reset_url }}" class="crm-leads-btn crm-leads-btn--ghost">Сбросить</a>
+    </div>
+  </form>
+
+  <div class="crm-leads-actions" aria-label="Быстрые действия">
+    {% if has_add_permission %}
+      <a href="{{ lead_add_url }}" class="crm-leads-btn crm-leads-btn--primary">
+        <i class="fas fa-plus" aria-hidden="true"></i>
+        <span>Добавить</span>
+        <i class="fas fa-angle-down" aria-hidden="true"></i>
+      </a>
+    {% endif %}
+    <a href="{{ lead_forms_url }}" class="crm-leads-btn crm-leads-btn--blue">
+      <i class="fas fa-poll-h" aria-hidden="true"></i>
+      <span>Формы</span>
+    </a>
+    <a href="{{ lead_tasks_url }}" class="crm-leads-btn crm-leads-btn--red">
+      <i class="fas fa-tasks" aria-hidden="true"></i>
+      <span>Мои задачи</span>
+    </a>
+    <a href="{{ lead_export_url }}" class="crm-leads-btn crm-leads-btn--green">
+      <i class="fas fa-file-excel" aria-hidden="true"></i>
+      <span>Экспорт</span>
+    </a>
+    <button type="button" class="crm-leads-btn crm-leads-btn--outline">
+      <span>Ещё</span>
+      <i class="fas fa-angle-down" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <section class="crm-lead-board" aria-label="Доска лидов">
+    {% for column in lead_board_columns %}
+      <div class="crm-lead-column crm-lead-column--{{ column.key }}" data-lead-column data-target-status="{{ column.target_status }}">
+        <div class="crm-lead-column__head">
+          <h2 title="{{ column.title }}">{{ column.title }}</h2>
+          <span data-lead-count>{{ column.count }}</span>
+        </div>
+        <div class="crm-lead-column__tools">
+          <button type="button" class="crm-lead-switch" title="Включено" aria-label="Включено"></button>
+          <span class="crm-lead-column__mini"><i class="far fa-check-circle" aria-hidden="true"></i> 0</span>
+          <button type="button" class="crm-lead-column__edit" title="Настроить колонку" aria-label="Настроить колонку">
+            <i class="fas fa-pencil-alt" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="crm-lead-column__cards" data-lead-dropzone>
+          {% for card in column.cards %}
+            <article
+              class="crm-lead-card crm-lead-card--{{ card.tone }}"
+              draggable="true"
+              data-lead-card
+              data-lead-id="{{ card.id }}"
+              data-lead-status="{{ card.status }}"
+              data-status-url="{{ card.status_url }}"
+            >
+              <div class="crm-lead-card__top">
+                <span class="crm-lead-badge">{{ card.badge }}</span>
+                <a href="{{ card.change_url }}" class="crm-lead-card__expand" title="Открыть лид" aria-label="Открыть лид">
+                  <i class="fas fa-expand-alt" aria-hidden="true"></i>
+                </a>
+              </div>
+              <div class="crm-lead-card__person">
+                <span class="crm-lead-card__checkbox" aria-hidden="true"></span>
+                <a href="{{ card.change_url }}" class="crm-lead-card__name">{{ card.name }}</a>
+              </div>
+              {% if card.phone_or_email %}
+                <div class="crm-lead-card__contact">{{ card.phone_or_email }}</div>
+              {% endif %}
+              {% if card.message %}
+                <p class="crm-lead-card__message">{{ card.message }}</p>
+              {% endif %}
+              <div class="crm-lead-card__dates">
+                <time datetime="{{ card.created_date|date:'Y-m-d' }}">{{ card.created_date|date:"d M Y" }}</time>
+                <time datetime="{{ card.next_contact_date|date:'Y-m-d' }}">{{ card.next_contact_date|date:"d M Y" }}</time>
+                <span class="crm-lead-source" title="{{ card.source }}">{{ card.source_mark }}</span>
+              </div>
+              <footer class="crm-lead-card__footer">
+                Назначен на {{ card.responsible }}
+              </footer>
+            </article>
+          {% endfor %}
+          <div class="crm-lead-empty{% if column.cards %} is-hidden{% endif %}" data-lead-empty>Нет лидов</div>
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
