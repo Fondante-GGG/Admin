@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -28,7 +27,6 @@ from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.views.decorators.csrf import csrf_exempt
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
@@ -49,7 +47,6 @@ from .models import (
     Payment,
     Salary,
     Student,
-    Task,
     TuitionPayment,
     User,
 )
@@ -2047,8 +2044,7 @@ class CRMAdminSite(AdminSite):
                     role="Студент",
                     is_staff=False,
                 )
-                raw_password = _require_valid_password(request.POST.get("password"), user)
-                user.set_password(raw_password)
+                user.set_unusable_password()
                 user.save()
                 student = Student.objects.create(
                     user=user,

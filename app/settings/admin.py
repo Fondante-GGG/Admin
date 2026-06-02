@@ -1,7 +1,7 @@
 import csv
 
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth import password_validation
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
@@ -16,7 +16,7 @@ from django.db.models import F, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_date
 from django.utils.html import format_html
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 from django.utils.safestring import mark_safe
 from django.utils import timezone
@@ -148,6 +148,31 @@ LEAD_STATUS_TO_COLUMN = {
     for column in LEAD_BOARD_COLUMNS
     for value in column["values"]
 }
+
+LEAD_EXPORT_FIELDS = (
+    ("id", "ID", True),
+    ("first_name", "Имя", True),
+    ("last_name", "Фамилия", True),
+    ("middle_name", "Отчество", True),
+    ("phone_number", "Номер телефона", True),
+    ("extra_phone", "Дополнительный номер", False),
+    ("email", "Адрес электронной почты", True),
+    ("created_at", "Дата добавления", False),
+    ("channel", "Канал", True),
+    ("status", "Статус", True),
+    ("assignee", "Назначен на", False),
+    ("archived_at", "Дата архивирования", False),
+    ("lost_reason", "Причина потери лида", False),
+    ("birth_date", "Дата рождения", False),
+    ("due_date", "Крайний срок", False),
+    ("subject_interest", "Интересуется предметом", False),
+    ("source", "С какой публичной формы", False),
+    ("interested_courses", "Интересуется курсами", False),
+    ("telegram_nick", "Ник в Telegram", False),
+    ("from_where", "Откуда", False),
+    ("labels", "Метки", False),
+    ("comment", "Комментарий", False),
+)
 
 
 class LeadAdminForm(forms.ModelForm):
@@ -1229,11 +1254,26 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             {
                 "fields": (
                     "organization",
+                    "assignee",
+                    "first_name",
+                    "last_name",
+                    "middle_name",
                     "full_name",
                     "phone_number",
+                    "extra_phone",
                     "email",
+                    "telegram_nick",
+                    "birth_date",
+                    "due_date",
+                    "from_where",
+                    "channel",
                     "source",
                     "status",
+                    "subject_interest",
+                    "interested_courses",
+                    "labels",
+                    "comment",
+                    "lost_reason",
                     "created_at",
                 )
             },
@@ -1260,6 +1300,16 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
     def get_urls(self):
         urls = super().get_urls()
         custom = [
+            path("create/", self.admin_site.admin_view(self.lead_quick_create), name="settings_lead_quick_create"),
+            path("upload/", self.admin_site.admin_view(self.lead_upload), name="settings_lead_upload"),
+            path("upload/meta/", self.admin_site.admin_view(self.lead_upload_meta), name="settings_lead_upload_meta"),
+            path("upload/template.xlsx", self.admin_site.admin_view(self.lead_upload_template), name="settings_lead_upload_template"),
+            path(
+                "upload/meta-template.csv",
+                self.admin_site.admin_view(self.lead_upload_meta_template),
+                name="settings_lead_upload_meta_template",
+            ),
+            path("export/", self.admin_site.admin_view(self.lead_export_fields), name="settings_lead_export_fields"),
             path(
                 "<int:lead_id>/status/",
                 self.admin_site.admin_view(self.lead_status_update),
@@ -1309,6 +1359,181 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             return (column_key,)
         return ()
 
+    @staticmethod
+    def _lead_status_value(raw: str | None) -> str:
+        value = (raw or "").strip()
+        if not value:
+            return Lead.Status.NEW
+        if value in LEAD_STATUS_LABELS:
+            return value
+        lowered = value.casefold()
+        for key, label in LEAD_STATUS_CHOICES:
+            if lowered in {key.casefold(), label.casefold()}:
+                return key
+        for column in LEAD_BOARD_COLUMNS:
+            if lowered == column["title"].casefold():
+                return column["values"][0]
+        return Lead.Status.NEW
+
+    @staticmethod
+    def _lead_clip(value: str | None, length: int) -> str:
+        return (value or "").strip()[:length]
+
+    @staticmethod
+    def _lead_full_name(first_name: str, last_name: str, middle_name: str, fallback: str = "") -> str:
+        full_name = " ".join(part for part in (last_name, first_name, middle_name) if part).strip()
+        return full_name or (fallback or "").strip() or "Посетитель сайта"
+
+    def _lead_assignee_from_value(self, raw: str | None):
+        value = (raw or "").strip()
+        if not value:
+            return None
+        qs = User.objects.filter(is_active=True)
+        if value.isdigit():
+            return qs.filter(pk=int(value)).first()
+        lowered = value.casefold()
+        for user in qs:
+            names = {
+                user.username.casefold(),
+                (user.get_full_name() or "").strip().casefold(),
+                f"{user.last_name} {user.first_name}".strip().casefold(),
+                f"{user.first_name} {user.last_name}".strip().casefold(),
+            }
+            if lowered in names:
+                return user
+        return None
+
+    def _lead_people(self):
+        return User.objects.filter(is_active=True, is_staff=True).order_by("last_name", "first_name", "username")
+
+    def _lead_courses(self):
+        return Cursues.objects.filter(is_archived=False).order_by("title")
+
+    def _lead_payload_from_post(self, request) -> dict:
+        return {
+            "first_name": request.POST.get("first_name"),
+            "last_name": request.POST.get("last_name"),
+            "middle_name": request.POST.get("middle_name"),
+            "full_name": request.POST.get("full_name"),
+            "due_date": request.POST.get("due_date"),
+            "phone_number": request.POST.get("phone_number"),
+            "extra_phone": request.POST.get("extra_phone"),
+            "email": request.POST.get("email"),
+            "telegram_nick": request.POST.get("telegram_nick"),
+            "birth_date": request.POST.get("birth_date"),
+            "from_where": request.POST.get("from_where"),
+            "assignee": request.POST.get("assignee"),
+            "channel": request.POST.get("channel"),
+            "status": request.POST.get("status"),
+            "subject_interest": request.POST.get("subject_interest"),
+            "interested_courses": request.POST.get("interested_courses"),
+            "labels": request.POST.get("labels"),
+            "comment": request.POST.get("comment"),
+        }
+
+    def _lead_create_from_payload(self, request, data: dict) -> Lead:
+        first_name = self._lead_clip(data.get("first_name"), 150)
+        last_name = self._lead_clip(data.get("last_name"), 150)
+        middle_name = self._lead_clip(data.get("middle_name"), 150)
+        full_name = self._lead_full_name(first_name, last_name, middle_name, data.get("full_name"))
+        channel = self._lead_clip(data.get("channel"), 64)
+        source = self._lead_clip(data.get("source") or channel or "manual", 32) or "manual"
+        assignee = self._lead_assignee_from_value(data.get("assignee"))
+        org_id = request.session.get("current_org_id")
+
+        lead = Lead.objects.create(
+            organization_id=org_id or None,
+            first_name=first_name,
+            last_name=last_name,
+            middle_name=middle_name,
+            full_name=self._lead_clip(full_name, 255),
+            phone_number=self._lead_clip(data.get("phone_number"), 64),
+            extra_phone=self._lead_clip(data.get("extra_phone"), 64),
+            email=self._lead_clip(data.get("email"), 255),
+            telegram_nick=self._lead_clip(data.get("telegram_nick"), 100),
+            birth_date=parse_date((data.get("birth_date") or "").strip()),
+            due_date=parse_date((data.get("due_date") or "").strip()),
+            from_where=self._lead_clip(data.get("from_where"), 255),
+            assignee=assignee,
+            channel=channel,
+            source=source,
+            status=self._lead_status_value(data.get("status")),
+            subject_interest=self._lead_clip(data.get("subject_interest"), 255),
+            interested_courses=(data.get("interested_courses") or "").strip(),
+            labels=self._lead_clip(data.get("labels"), 255),
+            comment=(data.get("comment") or "").strip(),
+            message=(data.get("comment") or "").strip(),
+        )
+        return lead
+
+    def _lead_export_value(self, lead: Lead, field: str) -> str:
+        if field == "id":
+            return str(lead.pk)
+        if field == "status":
+            return self._lead_status_label(lead.status)
+        if field == "assignee":
+            if not lead.assignee:
+                return ""
+            return lead.assignee.get_full_name() or lead.assignee.username
+        if field == "created_at":
+            return timezone.localtime(lead.created_at).strftime("%d.%m.%Y %H:%M")
+        if field == "archived_at":
+            return timezone.localtime(lead.archived_at).strftime("%d.%m.%Y %H:%M") if lead.archived_at else ""
+        value = getattr(lead, field, "")
+        if isinstance(value, date):
+            return value.strftime("%d.%m.%Y")
+        return str(value or "")
+
+    def _lead_rows_from_file(self, file_obj):
+        name = (getattr(file_obj, "name", "") or "").lower()
+        if name.endswith((".xlsx", ".xlsm")):
+            workbook = load_workbook(file_obj, read_only=True, data_only=True)
+            sheet = workbook.active
+            rows = list(sheet.iter_rows(values_only=True))
+            if not rows:
+                return []
+            headers = [str(cell or "").strip() for cell in rows[0]]
+            data_rows = []
+            for row in rows[1:]:
+                data_rows.append({headers[i]: row[i] for i in range(min(len(headers), len(row))) if headers[i]})
+            return data_rows
+
+        text = file_obj.read().decode("utf-8-sig")
+        sample = text[:2048]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        except csv.Error:
+            dialect = csv.excel
+        return list(csv.DictReader(io.StringIO(text), dialect=dialect))
+
+    def _lead_payload_from_row(self, row: dict, mapping: dict | None = None) -> dict:
+        def pick(*names):
+            if mapping:
+                column = mapping.get(names[0], "")
+                if column:
+                    return row.get(column, "")
+            for name in names:
+                if name in row:
+                    return row.get(name, "")
+            return ""
+
+        return {
+            "full_name": pick("full_name", "ФИО", "фио", "полное_имя", "name"),
+            "first_name": pick("first_name", "Имя", "имя"),
+            "last_name": pick("last_name", "Фамилия", "фамилия"),
+            "middle_name": pick("middle_name", "Отчество", "отчество"),
+            "phone_number": pick("phone_number", "Номер телефона", "Телефон", "номер_телефона"),
+            "extra_phone": pick("extra_phone", "Дополнительный номер"),
+            "email": pick("email", "Адрес электронной почты", "Email", "эл_адрес"),
+            "comment": pick("comment", "Комментарий", "campaign_name"),
+            "channel": pick("channel", "Канал", "platform"),
+            "source": pick("source", "Источник", "platform"),
+            "status": pick("status", "Статус"),
+            "subject_interest": pick("subject_interest", "Интересуется предметом"),
+            "interested_courses": pick("interested_courses", "Интересующие курсы", "Курс"),
+            "assignee": pick("assignee", "Ответственный", "Ответственные"),
+        }
+
     def _apply_board_filters(self, request, qs):
         q = (request.GET.get("q") or "").strip()
         if q:
@@ -1339,33 +1564,33 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
 
         return qs
 
-    def _lead_export_csv(self, request):
-        qs = self._apply_board_filters(request, self.get_queryset(request)).order_by("-created_at")
+    def _lead_export_csv(self, request, selected_fields: list[str] | None = None):
+        allowed = {key for key, _label, _default in LEAD_EXPORT_FIELDS}
+        selected_fields = [field for field in (selected_fields or request.GET.getlist("fields")) if field in allowed]
+        if not selected_fields:
+            selected_fields = [key for key, _label, default in LEAD_EXPORT_FIELDS if default]
+        labels = dict((key, label) for key, label, _default in LEAD_EXPORT_FIELDS)
+
+        qs = self._apply_board_filters(request, self.get_queryset(request)).select_related("assignee").order_by("-created_at")
         response = HttpResponse(content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = 'attachment; filename="leads.csv"'
         response.write("\ufeff")
         writer = csv.writer(response)
-        writer.writerow(["ФИО", "Телефон", "Email", "Источник", "Статус", "Создано", "Вопрос"])
+        writer.writerow([labels[field] for field in selected_fields])
         for lead in qs:
-            writer.writerow(
-                [
-                    lead.full_name,
-                    lead.phone_number,
-                    lead.email,
-                    self._lead_source_label(lead.source),
-                    self._lead_status_label(lead.status),
-                    timezone.localtime(lead.created_at).strftime("%d.%m.%Y %H:%M"),
-                    lead.message,
-                ]
-            )
+            writer.writerow([self._lead_export_value(lead, field) for field in selected_fields])
         return response
 
     def _lead_card(self, request, lead: Lead) -> dict:
         created_at = timezone.localtime(lead.created_at)
         column_key = LEAD_STATUS_TO_COLUMN.get(lead.status, "consultation")
         column_meta = next((column for column in LEAD_BOARD_COLUMNS if column["key"] == column_key), LEAD_BOARD_COLUMNS[0])
-        user_name = request.user.get_full_name() or request.user.get_username()
-        message = (lead.message or lead.bot_reply or lead.conversation_log or "").strip()
+        user_name = (
+            (lead.assignee.get_full_name() or lead.assignee.username)
+            if lead.assignee
+            else (request.user.get_full_name() or request.user.get_username())
+        )
+        message = (lead.comment or lead.message or lead.bot_reply or lead.conversation_log or "").strip()
         phone_or_email = lead.phone_number or lead.email
         return {
             "id": lead.pk,
@@ -1379,11 +1604,138 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             "source": self._lead_source_label(lead.source),
             "source_mark": self._lead_source_mark(lead.source),
             "created_date": created_at.date(),
-            "next_contact_date": created_at.date() + timedelta(days=10),
+            "next_contact_date": lead.due_date or (created_at.date() + timedelta(days=10)),
             "responsible": user_name,
             "change_url": reverse(f"{self.admin_site.name}:settings_lead_change", args=[lead.pk]),
             "status_url": reverse(f"{self.admin_site.name}:settings_lead_status_update", args=[lead.pk]),
         }
+
+    def lead_quick_create(self, request):
+        if request.method != "POST":
+            return redirect(reverse(f"{self.admin_site.name}:settings_lead_changelist"))
+        try:
+            self._lead_create_from_payload(request, self._lead_payload_from_post(request))
+            messages.success(request, "Лид добавлен.")
+        except Exception as exc:
+            messages.error(request, f"Не удалось добавить лид: {exc}")
+        return redirect(reverse(f"{self.admin_site.name}:settings_lead_changelist"))
+
+    def lead_upload_template(self, request):
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Leads"
+        sheet.append(["ФИО", "Телефон", "Email", "Комментарий", "Канал", "Статус"])
+        sheet.append(["Иван Иванов", "+996555000000", "lead@example.com", "Интересуется курсом", "instagram", "Консультация"])
+        buf = io.BytesIO()
+        workbook.save(buf)
+        response = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="leads-template.xlsx"'
+        return response
+
+    def lead_upload_meta_template(self, request):
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="leads-meta-template.csv"'
+        response.write("\ufeff")
+        writer = csv.writer(response)
+        writer.writerow(["полное_имя", "эл_адрес", "номер_телефона", "campaign_name", "platform"])
+        writer.writerow(["Ivan Lead", "lead@example.com", "+996555000000", "IELTS Campaign", "facebook"])
+        return response
+
+    def lead_upload(self, request):
+        if request.method == "POST":
+            file_obj = request.FILES.get("file")
+            if not file_obj:
+                messages.error(request, "Выберите файл.")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_upload"))
+            try:
+                created = 0
+                for row in self._lead_rows_from_file(file_obj):
+                    payload = self._lead_payload_from_row(row)
+                    if any(str(value or "").strip() for value in payload.values()):
+                        self._lead_create_from_payload(request, payload)
+                        created += 1
+                messages.success(request, f"Загружено лидов: {created}.")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_changelist"))
+            except Exception as exc:
+                messages.error(request, f"Не удалось загрузить файл: {exc}")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_upload"))
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Загрузить список",
+            "opts": self.model._meta,
+            "template_url": reverse(f"{self.admin_site.name}:settings_lead_upload_template"),
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+        }
+        return TemplateResponse(request, "admin/leads_upload.html", context)
+
+    def lead_upload_meta(self, request):
+        default_mapping = {
+            "full_name": "полное_имя",
+            "email": "эл_адрес",
+            "phone_number": "номер_телефона",
+            "comment": "campaign_name",
+            "channel": "platform",
+        }
+        if request.method == "POST":
+            file_obj = request.FILES.get("file")
+            if not file_obj:
+                messages.error(request, "Выберите CSV-файл.")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_upload_meta"))
+            mapping = {
+                "full_name": (request.POST.get("map_full_name") or "").strip(),
+                "email": (request.POST.get("map_email") or "").strip(),
+                "phone_number": (request.POST.get("map_phone_number") or "").strip(),
+                "comment": (request.POST.get("map_comment") or "").strip(),
+                "channel": (request.POST.get("map_channel") or "").strip(),
+            }
+            course = (request.POST.get("course") or "").strip()
+            assignee = (request.POST.get("assignee") or "").strip()
+            try:
+                created = 0
+                for row in self._lead_rows_from_file(file_obj):
+                    payload = self._lead_payload_from_row(row, mapping)
+                    payload["interested_courses"] = course
+                    payload["assignee"] = assignee
+                    if any(str(value or "").strip() for value in payload.values()):
+                        self._lead_create_from_payload(request, payload)
+                        created += 1
+                messages.success(request, f"Загружено лидов Meta: {created}.")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_changelist"))
+            except Exception as exc:
+                messages.error(request, f"Не удалось загрузить Meta-файл: {exc}")
+                return redirect(reverse(f"{self.admin_site.name}:settings_lead_upload_meta"))
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Загрузить список: Meta",
+            "opts": self.model._meta,
+            "mapping": default_mapping,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+            "template_url": reverse(f"{self.admin_site.name}:settings_lead_upload_meta_template"),
+            "people": self._lead_people(),
+            "courses": self._lead_courses(),
+        }
+        return TemplateResponse(request, "admin/leads_upload_meta.html", context)
+
+    def lead_export_fields(self, request):
+        if request.method == "POST":
+            return self._lead_export_csv(request, selected_fields=request.POST.getlist("fields"))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Выберите поля для экспорта",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+            "lead_selected_count": self._apply_board_filters(request, self.get_queryset(request)).count(),
+            "export_fields": [
+                {"key": key, "label": label, "default": default}
+                for key, label, default in LEAD_EXPORT_FIELDS
+            ],
+        }
+        return TemplateResponse(request, "admin/leads_export_fields.html", context)
 
     def lead_status_update(self, request, lead_id: int):
         if request.method != "POST":
@@ -1447,6 +1799,11 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
         params = request.GET.copy()
         params["export"] = "csv"
         export_url = f"{request.path}?{params.urlencode()}"
+        export_fields_params = request.GET.copy()
+        export_fields_params.pop("export", None)
+        export_fields_url = reverse(f"{self.admin_site.name}:settings_lead_export_fields")
+        if export_fields_params:
+            export_fields_url = f"{export_fields_url}?{export_fields_params.urlencode()}"
 
         filter_values = {
             "q": (request.GET.get("q") or "").strip(),
@@ -1480,11 +1837,17 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             ],
             "lead_active_filters_count": active_filters_count,
             "lead_filters_open": active_filters_count > 0,
-            "lead_add_url": reverse(f"{self.admin_site.name}:settings_lead_add"),
-            "lead_export_url": export_url,
+            "lead_add_url": reverse(f"{self.admin_site.name}:settings_lead_quick_create"),
+            "lead_change_add_url": reverse(f"{self.admin_site.name}:settings_lead_add"),
+            "lead_upload_url": reverse(f"{self.admin_site.name}:settings_lead_upload"),
+            "lead_upload_meta_url": reverse(f"{self.admin_site.name}:settings_lead_upload_meta"),
+            "lead_export_url": export_fields_url,
             "lead_tasks_url": tasks_url,
             "lead_forms_url": reverse(f"{self.admin_site.name}:settings_index"),
             "lead_reset_url": request.path,
+            "lead_status_choices": LEAD_STATUS_CHOICES,
+            "lead_people": self._lead_people(),
+            "lead_courses": self._lead_courses(),
             "is_archive": filter_values["archived"] == "1",
             "has_add_permission": self.has_add_permission(request),
         }

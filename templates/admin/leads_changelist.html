@@ -84,11 +84,27 @@
 
   <div class="crm-leads-actions" aria-label="Быстрые действия">
     {% if has_add_permission %}
-      <a href="{{ lead_add_url }}" class="crm-leads-btn crm-leads-btn--primary">
-        <i class="fas fa-plus" aria-hidden="true"></i>
-        <span>Добавить</span>
-        <i class="fas fa-angle-down" aria-hidden="true"></i>
-      </a>
+      <div class="crm-leads-dd" data-lead-dd>
+        <button type="button" class="crm-leads-btn crm-leads-btn--primary" data-lead-menu-toggle>
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>Добавить</span>
+          <i class="fas fa-angle-down" aria-hidden="true"></i>
+        </button>
+        <div class="crm-leads-dd__menu" data-lead-menu>
+          <button type="button" class="crm-leads-dd__item" data-lead-modal-open>
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            <span>Добавить лид</span>
+          </button>
+          <a href="{{ lead_upload_url }}" class="crm-leads-dd__item">
+            <i class="fas fa-upload" aria-hidden="true"></i>
+            <span>Загрузить файл</span>
+          </a>
+          <a href="{{ lead_upload_meta_url }}" class="crm-leads-dd__item">
+            <i class="fas fa-upload" aria-hidden="true"></i>
+            <span>Загрузить файл: Meta</span>
+          </a>
+        </div>
+      </div>
     {% endif %}
     <a href="{{ lead_forms_url }}" class="crm-leads-btn crm-leads-btn--blue">
       <i class="fas fa-poll-h" aria-hidden="true"></i>
@@ -163,5 +179,99 @@
       </div>
     {% endfor %}
   </section>
+</div>
+
+<div class="crm-lead-modal is-hidden" data-lead-modal>
+  <div class="crm-lead-modal__backdrop" data-lead-modal-close></div>
+  <div class="crm-lead-modal__panel">
+    <button type="button" class="crm-lead-modal__close" data-lead-modal-close aria-label="Закрыть">&times;</button>
+    <h2>Новый лид</h2>
+    <form method="post" action="{{ lead_add_url }}">
+      {% csrf_token %}
+      <div class="crm-lead-form-grid">
+        <label>Имя
+          <input type="text" name="first_name">
+        </label>
+        <label>Крайний срок
+          <input type="date" name="due_date">
+        </label>
+        <label>Фамилия
+          <input type="text" name="last_name">
+        </label>
+        <label>Номер телефона
+          <input type="text" name="phone_number">
+        </label>
+        <label>Отчество
+          <input type="text" name="middle_name">
+        </label>
+        <label>Дополнительный номер
+          <input type="text" name="extra_phone">
+        </label>
+        <label>Адрес электронной почты
+          <input type="email" name="email">
+        </label>
+        <label>Ник в Telegram
+          <input type="text" name="telegram_nick">
+        </label>
+        <label>Дата рождения
+          <input type="date" name="birth_date">
+        </label>
+        <label>Откуда
+          <input type="text" name="from_where">
+        </label>
+        <label>Assignee
+          <select name="assignee">
+            <option value="">--------</option>
+            {% for person in lead_people %}
+              <option value="{{ person.id }}">{{ person.get_full_name|default:person.username }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Канал
+          <select name="channel">
+            <option value="">--------</option>
+            <option value="manual">Ручной</option>
+            <option value="website">Сайт</option>
+            <option value="website_chat">Чат сайта</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook / Meta</option>
+            <option value="telegram">Telegram</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </label>
+        <label class="crm-lead-form-grid__right">Статус
+          <select name="status">
+            {% for value, label in lead_status_choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="crm-lead-form-wide">
+        <label>Интересуется предметом
+          <select name="subject_interest">
+            <option value="">--------</option>
+            {% for course in lead_courses %}
+              {% if course.subject %}<option value="{{ course.subject }}">{{ course.subject }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </label>
+        <label>Интересующие курсы
+          <input type="text" name="interested_courses">
+        </label>
+        <label>Метки
+          <input type="text" name="labels">
+        </label>
+        <label>Комментарий
+          <textarea name="comment" rows="3"></textarea>
+        </label>
+      </div>
+
+      <div class="crm-lead-modal__actions">
+        <button type="submit" class="crm-leads-btn crm-leads-btn--primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

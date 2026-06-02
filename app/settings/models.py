@@ -428,6 +428,9 @@ class Lead(ArchiveBase):
         verbose_name="Организация",
         related_name="leads",
     )
+    first_name = models.CharField("Имя", max_length=150, blank=True, default="")
+    last_name = models.CharField("Фамилия", max_length=150, blank=True, default="")
+    middle_name = models.CharField("Отчество", max_length=150, blank=True, default="")
     full_name = models.CharField(
         max_length=255,
         blank=True,
@@ -446,6 +449,25 @@ class Lead(ArchiveBase):
         default="",
         verbose_name="Email",
     )
+    extra_phone = models.CharField("Дополнительный номер", max_length=64, blank=True, default="")
+    telegram_nick = models.CharField("Ник в Telegram", max_length=100, blank=True, default="")
+    birth_date = models.DateField("Дата рождения", null=True, blank=True)
+    due_date = models.DateField("Крайний срок", null=True, blank=True)
+    from_where = models.CharField("Откуда", max_length=255, blank=True, default="")
+    channel = models.CharField("Канал", max_length=64, blank=True, default="")
+    assignee = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Ответственный",
+        related_name="assigned_leads",
+    )
+    subject_interest = models.CharField("Интересуется предметом", max_length=255, blank=True, default="")
+    interested_courses = models.TextField("Интересующие курсы", blank=True, default="")
+    labels = models.CharField("Метки", max_length=255, blank=True, default="")
+    comment = models.TextField("Комментарий", blank=True, default="")
+    lost_reason = models.CharField("Причина потери лида", max_length=255, blank=True, default="")
     source = models.CharField(
         max_length=32,
         blank=True,

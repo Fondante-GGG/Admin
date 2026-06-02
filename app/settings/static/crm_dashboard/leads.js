@@ -15,10 +15,48 @@
     var toggle = document.querySelector("[data-lead-filter-toggle]");
     var filters = document.querySelector("[data-lead-filters]");
     var board = document.querySelector(".crm-lead-board");
+    var dropdown = document.querySelector("[data-lead-dd]");
+    var menuToggle = document.querySelector("[data-lead-menu-toggle]");
+    var modal = document.querySelector("[data-lead-modal]");
+    var exportAll = document.querySelector("[data-lead-export-all]");
 
     if (toggle && filters) {
       toggle.addEventListener("click", function () {
         filters.classList.toggle("is-hidden");
+      });
+    }
+
+    if (dropdown && menuToggle) {
+      menuToggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        dropdown.classList.toggle("is-open");
+      });
+      document.addEventListener("click", function (event) {
+        if (!dropdown.contains(event.target)) dropdown.classList.remove("is-open");
+      });
+    }
+
+    document.querySelectorAll("[data-lead-modal-open]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        if (dropdown) dropdown.classList.remove("is-open");
+        if (modal) modal.classList.remove("is-hidden");
+        document.body.classList.add("crm-drawer-open");
+      });
+    });
+
+    document.querySelectorAll("[data-lead-modal-close]").forEach(function (button) {
+      button.addEventListener("click", closeLeadModal);
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeLeadModal();
+    });
+
+    if (exportAll) {
+      exportAll.addEventListener("change", function () {
+        document.querySelectorAll('input[name="fields"]').forEach(function (checkbox) {
+          checkbox.checked = exportAll.checked;
+        });
       });
     }
 
@@ -98,6 +136,12 @@
       });
 
       refreshBoard();
+    }
+
+    function closeLeadModal() {
+      if (!modal || modal.classList.contains("is-hidden")) return;
+      modal.classList.add("is-hidden");
+      document.body.classList.remove("crm-drawer-open");
     }
   });
 

@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-upload-page">
+  <h1>Загрузить список <a href="{{ lead_list_url }}">Лиды</a></h1>
+  <section class="crm-lead-upload-card">
+    <h2>Загрузить список</h2>
+    <p>Скачайте шаблон, заполните его и загрузите через эту форму</p>
+    <a href="{{ template_url }}" class="crm-lead-upload-card__template">
+      <i class="fas fa-download" aria-hidden="true"></i>
+      <span>Скачать шаблон</span>
+    </a>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label>Файл *.xlsx*
+        <input type="file" name="file" accept=".xlsx,.xlsm,.csv">
+      </label>
+      <div class="crm-lead-upload-card__actions">
+        <button type="submit" class="crm-leads-btn crm-leads-btn--primary">Загрузить</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

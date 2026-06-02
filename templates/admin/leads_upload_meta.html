@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-upload-page">
+  <h1>Загрузить список <a href="{{ lead_list_url }}">Лиды</a></h1>
+  <section class="crm-lead-upload-card crm-lead-upload-card--narrow">
+    <h2>Загрузить список: Meta</h2>
+    <a href="{{ template_url }}" class="crm-lead-upload-card__template">
+      <i class="fas fa-download" aria-hidden="true"></i>
+      <span>Скачать шаблон</span>
+    </a>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label>Файл *.csv*
+        <input type="file" name="file" accept=".csv">
+      </label>
+      <p>Выберите поля из файла, которые соответствуют полям Лида</p>
+      <label>ФИО
+        <input type="text" name="map_full_name" value="{{ mapping.full_name }}">
+      </label>
+      <label>Адрес электронной почты
+        <input type="text" name="map_email" value="{{ mapping.email }}">
+      </label>
+      <label>Номер телефона
+        <input type="text" name="map_phone_number" value="{{ mapping.phone_number }}">
+      </label>
+      <label>Комментарий
+        <input type="text" name="map_comment" value="{{ mapping.comment }}">
+      </label>
+      <label>Канал
+        <input type="text" name="map_channel" value="{{ mapping.channel }}">
+      </label>
+      <label>Курс
+        <select name="course">
+          <option value="">--------</option>
+          {% for course in courses %}
+            <option value="{{ course.title }}">{{ course.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Ответственные
+        <select name="assignee">
+          <option value="">--------</option>
+          {% for person in people %}
+            <option value="{{ person.id }}">{{ person.get_full_name|default:person.username }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="crm-lead-upload-card__actions">
+        <button type="submit" class="crm-leads-btn crm-leads-btn--primary">Загрузить</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
