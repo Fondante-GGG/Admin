@@ -13,14 +13,16 @@
   min-width: 160px;
   text-align: center;
 }
-.crm-acc-toolbar__spacer { flex: 1; }
+.crm-acc-toolbar__spacer { display: none; }
 .crm-acc-filter {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
 }
 .crm-acc-filter input {
-  flex: 1;
+  flex: 0 1 720px;
+  max-width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;

@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-extra-page">
+  <h1>Отчет по продажам <a href="{{ lead_list_url }}">Лиды</a></h1>
+  <h2>{{ lead_sales_date_from|date:"d M Y" }} — {{ lead_sales_date_to|date:"d M Y" }}</h2>
+
+  <form method="get" class="crm-lead-inline-filter">
+    <label>
+      Дата начала
+      <input type="date" name="date_from" value="{{ lead_sales_date_from|date:'Y-m-d' }}">
+    </label>
+    <label>
+      Дата конца
+      <input type="date" name="date_to" value="{{ lead_sales_date_to|date:'Y-m-d' }}">
+    </label>
+    <label>
+      Канал
+      <select name="channel">
+        <option value="">------</option>
+        {% for channel in lead_sales_channels %}
+          <option value="{{ channel }}"{% if lead_sales_channel == channel %} selected{% endif %}>{{ channel }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="crm-leads-btn crm-leads-btn--primary">
+      <i class="fas fa-filter" aria-hidden="true"></i>
+      <span>Фильтр</span>
+    </button>
+  </form>
+
+  <div class="crm-lead-table-wrap">
+    <table class="crm-lead-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ФИО</th>
+          <th>Количество продаж</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lead_sales_rows %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.total }}</td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <td colspan="2">Всего</td>
+          <td>{{ lead_sales_total }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

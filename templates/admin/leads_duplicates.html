@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-extra-page">
+  <h1>Дубликаты <a href="{{ lead_list_url }}">Лиды</a></h1>
+
+  {% if lead_duplicate_groups %}
+    <section class="crm-lead-duplicate-board">
+      {% for group in lead_duplicate_groups %}
+        <div class="crm-lead-duplicate-group">
+          <h2>{{ group.label }}</h2>
+          <div class="crm-lead-duplicate-cards">
+            {% for lead in group.leads %}
+              <a href="{% url 'crm_admin:settings_lead_change' lead.id %}" class="crm-lead-duplicate-card">
+                <span class="crm-lead-badge{% if lead.status == 'won' %} crm-lead-badge--success{% endif %}">
+                  {{ lead.get_status_display }}
+                </span>
+                <strong>{{ lead.full_name }}</strong>
+                <span>{{ lead.created_at|date:"d M Y" }}</span>
+                <small>
+                  {% if lead.assignee %}
+                    Назначен на {{ lead.assignee.get_full_name|default:lead.assignee.username }}
+                  {% else %}
+                    Без ответственного
+                  {% endif %}
+                </small>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+  {% else %}
+    <div class="crm-lead-empty-state">Дубликаты не найдены.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-extra-page">
+  <h1>Сводные отчеты по лидам <a href="{{ lead_list_url }}">Лиды</a></h1>
+  <p>Здесь можно будет создавать и сохранять разные отчеты по лидам.</p>
+
+  <button type="button" class="crm-leads-btn crm-leads-btn--primary" disabled>
+    <i class="fas fa-plus" aria-hidden="true"></i>
+    <span>Добавить</span>
+  </button>
+
+  <div class="crm-lead-table-wrap">
+    <table class="crm-lead-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Название</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="3">Пока нет отчетов</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

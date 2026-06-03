@@ -1,0 +1,55 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'crm_dashboard/leads.css' %}">
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="crm-lead-extra-page">
+  <h1>Архив лидов <a href="{{ lead_list_url }}">Лиды</a></h1>
+  <p>Общее количество: {{ lead_archive_total }}</p>
+
+  <form method="get" class="crm-lead-inline-filter">
+    <input type="search" name="q" value="{{ lead_archive_query }}" placeholder="Поиск">
+    <button type="submit" class="crm-leads-btn crm-leads-btn--primary">
+      <i class="fas fa-filter" aria-hidden="true"></i>
+      <span>Фильтр</span>
+    </button>
+  </form>
+
+  <div class="crm-lead-table-wrap">
+    <table class="crm-lead-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Имя</th>
+          <th>Фамилия</th>
+          <th>Дата добавления</th>
+          <th>Адрес электронной почты</th>
+          <th>Причина потери лида</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in lead_archive_rows %}
+          <tr>
+            <td>{{ lead.id }}</td>
+            <td>{{ lead.first_name|default:lead.full_name }}</td>
+            <td>{{ lead.last_name|default:"—" }}</td>
+            <td>{{ lead.created_at|date:"d.m.Y" }}</td>
+            <td>{{ lead.email|default:"—" }}</td>
+            <td>{{ lead.lost_reason|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">Нет данных</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

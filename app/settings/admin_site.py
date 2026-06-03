@@ -253,6 +253,8 @@ class CRMAdminSite(AdminSite):
             "settings.task",
             "settings.user",
             "settings.payment",
+            "settings.curriculummodule",
+            "admin.logentry",
         }
     )
 
@@ -470,17 +472,6 @@ class CRMAdminSite(AdminSite):
                 icon="fas fa-home",
                 url=index_url,
                 exact=True,
-            )
-        )
-
-        # Добавляем ссылку на регистрацию пользователей
-        menu.append(
-            self._sidebar_item(
-                request,
-                title="Регистрация пользователей",
-                icon="fas fa-user-plus",
-                url="/register/",
-                match_url=False,
             )
         )
 

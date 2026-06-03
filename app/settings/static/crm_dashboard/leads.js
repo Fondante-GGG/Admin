@@ -15,8 +15,6 @@
     var toggle = document.querySelector("[data-lead-filter-toggle]");
     var filters = document.querySelector("[data-lead-filters]");
     var board = document.querySelector(".crm-lead-board");
-    var dropdown = document.querySelector("[data-lead-dd]");
-    var menuToggle = document.querySelector("[data-lead-menu-toggle]");
     var modal = document.querySelector("[data-lead-modal]");
     var exportAll = document.querySelector("[data-lead-export-all]");
 
@@ -26,19 +24,29 @@
       });
     }
 
-    if (dropdown && menuToggle) {
+    document.querySelectorAll("[data-lead-dd]").forEach(function (dropdown) {
+      var menuToggle = dropdown.querySelector("[data-lead-menu-toggle]");
+      if (!menuToggle) return;
       menuToggle.addEventListener("click", function (event) {
         event.stopPropagation();
+        document.querySelectorAll("[data-lead-dd].is-open").forEach(function (openDropdown) {
+          if (openDropdown !== dropdown) openDropdown.classList.remove("is-open");
+        });
         dropdown.classList.toggle("is-open");
       });
-      document.addEventListener("click", function (event) {
+    });
+
+    document.addEventListener("click", function (event) {
+      document.querySelectorAll("[data-lead-dd].is-open").forEach(function (dropdown) {
         if (!dropdown.contains(event.target)) dropdown.classList.remove("is-open");
       });
-    }
+    });
 
     document.querySelectorAll("[data-lead-modal-open]").forEach(function (button) {
       button.addEventListener("click", function () {
-        if (dropdown) dropdown.classList.remove("is-open");
+        document.querySelectorAll("[data-lead-dd].is-open").forEach(function (dropdown) {
+          dropdown.classList.remove("is-open");
+        });
         if (modal) modal.classList.remove("is-hidden");
         document.body.classList.add("crm-drawer-open");
       });

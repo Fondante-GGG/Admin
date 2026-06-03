@@ -6,13 +6,14 @@ from django.contrib.auth import password_validation
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.contrib.admin.models import LogEntry
+from django.contrib.contenttypes.models import ContentType
 import io
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.urls import path, reverse
 from django.db import models
-from django.db.models import F, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models import Count, F, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.dateparse import parse_date
 from django.utils.html import format_html
@@ -1310,6 +1311,11 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
                 name="settings_lead_upload_meta_template",
             ),
             path("export/", self.admin_site.admin_view(self.lead_export_fields), name="settings_lead_export_fields"),
+            path("mailing-list/", self.admin_site.admin_view(self.lead_mailing_list), name="settings_lead_mailing_list"),
+            path("archived/", self.admin_site.admin_view(self.lead_archive_page), name="settings_lead_archive"),
+            path("duplicates/", self.admin_site.admin_view(self.lead_duplicates), name="settings_lead_duplicates"),
+            path("reports/", self.admin_site.admin_view(self.lead_reports), name="settings_lead_reports"),
+            path("sales-report/", self.admin_site.admin_view(self.lead_sales_report), name="settings_lead_sales_report"),
             path(
                 "<int:lead_id>/status/",
                 self.admin_site.admin_view(self.lead_status_update),
@@ -1408,6 +1414,15 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
 
     def _lead_courses(self):
         return Cursues.objects.filter(is_archived=False).order_by("title")
+
+    def _lead_base_queryset(self, request, *, include_archived: bool = False):
+        qs = Lead.objects.select_related("assignee", "organization").all()
+        org_id = request.session.get("current_org_id")
+        if org_id:
+            qs = qs.filter(organization_id=org_id)
+        if not include_archived:
+            qs = qs.filter(is_archived=False)
+        return qs
 
     def _lead_payload_from_post(self, request) -> dict:
         return {
@@ -1737,6 +1752,132 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
         }
         return TemplateResponse(request, "admin/leads_export_fields.html", context)
 
+    def lead_mailing_list(self, request):
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Рассылка",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+        }
+        return TemplateResponse(request, "admin/leads_mailing_list.html", context)
+
+    def lead_reports(self, request):
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Сводные отчеты по лидам",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+        }
+        return TemplateResponse(request, "admin/leads_reports.html", context)
+
+    def lead_archive_page(self, request):
+        q = (request.GET.get("q") or "").strip()
+        qs = self._lead_base_queryset(request, include_archived=True).filter(is_archived=True)
+        if q:
+            qs = qs.filter(
+                Q(full_name__icontains=q)
+                | Q(first_name__icontains=q)
+                | Q(last_name__icontains=q)
+                | Q(phone_number__icontains=q)
+                | Q(email__icontains=q)
+                | Q(lost_reason__icontains=q)
+            )
+        rows = qs.order_by("-archived_at", "-created_at")[:300]
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Архив лидов",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+            "lead_archive_rows": rows,
+            "lead_archive_total": qs.count(),
+            "lead_archive_query": q,
+        }
+        return TemplateResponse(request, "admin/leads_archive.html", context)
+
+    def lead_duplicates(self, request):
+        groups: dict[str, dict] = {}
+        qs = self._lead_base_queryset(request).order_by("-created_at")
+        for lead in qs:
+            keys = []
+            phone_key = "".join(ch for ch in (lead.phone_number or "") if ch.isdigit())
+            email_key = (lead.email or "").strip().casefold()
+            if len(phone_key) >= 5:
+                keys.append(("phone", phone_key, lead.phone_number))
+            if email_key:
+                keys.append(("email", email_key, lead.email))
+            for kind, value, label in keys:
+                key = f"{kind}:{value}"
+                groups.setdefault(
+                    key,
+                    {
+                        "label": f"{'Телефон' if kind == 'phone' else 'Email'}: {label}",
+                        "leads": [],
+                    },
+                )["leads"].append(lead)
+
+        duplicate_groups = [
+            group for group in groups.values()
+            if len(group["leads"]) > 1
+        ]
+        duplicate_groups.sort(key=lambda group: len(group["leads"]), reverse=True)
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Дубликаты",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+            "lead_duplicate_groups": duplicate_groups[:80],
+            "lead_duplicate_total": sum(len(group["leads"]) for group in duplicate_groups),
+        }
+        return TemplateResponse(request, "admin/leads_duplicates.html", context)
+
+    def lead_sales_report(self, request):
+        today = timezone.localdate()
+        month_start = today.replace(day=1)
+        date_from = parse_date((request.GET.get("date_from") or "").strip()) or month_start
+        date_to = parse_date((request.GET.get("date_to") or "").strip()) or today
+        channel = (request.GET.get("channel") or "").strip()
+
+        qs = self._lead_base_queryset(request, include_archived=True).filter(
+            status=Lead.Status.WON,
+            created_at__date__gte=date_from,
+            created_at__date__lte=date_to,
+        )
+        if channel:
+            qs = qs.filter(channel=channel)
+
+        rows = []
+        grouped = (
+            qs.values("assignee_id", "assignee__first_name", "assignee__last_name", "assignee__username")
+            .annotate(total=Count("id"))
+            .order_by("assignee__last_name", "assignee__first_name", "assignee__username")
+        )
+        for row in grouped:
+            name = " ".join(
+                part for part in (row["assignee__last_name"], row["assignee__first_name"]) if part
+            ).strip()
+            rows.append({"name": name or row["assignee__username"] or "Без ответственного", "total": row["total"]})
+
+        channel_choices = (
+            self._lead_base_queryset(request, include_archived=True)
+            .exclude(channel="")
+            .values_list("channel", flat=True)
+            .distinct()
+            .order_by("channel")
+        )
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Отчет по продажам",
+            "opts": self.model._meta,
+            "lead_list_url": reverse(f"{self.admin_site.name}:settings_lead_changelist"),
+            "lead_sales_rows": rows,
+            "lead_sales_total": sum(row["total"] for row in rows),
+            "lead_sales_date_from": date_from,
+            "lead_sales_date_to": date_to,
+            "lead_sales_channel": channel,
+            "lead_sales_channels": channel_choices,
+        }
+        return TemplateResponse(request, "admin/leads_sales_report.html", context)
+
     def lead_status_update(self, request, lead_id: int):
         if request.method != "POST":
             return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
@@ -1821,6 +1962,14 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             tasks_url = reverse(f"{self.admin_site.name}:settings_task_changelist")
         except Exception:
             tasks_url = "#"
+        try:
+            lead_content_type = ContentType.objects.get_for_model(Lead)
+            history_url = (
+                reverse(f"{self.admin_site.name}:admin_logentry_changelist")
+                + f"?content_type__id__exact={lead_content_type.pk}"
+            )
+        except Exception:
+            history_url = reverse(f"{self.admin_site.name}:index")
 
         context = {
             **self.admin_site.each_context(request),
@@ -1844,6 +1993,12 @@ class LeadAdmin(RoleRestrictedAdminMixin, OrganizationFilterMixin, ArchiveAdminM
             "lead_export_url": export_fields_url,
             "lead_tasks_url": tasks_url,
             "lead_forms_url": reverse(f"{self.admin_site.name}:settings_index"),
+            "lead_mailing_url": reverse(f"{self.admin_site.name}:settings_lead_mailing_list"),
+            "lead_archive_url": reverse(f"{self.admin_site.name}:settings_lead_archive"),
+            "lead_history_url": history_url,
+            "lead_duplicates_url": reverse(f"{self.admin_site.name}:settings_lead_duplicates"),
+            "lead_reports_url": reverse(f"{self.admin_site.name}:settings_lead_reports"),
+            "lead_sales_report_url": reverse(f"{self.admin_site.name}:settings_lead_sales_report"),
             "lead_reset_url": request.path,
             "lead_status_choices": LEAD_STATUS_CHOICES,
             "lead_people": self._lead_people(),
